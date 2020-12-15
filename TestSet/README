@@ -1,0 +1,18 @@
+From Nick:
+
+The test_set*txt files are x,y,z,xdot,ydot,zdot for the first 100 non-perturber (what we consider massless) asteroids.
+These are heliocentric, ecliptic coordinates retrieved from astorb.
+
+The JPL vectors script shows how to retrieve barycentric (location=‘@0’), ecliptic coordinates of minor planet Ceres
+across a range of dates at 1 day time steps. Heliocentric coordinates can be retrieved by changing location=‘@sun’.
+The creation of the Horizons object in this script can also be performed for just a single epoch as indicated in the commented line.
+
+
+Test objects: 
+main belt, no non-grav effects
+	Varuna
+	Chiron
+	Nestor
+	Astraea
+	Kalliope
+	105140
