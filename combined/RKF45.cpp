@@ -408,33 +408,19 @@ void Newtonian(double *m, double *xt, double *yt, double *zt, double *aNx, doubl
 			//for(int j = 0; j < Nperturbers; ++j){
 			for(int j = Nperturbers-1; j >= 0; --j){
 				accP(m, xt, yt, zt, aNx[i], aNy[i], aNz[i], i, j);
-<<<<<<< HEAD
 //if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, j, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
 			}
 //printf("N0 %d %.20g %.20g %.20g\n", i, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
-=======
-if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, j, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
-			}
-printf("N0 %d %.20g %.20g %.20g\n", i, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 		}
 		else{
 			//for(int j = 1; j < Nperturbers; ++j){
 			for(int j = Nperturbers-1; j >= 1; --j){
 				accP(m, xt, yt, zt, aNx[i], aNy[i], aNz[i], i, j);
-<<<<<<< HEAD
 //if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, j, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
 			}
 			accS(m, xt, yt, zt, aNx[i], aNy[i], aNz[i], i);
 //if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
 //if(i == 27) printf("N0 %d %.20g %.20g %.20g\n", i, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
-=======
-if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, j, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
-			}
-			accS(m, xt, yt, zt, aNx[i], aNy[i], aNz[i], i);
-if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
-printf("N0 %d %.20g %.20g %.20g\n", i, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 
 			aNxb[i] = aNx[i];
 			aNyb[i] = aNy[i];
@@ -444,11 +430,7 @@ printf("N0 %d %.20g %.20g %.20g\n", i, aNx[i] * dayUnit * dayUnit, aNy[i] * dayU
 			for(int j = Nperturbers-1; j >= 1; --j){
 				accP2(m, xt, yt, zt, aNx[i], aNy[i], aNz[i], i, j);
 			}
-<<<<<<< HEAD
 //if(i == 27) printf("Np %d %.20g %.20g %.20g\n", i, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
-=======
-//printf("Np %d %.20g %.20g %.20g\n", i, aNx[i] * dayUnit * dayUnit, aNy[i] * dayUnit * dayUnit, aNz[i] * dayUnit * dayUnit);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 		}
 
 	}
@@ -564,15 +546,9 @@ void J2(double *m, double *x, double *y, double *z, double &ax, double &ay, doub
 
 printf("rm %.20g %.20g %.20g\n", RE, muE, t1);
 
-<<<<<<< HEAD
 	double tx = t1 * (t2 - 1.0) * xE;
 	double ty = t1 * (t2 - 1.0) * yE;
 	double tz = t1 * (t2 - 3.0) * zE;
-=======
-	double tx = t1 * (t2 - 1.0) * xE;// * xE / r;
-	double ty = t1 * (t2 - 1.0) * yE;// * yE / r;
-	double tz = t1 * (t2 - 3.0) * zE;// * zE / r;
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 	
 	ax += tx;
 	ay += ty;
@@ -592,7 +568,7 @@ int main(int argc, char*argv[]){
 	const int Ninterpolate = 10;	//number of interpolation points
 	const double dtime = 1.0;     //interval between stored time steps
 
-	int GR = 4;
+	int GR = 2;
 	//1 Quin Tremaine Duncan 1991, heliocentric coordinates
 	//2 Sitarski 1982, heliocentric coordinates
 	//3 Fabricky 2010, heliocentric coordinates
@@ -607,11 +583,7 @@ int main(int argc, char*argv[]){
 	//double dt = 0.1 * dayUnit;
 
 	//long long int Nsteps = 400000;	
-<<<<<<< HEAD
 	long long int Nsteps = 40000;
-=======
-	long long int Nsteps = 1;//4400000;	
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 	long long int outInterval = 100;
 	double dt = 0.01 * dayUnit;
 
@@ -751,7 +723,6 @@ printf("m %d %.20g\n", i, m[i]);
 		fscanf(infile, "%lf", &z[i]);
 		fscanf(infile, "%lf", &vx[i]);
 		fscanf(infile, "%lf", &vy[i]);
-<<<<<<< HEAD
 		er = fscanf(infile, "%lf", &vz[i]);
 		//fscanf(infile, "%lf", &A1[i]);
 		//fscanf(infile, "%lf", &A2[i]);
@@ -761,17 +732,6 @@ printf("m %d %.20g\n", i, m[i]);
 		//fscanf(infile, "%lf", &NM[i]);
 		//fscanf(infile, "%lf", &Nn[i]);
 		//er = fscanf(infile, "%lf", &R0[i]);
-=======
-		fscanf(infile, "%lf", &vz[i]);
-		fscanf(infile, "%lf", &A1[i]);
-		fscanf(infile, "%lf", &A2[i]);
-		fscanf(infile, "%lf", &A3[i]);
-		fscanf(infile, "%lf", &ALN[i]);
-		fscanf(infile, "%lf", &NK[i]);
-		fscanf(infile, "%lf", &NM[i]);
-		fscanf(infile, "%lf", &Nn[i]);
-		er = fscanf(infile, "%lf", &R0[i]);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 		if(er < 0) break;
 		++N;
 printf("er %d %d %d %d %.20g %.20g %.20g\n", i, id[i], er, N, x[i], y[i], z[i]);
@@ -1109,13 +1069,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-<<<<<<< HEAD
 			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
 			//J2(m, xt, yt, zt, ax, ay, az, i);
-=======
-			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			J2(m, xt, yt, zt, ax, ay, az, i);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 
 			kvx[i][0] = ax;
 			kvy[i][0] = ay;
@@ -1199,13 +1154,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-<<<<<<< HEAD
 			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
 			//J2(m, xt, yt, zt, ax, ay, az, i);
-=======
-			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			J2(m, xt, yt, zt, ax, ay, az, i);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 
 			kvx[i][1] = ax;
 			kvy[i][1] = ay;
@@ -1289,13 +1239,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-<<<<<<< HEAD
 			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
 			//J2(m, xt, yt, zt, ax, ay, az, i);
-=======
-			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			J2(m, xt, yt, zt, ax, ay, az, i);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 
 			kvx[i][2] = ax;
 			kvy[i][2] = ay;
@@ -1379,13 +1324,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-<<<<<<< HEAD
 			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
 			//J2(m, xt, yt, zt, ax, ay, az, i);
-=======
-			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			J2(m, xt, yt, zt, ax, ay, az, i);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 
 			kvx[i][3] = ax;
 			kvy[i][3] = ay;
@@ -1469,13 +1409,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-<<<<<<< HEAD
 			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
 			//J2(m, xt, yt, zt, ax, ay, az, i);
-=======
-			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			J2(m, xt, yt, zt, ax, ay, az, i);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 
 			kvx[i][4] = ax;
 			kvy[i][4] = ay;
@@ -1561,13 +1496,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-<<<<<<< HEAD
 			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
 			//J2(m, xt, yt, zt, ax, ay, az, i);
-=======
-			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			J2(m, xt, yt, zt, ax, ay, az, i);
->>>>>>> f28efb018735bbd62b2845e662c43faea3666aee
 
 			kvx[i][5] = ax;
 			kvy[i][5] = ay;
