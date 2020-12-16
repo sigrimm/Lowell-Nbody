@@ -1,10 +1,14 @@
 import numpy as np
 import math
+import sys
 
 #startTime = 2433282.5
 startTime = 2396758.5
 
-name ='105140'
+#name ='105140'
+
+name = str(sys.argv[1])
+print(name)
 
 #t2, i2, x2, y2, z2 = np.loadtxt("out%s_b.dat" % name, usecols=(0,1,3,4,5), skiprows=0, unpack=True)
 #skr = int(t2[0] - startTime);

@@ -513,7 +513,7 @@ printf("gr %.20g %.20g\n", gr1, gr);
 	ax += f1 * x[i] + f2 * tx + f3 * hx;
 	ay += f1 * y[i] + f2 * ty + f3 * hy;
 	az += f1 * z[i] + f2 * tz + f3 * hz;
-printf("NonGrav %d %.20g %.20g %.20g\n", i, (f1 * x[i] + f2 * tx + f3 * hx) * dayUnit * dayUnit, (f1 * y[i] + f2 * ty + f3 * hy) * dayUnit * dayUnit, (f1 * z[i] + f2 * tz + f3 * hz) * dayUnit * dayUnit);
+//printf("NonGrav %d %.20g %.20g %.20g\n", i, (f1 * x[i] + f2 * tx + f3 * hx) * dayUnit * dayUnit, (f1 * y[i] + f2 * ty + f3 * hy) * dayUnit * dayUnit, (f1 * z[i] + f2 * tz + f3 * hz) * dayUnit * dayUnit);
 
 }
 
@@ -544,7 +544,7 @@ void J2(double *m, double *x, double *y, double *z, double &ax, double &ay, doub
 	double t1 = 3.0 * J2E * muE * RE * RE / (2.0 * r5);
 	double t2 = 5.0 * zE * zE / rsq;
 
-printf("rm %.20g %.20g %.20g\n", RE, muE, t1);
+//printf("rm %.20g %.20g %.20g\n", RE, muE, t1);
 
 	double tx = t1 * (t2 - 1.0) * xE;
 	double ty = t1 * (t2 - 1.0) * yE;
@@ -554,7 +554,7 @@ printf("rm %.20g %.20g %.20g\n", RE, muE, t1);
 	ay += ty;
 	az += tz;
  
-printf("J2 %d %.20g %.20g %.20g | %.20g %.20g %.20g\n", i, tx * dayUnit * dayUnit, ty * dayUnit * dayUnit, tz * dayUnit * dayUnit, xE, yE, zE); 
+//printf("J2 %d %.20g %.20g %.20g | %.20g %.20g %.20g\n", i, tx * dayUnit * dayUnit, ty * dayUnit * dayUnit, tz * dayUnit * dayUnit, xE, yE, zE); 
 
 
 }
@@ -723,15 +723,15 @@ printf("m %d %.20g\n", i, m[i]);
 		fscanf(infile, "%lf", &z[i]);
 		fscanf(infile, "%lf", &vx[i]);
 		fscanf(infile, "%lf", &vy[i]);
-		er = fscanf(infile, "%lf", &vz[i]);
-		//fscanf(infile, "%lf", &A1[i]);
-		//fscanf(infile, "%lf", &A2[i]);
-		//fscanf(infile, "%lf", &A3[i]);
-		//fscanf(infile, "%lf", &ALN[i]);
-		//fscanf(infile, "%lf", &NK[i]);
-		//fscanf(infile, "%lf", &NM[i]);
-		//fscanf(infile, "%lf", &Nn[i]);
-		//er = fscanf(infile, "%lf", &R0[i]);
+		fscanf(infile, "%lf", &vz[i]);
+		fscanf(infile, "%lf", &A1[i]);
+		fscanf(infile, "%lf", &A2[i]);
+		fscanf(infile, "%lf", &A3[i]);
+		fscanf(infile, "%lf", &ALN[i]);
+		fscanf(infile, "%lf", &NK[i]);
+		fscanf(infile, "%lf", &NM[i]);
+		fscanf(infile, "%lf", &Nn[i]);
+		er = fscanf(infile, "%lf", &R0[i]);
 		if(er < 0) break;
 		++N;
 printf("er %d %d %d %d %.20g %.20g %.20g\n", i, id[i], er, N, x[i], y[i], z[i]);
@@ -1069,8 +1069,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			//J2(m, xt, yt, zt, ax, ay, az, i);
+			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
+			J2(m, xt, yt, zt, ax, ay, az, i);
 
 			kvx[i][0] = ax;
 			kvy[i][0] = ay;
@@ -1154,8 +1154,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			//J2(m, xt, yt, zt, ax, ay, az, i);
+			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
+			J2(m, xt, yt, zt, ax, ay, az, i);
 
 			kvx[i][1] = ax;
 			kvy[i][1] = ay;
@@ -1239,8 +1239,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			//J2(m, xt, yt, zt, ax, ay, az, i);
+			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
+			J2(m, xt, yt, zt, ax, ay, az, i);
 
 			kvx[i][2] = ax;
 			kvy[i][2] = ay;
@@ -1324,8 +1324,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			//J2(m, xt, yt, zt, ax, ay, az, i);
+			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
+			J2(m, xt, yt, zt, ax, ay, az, i);
 
 			kvx[i][3] = ax;
 			kvy[i][3] = ay;
@@ -1409,8 +1409,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			//J2(m, xt, yt, zt, ax, ay, az, i);
+			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
+			J2(m, xt, yt, zt, ax, ay, az, i);
 
 			kvx[i][4] = ax;
 			kvy[i][4] = ay;
@@ -1496,8 +1496,8 @@ printf("read %.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %d\n", timep[id * Nint
 			else{
 				GRCall(m, xt, yt, zt, vxt, vyt, vzt, ax, ay, az, aNx, aNy, aNz, N, Nperturbers, useHelio, GR, i);
 			}
-			//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
-			//J2(m, xt, yt, zt, ax, ay, az, i);
+			NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, i);
+			J2(m, xt, yt, zt, ax, ay, az, i);
 
 			kvx[i][5] = ax;
 			kvy[i][5] = ay;

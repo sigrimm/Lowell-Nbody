@@ -4,7 +4,7 @@ epoch_start = '1850-01-01'  # no earlier than 1950 due to Horizons limits
 epoch_stop = '2020-12-31'
 
 
-useHelioCentric = 0
+useHelioCentric = 1
 ###small bodies###
 #single time step
 #obj = Horizons(id='Ceres',epochs=2458133.33546,location='@0')

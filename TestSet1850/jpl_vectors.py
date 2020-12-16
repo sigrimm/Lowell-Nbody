@@ -3,7 +3,7 @@ from astroquery.jplsbdb import SBDB
 import sys
 
 epoch_start = '1850-01-01'  # no earlier than 1950 due to Horizons limits
-epoch_stop = '1960-12-31'
+epoch_stop = '2020-12-31'
 
 
 useHelioCentric = 1

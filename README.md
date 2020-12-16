@@ -5,33 +5,38 @@ Author: Simon Grimm, University of Bern, Switzerland
 
 # Instructions #
 
-## Step 1, get initial conditions ##
+## Step 1A, get initial conditions ##
 
-- cd TestSet
+- cd TestSet1850
 - run:
 
 python3 jpl_vectors.py <Asteroid_Name>
 
 with the desired asteroid name, e.g. python3 jpl_vectors.py Icarus
 
-This will downlaod the barycentric coordinates for the JPL Horizons database,
-and store it in a file name <Aseroid_Name_d>.dat 
+This will download the heliocentric coordinates for the JPL Horizons database,
+and store it in a file name <Aseroid_Name_d>_h.dat 
 
--inside jpl_vectors.py, the flag `useHelioCentric`can be used to swith from barycentric to heliocentric coordinates.
+-inside jpl_vectors.py, the flag `useHelioCentric`can be used to swith from heliocentric to barycentric coordinates.
 
 ## Step 1B, get perturbers file ##
 This is only necessary, if the perturbers file needs to be updated.
 
 - use `python3 jpl_vectorsAll.py` to download all perturbers.
-- run `python3 merge.py > All_b.dat` to merge all perturbers onto one file
-- copy All_b.dat to the directory 'combined'
+  This will download all perturbers coordinates and store them in files <Perturber_Name>_h.dat
+- run `python3 merge.py > All_h.dat` to merge all perturbers onto one file
+- copy All_h.dat to the directory 'combined'
 
 
 ## Step 2, copy initial conditions ##
+In the TestSet1850 directory
 
--Chose the starting time of the integration, this can not be earlier than 2433286.5
--Copy the corresponding line from <Aseroid_Name_d>.dat to a file named initial.dat
-- e.g. 2433286.5 1.046239393196292 -1.497371446392998 -0.4605849986210472 0.002079418803054296 0.005857305828677572 -0.0008158440936451222
+-Chose the starting time of the integration, this can not be earlier than 2396770.5
+-Copy the corresponding line from <Aseroid_Name_h>.dat in the TestSet1850 directory to a file named initial.dat
+- e.g. for asteroid 105140:
+
+2396770.5 0.752060381543369849133284787968 -0.947384215699796805587595827092 0.300046271431012923081027565786 0.0107856006406296302951863808062 -0.00245802678537547720019618147091 0.00537247903456764940716139378196 0 0 0 0.11126204259999999957 4.6142000000000003013 2.1499999999999999112 5.0929999999999999716 2.8079999999999998295
+
 
 -Copy the file initial.dat to the directory 'combined'
 
@@ -41,13 +46,13 @@ This is only necessary, if the perturbers file needs to be updated.
 
 - compile with g++ -o RKF45 RKF45.cpp
 
-- ./RKF45 (options)
+-run: ./RKF45 [options]
 - options are:
-- `-Nsteps` <integer> , default = 4000000, number of time steps.
+- `-Nsteps` <integer> , default = 400000, number of time steps.
 - `-outInterval` <integer> , default = 1000, interval out output files.
 - `-dt` <float> , default = 0.001, time step in days.
 
-This will run the integration and produce an output (barycentric) (every day for default options). The output file names include the number of the time step. 
+This will run the integration and produce an output (heliocentric) (every day for default options). The output file names include the number of the time step. 
 
 The output files contain 
 - time in days
@@ -60,17 +65,17 @@ The output files contain
 - vy velocity in AU/day
 - vz velocity in AU/day
 
-## Step 4 compare the results ##
+## Step 4 compare the results with JPL##
 - combine the output files with
 
-cat Out* > out<name>.dat
+cat Out* > out<name>_h.dat
 
-e.g. cat Out* > outIcarus.dat
+e.g. cat Out* > outIcarus_h.dat
 
--run python3 compare.py > diffIcarus.dat
-(The skiprow arguments needs to be adapted to the initial start time)
+-run python3 compare.py <name> > diff<name>.dat
+e.g. python3 compare.py Icarus > diffIcarus.dat
 
-This produces a file with the difference between the real positions and the integration.
+This produces a file with the difference between the real positions from JPL and the integration.
 The file contains two columns:
 -- time in day
 -- difference in meters

@@ -1,6 +1,6 @@
 import numpy as np
 
-'''
+
 tS, xS, yS, zS, vxS, vyS, vzS = np.loadtxt('Sun_h.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
 t0, x0, y0, z0, vx0, vy0, vz0 = np.loadtxt('Mercury_h.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
 t1, x1, y1, z1, vx1, vy1, vz1 = np.loadtxt('Venus_h.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
@@ -28,9 +28,9 @@ t22, x22, y22, z22, vx22, vy22, vz22 = np.loadtxt('Thisbe_h.dat', usecols=(0,1,2
 t23, x23, y23, z23, vx23, vy23, vz23 = np.loadtxt('Doris_h.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
 t24, x24, y24, z24, vx24, vy24, vz24 = np.loadtxt('Patientia_h.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
 t25, x25, y25, z25, vx25, vy25, vz25 = np.loadtxt('Sylvia_h.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
+
+
 '''
-
-
 tS, xS, yS, zS, vxS, vyS, vzS = np.loadtxt('Sun_d.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
 t0, x0, y0, z0, vx0, vy0, vz0 = np.loadtxt('Mercury_d.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
 t1, x1, y1, z1, vx1, vy1, vz1 = np.loadtxt('Venus_d.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
@@ -58,6 +58,7 @@ t22, x22, y22, z22, vx22, vy22, vz22 = np.loadtxt('Thisbe_d.dat', usecols=(0,1,2
 t23, x23, y23, z23, vx23, vy23, vz23 = np.loadtxt('Doris_d.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
 t24, x24, y24, z24, vx24, vy24, vz24 = np.loadtxt('Patientia_d.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
 t25, x25, y25, z25, vx25, vy25, vz25 = np.loadtxt('Sylvia_d.dat', usecols=(0,1,2,3,4,5,6), unpack=True)
+'''
 
 #t20, x20, y20, z20 = np.loadtxt('Icarus.dat', usecols=(0,1,2,3), unpack=True)
 #t20, x20, y20, z20 = np.loadtxt('Flora.dat', usecols=(0,1,2,3), unpack=True)
