@@ -48,9 +48,9 @@ In the TestSet1850 directory
 
 -run: ./RKF45 [options]
 - options are:
-- `-Nsteps` <integer>, default = 400000, number of time steps.
-- `-outInterval` <integer>, default = 1000, interval out output files.
-- `-dt` <float>, default = 0.001, time step in days.
+- `-Nsteps` < integer >, default = 400000, number of time steps.
+- `-outInterval` < integer >, default = 1000, interval out output files.
+- `-dt` < float >, default = 0.001, time step in days.
 
 This will run the integration and produce an output (heliocentric) (every day for default options). The output file names include the number of the time step. 
 
@@ -68,11 +68,12 @@ The output files contain
 ## Step 4 compare the results with JPL ##
 - combine the output files with
 
-cat Out* > out<name>_h.dat
+cat Out* > out< name >_h.dat
 
 e.g. cat Out* > outIcarus_h.dat
 
--run python3 compare.py < name > > diff<name>.dat
+-run python3 compare.py < name > > diff< name >.dat
+
 e.g. python3 compare.py Icarus > diffIcarus.dat
 
 This produces a file with the difference between the real positions from JPL and the integration.
