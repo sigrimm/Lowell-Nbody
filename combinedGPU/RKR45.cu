@@ -124,7 +124,6 @@ __device__ void accP2_device(double mj, double xj, double yj, double zj, double 
 	double r = sqrt(rsq);
 
 	double s = mj / (r * rsq);
-
 	ax += s * rx;
 	ay += s * ry;
 	az += s * rz;
@@ -197,20 +196,100 @@ __host__ void interpolate(int Ninterpolate, double *xp, double *yp, double *zp, 
 //printf("interpolate %.20g %d %.20g %.20g %.20g\n", time, p, xt[p], yt[p], zt[p]);
 
 }
+__host__ void interpolate2(int Ninterpolate, double *xp, double *yp, double *zp, double *timep, double time, double *xt, double *yt, double *zt, int p){
 
 
-template <int NN>
-__global__ void interpolate_kernel(int Ninterpolate, int Nperturbers, double *xp, double *yp, double *zp, double *timep, double time, double *xt, double *yt, double *zt){
+	//p is the particle index
+
+	double Cx[Ninterpolate];
+	double Cy[Ninterpolate];
+	double Cz[Ninterpolate];
+
+	double Dx[Ninterpolate];
+	double Dy[Ninterpolate];
+	double Dz[Ninterpolate];
+
+	double tn[Ninterpolate];
+
+	for(int i = 0; i < Ninterpolate; ++i){
+		Cx[i] = xp[p * Ninterpolate + i];
+		Cy[i] = yp[p * Ninterpolate + i];
+		Cz[i] = zp[p * Ninterpolate + i];
+
+		Dx[i] = Cx[i];		
+		Dy[i] = Cy[i];		
+		Dz[i] = Cz[i];		
+
+		tn[i] = timep[p * Ninterpolate + i];
+
+//printf("interpolate %d %d %.20g %.20g %.20g\n", p, i, time, tn[i], Cx[i]);
+	}
+
+	//initialize with closest solution
+	//Assume that the closest solution is in the middle
+
+	int ii = Ninterpolate / 2 - 1;
+	xt[p] = Cx[ii];
+	yt[p] = Cy[ii];
+	zt[p] = Cz[ii];
+
+	--ii;
+
+	for(int j = 1; j < Ninterpolate; ++j){
+//printf("**** %d %d %g\n", j, ii, xt[p]);
+		for(int i = 0; i < Ninterpolate - j; ++i){
+
+			double dtn0 = tn[i] - time;
+			double dtn1 = tn[i + j] - time;
+			double dtn = tn[i] - tn[i + j];
+
+			double dPx = (Cx[i + 1] - Dx[i]) / dtn;
+			double dPy = (Cy[i + 1] - Dy[i]) / dtn;
+			double dPz = (Cz[i + 1] - Dz[i]) / dtn;
+
+			Dx[i] = dtn1 * dPx;
+			Dy[i] = dtn1 * dPy;
+			Dz[i] = dtn1 * dPz;
+
+			Cx[i] = dtn0 * dPx;
+			Cy[i] = dtn0 * dPy;
+			Cz[i] = dtn0 * dPz;
+
+	
+//printf("%d %d %g %g %g %g %.20g\n", i, i+j, tn[i], tn[i+j], P[j-1][i], P[j-1][i+1], P[j][i]);
+
+		}
+
+		if(2 * ii < Ninterpolate - j){
+			xt[p] += Cx[ii + 1];
+			yt[p] += Cy[ii + 1];
+			zt[p] += Cz[ii + 1];
+		}
+		else{
+			xt[p] += Dx[ii];
+			yt[p] += Dy[ii];
+			zt[p] += Dz[ii];
+			--ii;
+		}
+
+	}
+//printf("interpolate %.20g %d %.20g %.20g %.20g\n", time, p, xt[p], yt[p], zt[p]);
+
+}
+
+
+template <int Ninterpolate>
+__global__ void interpolate_kernel(int Nperturbers, double *xp, double *yp, double *zp, double *timep, double time, double *xt, double *yt, double *zt){
 
 	int pid = blockIdx.x;	//perturber index, Nperturbers
 	int idx = threadIdx.x;
 
 	if(pid < Nperturbers){
 
-		__shared__ double Px_s[NN][NN];
-		__shared__ double Py_s[NN][NN];
-		__shared__ double Pz_s[NN][NN];
-		__shared__ double tn_s[NN];
+		__shared__ double Px_s[Ninterpolate][Ninterpolate];
+		__shared__ double Py_s[Ninterpolate][Ninterpolate];
+		__shared__ double Pz_s[Ninterpolate][Ninterpolate];
+		__shared__ double tn_s[Ninterpolate];
 
 		if(idx < Ninterpolate){
 			Px_s[0][idx] = xp[pid * Ninterpolate + idx];
@@ -374,7 +453,7 @@ __host__ void stageStep(double *m, double *xt, double *yt, double *zt, double *v
 }
 
 template < int NN >
-__global__ void stageStep_kernel(double *m_d, double *xt_d, double *yt_d, double *zt_d, double *vxt_d, double *vyt_d, double *vzt_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, int S, int Nperturbers, int N, int useHelio, int GR){
+__global__ void stageStep_kernel(double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xt_d, double *yt_d, double *zt_d, double *vxt_d, double *vyt_d, double *vzt_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double dt, int S, int Nperturbers, int N, int useHelio, int GR){
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -387,22 +466,44 @@ __global__ void stageStep_kernel(double *m_d, double *xt_d, double *yt_d, double
 
 
 	if(threadIdx.x < Nperturbers){
-		x_s[threadIdx.x] = xt_d[idx];
-		y_s[threadIdx.x] = yt_d[idx];
-		z_s[threadIdx.x] = zt_d[idx];
-		m_s[threadIdx.x] = m_d[idx];
+		if(S == 0){
+			x_s[threadIdx.x] = x_d[idx];
+			y_s[threadIdx.x] = y_d[idx];
+			z_s[threadIdx.x] = z_d[idx];
+			m_s[threadIdx.x] = m_d[idx];
+		}
+		else{
+			x_s[threadIdx.x] = xt_d[idx];
+			y_s[threadIdx.x] = yt_d[idx];
+			z_s[threadIdx.x] = zt_d[idx];
+			m_s[threadIdx.x] = m_d[idx];
+		}
 	}
 	__syncthreads();
 
 	if(idx >= Nperturbers && idx < N){
 
-		double xi = xt_d[idx];
-		double yi = yt_d[idx];
-		double zi = zt_d[idx];
-		double vxi = vxt_d[idx];
-		double vyi = vyt_d[idx];
-		double vzi = vzt_d[idx];
+
+// ***********************
+		//update
+		double xi = x_d[idx];
+		double yi = y_d[idx];
+		double zi = z_d[idx];
+		double vxi = vx_d[idx];
+		double vyi = vy_d[idx];
+		double vzi = vz_d[idx];
 		double mi = m_d[idx];
+
+		for(int s = 0; s < S; ++s){
+			double aa = a_c[S * 6 + s];
+			xi  += dt * aa * kx_d[idx + s * N];
+			yi  += dt * aa * ky_d[idx + s * N];
+			zi  += dt * aa * kz_d[idx + s * N];
+			vxi += dt * aa * kvx_d[idx + s * N];
+			vyi += dt * aa * kvy_d[idx + s * N];
+			vzi += dt * aa * kvz_d[idx + s * N];
+		}
+// *****************************
 
 		kx_d[idx + S * N] = vxi;
 		ky_d[idx + S * N] = vyi;
@@ -420,16 +521,16 @@ __global__ void stageStep_kernel(double *m_d, double *xt_d, double *yt_d, double
 		else{
 			for(int j = Nperturbers-1; j >= 1; --j){
 				accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
-//if(idx == 27) printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 			}
 			accS_device(m_s[0] + mi, xi, yi, zi, ax, ay, az);
 
-//if(idx == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 //printf("N0 %d %.20g %.20g %.20g\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 			for(int j = Nperturbers-1; j >= 1; --j){
 				accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
+//printf("Npi %d %d %.20g %.20g %.20g %d\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
 			}
-//if(idx == 27) printf("Np %d %.20g %.20g %.20g %d\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+//printf("Np %d %.20g %.20g %.20g %d\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
 		}
 
 
@@ -447,6 +548,175 @@ __global__ void stageStep_kernel(double *m_d, double *xt_d, double *yt_d, double
 
 }
 
+//combine stage step and interpolation kernel
+template < const int NN, const int Ninterpolate >
+__global__ void stageStep1_kernel(double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double time, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double dt, int S, int Nperturbers, int N, int useHelio, int GR){
+
+	int idx = threadIdx.x;
+	int id = blockIdx.x * blockDim.x + idx;
+
+	//shared memory contains only the perturbers
+	//the particle idx is stored in registers
+	__shared__ double x_s[NN];
+	__shared__ double y_s[NN];
+	__shared__ double z_s[NN];
+	__shared__ double m_s[NN];
+
+	
+	//needs at least Nperturbers threads per block
+	// *******************************************************
+	//interpolate
+
+
+	//do interpolation in every thread block
+	//p is the particle index
+
+	double Cx[Ninterpolate];
+	double Cy[Ninterpolate];
+	double Cz[Ninterpolate];
+
+	double Dx[Ninterpolate];
+	double Dy[Ninterpolate];
+	double Dz[Ninterpolate];
+
+	double tn[Ninterpolate];
+
+
+	if(idx < Nperturbers){
+
+		for(int i = 0; i < Ninterpolate; ++i){
+			Cx[i] = xp_d[idx * Ninterpolate + i];
+			Cy[i] = yp_d[idx * Ninterpolate + i];
+			Cz[i] = zp_d[idx * Ninterpolate + i];
+
+			Dx[i] = Cx[i];		
+			Dy[i] = Cy[i];		
+			Dz[i] = Cz[i];		
+
+			tn[i] = timep_d[idx * Ninterpolate + i];
+
+	//printf("interpolate %d %d %.20g %.20g %.20g\n", idx, i, time, tn[i], Cx[i]);
+		}
+
+		//initialize with closest solution
+		//Assume that the closest solution is in the middle
+
+		int ii = Ninterpolate / 2 - 1;
+		x_s[idx] = Cx[ii];
+		y_s[idx] = Cy[ii];
+		z_s[idx] = Cz[ii];
+		m_s[idx] = m_d[idx]; 
+
+		--ii;
+
+		for(int j = 1; j < Ninterpolate; ++j){
+	//printf("**** %d %d %g\n", j, ii, x_s[idx]);
+			for(int i = 0; i < Ninterpolate - j; ++i){
+
+				double dtn0 = tn[i] - time;
+				double dtn1 = tn[i + j] - time;
+				double dtn = tn[i] - tn[i + j];
+
+				double dPx = (Cx[i + 1] - Dx[i]) / dtn;
+				double dPy = (Cy[i + 1] - Dy[i]) / dtn;
+				double dPz = (Cz[i + 1] - Dz[i]) / dtn;
+
+				Dx[i] = dtn1 * dPx;
+				Dy[i] = dtn1 * dPy;
+				Dz[i] = dtn1 * dPz;
+
+				Cx[i] = dtn0 * dPx;
+				Cy[i] = dtn0 * dPy;
+				Cz[i] = dtn0 * dPz;
+
+		
+	//printf("%d %d %g %g %g %g %.20g\n", i, i+j, tn[i], tn[i+j], P[j-1][i], P[j-1][i+1], P[j][i]);
+
+			}
+
+			if(2 * ii < Ninterpolate - j){
+				x_s[idx] += Cx[ii + 1];
+				y_s[idx] += Cy[ii + 1];
+				z_s[idx] += Cz[ii + 1];
+			}
+			else{
+				x_s[idx] += Dx[ii];
+				y_s[idx] += Dy[ii];
+				z_s[idx] += Dz[ii];
+				--ii;
+			}
+
+		}
+
+	}
+
+	if(id >= Nperturbers && id < N){
+
+
+// ***********************
+		//update
+		double xi = x_d[id];
+		double yi = y_d[id];
+		double zi = z_d[id];
+		double vxi = vx_d[id];
+		double vyi = vy_d[id];
+		double vzi = vz_d[id];
+		double mi = m_d[id];
+
+		for(int s = 0; s < S; ++s){
+			double aa = a_c[S * 6 + s];
+			xi  += dt * aa * kx_d[id + s * N];
+			yi  += dt * aa * ky_d[id + s * N];
+			zi  += dt * aa * kz_d[id + s * N];
+			vxi += dt * aa * kvx_d[id + s * N];
+			vyi += dt * aa * kvy_d[id + s * N];
+			vzi += dt * aa * kvz_d[id + s * N];
+		}
+// *****************************
+
+		kx_d[id + S * N] = vxi;
+		ky_d[id + S * N] = vyi;
+		kz_d[id + S * N] = vzi;
+
+		double ax = 0.0;
+		double ay = 0.0;
+		double az = 0.0;
+
+		if(useHelio == 0){
+			for(int j = Nperturbers-1; j >= 0; --j){
+				accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+			}
+		}
+		else{
+			for(int j = Nperturbers-1; j >= 1; --j){
+				accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+//printf("Nij %d %d %.20g %.20g %.20g\n", id, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+			}
+			accS_device(m_s[0] + mi, xi, yi, zi, ax, ay, az);
+
+//printf("N0 %d %.20g %.20g %.20g\n", id, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+			for(int j = Nperturbers-1; j >= 1; --j){
+				accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
+//printf("Npi %d %d %.20g %.20g %.20g %d\n", id, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+			}
+//printf("Np %d %.20g %.20g %.20g %d\n", id, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+		}
+
+
+		if(GR == 2){
+			acchGR2(xi, yi, zi, vxi, vyi, vzi, ax, ay, az);
+		}
+
+		//NonGrav(xt, yt, zt, vxt, vyt, vzt, ax, ay, az, A1, A2, A3, ALN, NK, NM, Nn, R0, id);
+		//J2(m, xt, yt, zt, ax, ay, az, id);
+
+		kvx_d[id + S * N] = ax;
+		kvy_d[id + S * N] = ay;
+		kvz_d[id + S * N] = az;
+	}
+
+}
+
 __host__ void update1(double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *x, double *y, double *z, double *vx, double *vy, double *vz, int i){
 
 	xt[i] = x[i];
@@ -457,20 +727,6 @@ __host__ void update1(double *xt, double *yt, double *zt, double *vxt, double *v
 	vzt[i] = vz[i];
 }
 
-__global__ void update1_kernel(double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *x, double *y, double *z, double *vx, double *vy, double *vz, int N){
-
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if(idx < N){
-
-		xt[idx] = x[idx];
-		yt[idx] = y[idx];
-		zt[idx] = z[idx];
-		vxt[idx] = vx[idx];
-		vyt[idx] = vy[idx];
-		vzt[idx] = vz[idx];
-	}
-}
 
 __host__ void update2(double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *x, double *y, double *z, double *vx, double *vy, double *vz, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int i, int N, double dt, int S, double *a){
 
@@ -491,27 +747,6 @@ __host__ void update2(double *xt, double *yt, double *zt, double *vxt, double *v
 	}
 }
 
-__global__ void update2_kernel(double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *x, double *y, double *z, double *vx, double *vy, double *vz, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int N, int Nperturbers, double dt, int S){
-	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	if(idx >= Nperturbers && idx < N){
-		xt[idx]  = x[idx];
-		yt[idx]  = y[idx];
-		zt[idx]  = z[idx];
-		vxt[idx] = vx[idx];
-		vyt[idx] = vy[idx];
-		vzt[idx] = vz[idx];
-
-		for(int s = 0; s < S; ++s){
-			xt[idx]  += dt * a_c[S * 6 + s] * kx[idx + s * N];
-			yt[idx]  += dt * a_c[S * 6 + s] * ky[idx + s * N];
-			zt[idx]  += dt * a_c[S * 6 + s] * kz[idx + s * N];
-			vxt[idx] += dt * a_c[S * 6 + s] * kvx[idx + s * N];
-			vyt[idx] += dt * a_c[S * 6 + s] * kvy[idx + s * N];
-			vzt[idx] += dt * a_c[S * 6 + s] * kvz[idx + s * N];
-		}
-	}
-}
 
 __host__ void update(double *x, double *y, double *z, double *vx, double *vy, double *vz, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int i, int N, double dt, double *b){
 	//RKF45
@@ -542,8 +777,8 @@ __global__ void update_kernel(double *x, double *y, double *z, double *vx, doubl
 int main(int argc, char*argv[]){
 
 	//Number of planets
-	const int NN = 28;	//22
-	const int Nperturbers = 27;	//21
+	const int NN = 27 + 1;//+ 8192 * 4; //28
+	const int Nperturbers = 27;
 	const int Ninterpolate = 10;	//number of interpolation points
 	const double dtime = 1.0;     //interval between stored time steps
 
@@ -789,7 +1024,7 @@ printf("CountNodes %d\n", countNodes);
 			if(er < 0) break;
 			timep_h[id * Ninterpolate + countNodes] = timepp;
 
-printf("read %.20g %d %.20g %.20g %.20g%d\n", timep_h[id * Ninterpolate + countNodes], id, xp_h[id * Ninterpolate + countNodes], yp_h[id * Ninterpolate + countNodes], zp_h[id * Ninterpolate + countNodes], id * Ninterpolate + countNodes);
+//printf("read %.20g %d %.20g %.20g %.20g%d\n", timep_h[id * Ninterpolate + countNodes], id, xp_h[id * Ninterpolate + countNodes], yp_h[id * Ninterpolate + countNodes], zp_h[id * Ninterpolate + countNodes], id * Ninterpolate + countNodes);
 
 			//vxp[id * Ninterpolate + countNodes] /= dayUnit;
 			//vyp[id * Ninterpolate + countNodes] /= dayUnit;
@@ -820,7 +1055,8 @@ printf("read %.20g %d %.20g %.20g %.20g%d\n", timep_h[id * Ninterpolate + countN
 	// ---------------------------------------
 	//interpolate on host
 	for(int p = 0; p < Nperturbers; ++p){
-		interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
+		//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
+		interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
 	}
 	// ---------------------------------------
 
@@ -1000,15 +1236,16 @@ printf("read %.20g %d %.20g %.20g %.20g%d\n", timep_h[id * Ninterpolate + countN
 			}
 		}
 		else{
-			update1_kernel <<< 1, NN >>> (xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, N);
-			stageStep_kernel < Nperturbers > <<< 1, NN >>> (m_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, S, Nperturbers, N, useHelio, GR);
+			//stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+			stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time + cc[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
 		}	
 				
 		//stage 2 - 6
 		for(int S = 1; S < 6; ++S){
 			if(useGPU == 0){
 				for(int p = 0; p < Nperturbers; ++p){
-					interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time + cc[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time + cc[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time + cc[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
 				}
 				for(int i = Nperturbers; i < N; ++i){
 					update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, a_h);	//a21
@@ -1018,9 +1255,9 @@ printf("read %.20g %d %.20g %.20g %.20g%d\n", timep_h[id * Ninterpolate + countN
 				}
 			}
 			else{
-				interpolate_kernel < NN > <<< Nperturbers, Ninterpolate >>> (Ninterpolate, Nperturbers, xp_d, yp_d, zp_d, timep_d, time + cc[S] * dt / dayUnit, xt_d, yt_d, zt_d);
-				update2_kernel <<< 1, NN >>> (xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, N, Nperturbers, dt, S);
-				stageStep_kernel < Nperturbers > <<< 1, NN >>> (m_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, S, Nperturbers, N, useHelio, GR);
+				//interpolate_kernel < Ninterpolate > <<< Nperturbers, Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, time + cc[S] * dt / dayUnit, xt_d, yt_d, zt_d);
+				//stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+				stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time + cc[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
 
 			}
 		}
@@ -1077,7 +1314,7 @@ printf("read %.20g %d %.20g %.20g %.20g%d\n", timep_h[id * Ninterpolate + countN
 			}
 		}
 		else{
-			update_kernel <<< 1, NN >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, N, Nperturbers, dt);	
+			update_kernel <<< (NN + 127) / 128, 128 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, N, Nperturbers, dt);	
 		}
 		
 		time = time0 + t * dt / dayUnit;
@@ -1132,11 +1369,12 @@ printf("read %.20g %d %.20g %.20g %.20g%d\n", timep_h[id * Ninterpolate + countN
 		//interpolate on host
 		if(useGPU == 0){
 			for(int p = 0; p < Nperturbers; ++p){
-				interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
+				//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
+				interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
 			}
 		}
 		else{
-			interpolate_kernel < NN > <<< Nperturbers, Ninterpolate >>> (Ninterpolate, Nperturbers, xp_d, yp_d, zp_d, timep_d, time, x_d, y_d, z_d);
+			interpolate_kernel < Ninterpolate > <<< Nperturbers, Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, time, x_d, y_d, z_d);
 		}
 		// ---------------------------------------
 
@@ -1197,6 +1435,7 @@ printf("read %.20g %d %.20g %.20g %.20g%d\n", timep_h[id * Ninterpolate + countN
 		*/
 	}	// end of time step loop
 	fclose(XVfile);
+	cudaDeviceSynchronize();
 	
 }
 	
