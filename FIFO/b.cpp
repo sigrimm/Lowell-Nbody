@@ -37,11 +37,11 @@ int main(){
 	
 	// **************************************** 
 	printf("wait\n");
-	sleep(3);
+	sleep(0.5);
 	printf("Send OK\n");
   
 
-	OK[0] = 1;
+	OK[0] = 100;
         // Now open in write mode and write 
         // string taken from user. 
         fd1 = open(fifoCheck,O_WRONLY); 
