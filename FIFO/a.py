@@ -16,7 +16,6 @@ data = np.ones(2)
 data[0] = 5.0
 data[1] = 6.0
 
-OK = np.zeros(1)
 
 #fifo = open(path, "w")
 
@@ -30,6 +29,7 @@ os.close(fd)
 
 
 ##############################
+OK = np.zeros(1)
 
 fd = open('fifoCheck', 'r')
 

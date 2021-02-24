@@ -14,8 +14,6 @@ int main(){
 	int fd1; 
  
 	double data[2];
-	int OK[1];
-	OK[0] = 0;
  
 	// FIFO file path 
 	const char *myfifo = "myfifo"; 
@@ -41,7 +39,7 @@ int main(){
 	printf("Send OK\n");
   
 
-	OK[0] = 100;
+	int OK = 100;
         // Now open in write mode and write 
         // string taken from user. 
         fd1 = open(fifoCheck,O_WRONLY); 
