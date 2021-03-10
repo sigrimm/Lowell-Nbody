@@ -60,7 +60,6 @@ for i in range(len(name)):
 
 	print("****** %s ********" % name[i])
 
-
 	if(useHelioCentric == 1):
 		f = open("%s_h.dat" % name[i], "w")
 	else:

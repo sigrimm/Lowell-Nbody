@@ -978,6 +978,31 @@ __global__ void update_kernel(double *x, double *y, double *z, double *vx, doubl
 }
 
 
+
+__global__ void bufferToX_kernel(double *XYdata_d, double *timep_d, double *xp_d, double *yp_d, double *zp_d,int N){
+
+	int id = threadIdx.x + blockDim.x * blockIdx.x;
+
+	if(id < N){
+		timep_d[id] = XYdata_d[id * 4];
+		xp_d[id] = XYdata_d[id * 4 + 1];
+		yp_d[id] = XYdata_d[id * 4 + 2];
+		zp_d[id] = XYdata_d[id * 4 + 3];
+if(id < 30) printf("buffer %d %.20g %.20g %.20g %.20g\n", id, timep_d[id], xp_d[id], yp_d[id], zp_d[id]);
+	}
+}
+__host__ void bufferToX(double *XYdata_h, double *timep_h, double *xp_h, double *yp_h, double *zp_h,int N){
+
+
+	for(int id = 0; id < N; ++id){
+		timep_h[id] = XYdata_h[id * 4];
+		xp_h[id] = XYdata_h[id * 4 + 1];
+		yp_h[id] = XYdata_h[id * 4 + 2];
+		zp_h[id] = XYdata_h[id * 4 + 3];
+if(id < 30) printf("buffer %d %.20g %.20g %.20g %.20g\n", id, timep_h[id], xp_h[id], yp_h[id], zp_h[id]);
+	}
+}
+
 int main(int argc, char*argv[]){
 
 	//Number of planets
@@ -1047,6 +1072,7 @@ int main(int argc, char*argv[]){
 		printf("sent back\n");
 	}
 
+	cudaError_t error;
 
 	int *id_h, *id_d;
 	double *m_h, *m_d;
@@ -1063,6 +1089,8 @@ int main(int argc, char*argv[]){
 	double *yp_h, *yp_d;
 	double *zp_h, *zp_d;
 
+	const int NTable = 65000;	//length of perturbers table, number of days
+	//store the entire perturbers file
 
 	//allocate data on host
 	id_h = (int*)malloc(NN * sizeof(int));
@@ -1074,10 +1102,10 @@ int main(int argc, char*argv[]){
 	vy_h = (double*)malloc(NN * sizeof(double));
 	vz_h = (double*)malloc(NN * sizeof(double));
 
-	timep_h = (double*)malloc(Nperturbers * Ninterpolate * sizeof(double));
-	xp_h = (double*)malloc(Nperturbers * Ninterpolate * sizeof(double));
-	yp_h = (double*)malloc(Nperturbers * Ninterpolate * sizeof(double));
-	zp_h = (double*)malloc(Nperturbers * Ninterpolate * sizeof(double));
+	timep_h = (double*)malloc(Nperturbers * NTable * sizeof(double));
+	xp_h = (double*)malloc(Nperturbers * NTable * sizeof(double));
+	yp_h = (double*)malloc(Nperturbers * NTable * sizeof(double));
+	zp_h = (double*)malloc(Nperturbers * NTable * sizeof(double));
 
 	//allocate data on the device
 	cudaMalloc((void **) &id_d, NN * sizeof(int));
@@ -1089,10 +1117,10 @@ int main(int argc, char*argv[]){
 	cudaMalloc((void **) &vy_d, NN * sizeof(double));
 	cudaMalloc((void **) &vz_d, NN * sizeof(double));
 
-	cudaMalloc((void **) &timep_d, Nperturbers * Ninterpolate * sizeof(double));
-	cudaMalloc((void **) &xp_d, Nperturbers * Ninterpolate * sizeof(double));
-	cudaMalloc((void **) &yp_d, Nperturbers * Ninterpolate * sizeof(double));
-	cudaMalloc((void **) &zp_d, Nperturbers * Ninterpolate * sizeof(double));
+	cudaMalloc((void **) &timep_d, Nperturbers * NTable * sizeof(double));
+	cudaMalloc((void **) &xp_d, Nperturbers * NTable * sizeof(double));
+	cudaMalloc((void **) &yp_d, Nperturbers * NTable * sizeof(double));
+	cudaMalloc((void **) &zp_d, Nperturbers * NTable * sizeof(double));
 
 	/*
 	//non Gravitational constants
@@ -1205,7 +1233,7 @@ printf("m %d %.20g\n", i, m_h[i]);
 			vx_h[i] = *reinterpret_cast<double*>(&buffer[4*8+4]);
 			vy_h[i] = *reinterpret_cast<double*>(&buffer[5*8+4]);
 			vz_h[i] = *reinterpret_cast<double*>(&buffer[6*8+4]);
-	printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i]);
+printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i]);
 			++N;
 		}
 		close(fd);
@@ -1243,7 +1271,7 @@ printf("m %d %.20g\n", i, m_h[i]);
 	}
 
 	double time0 = time;	//start time from simulation
-	double time1 = time;	//time from table position
+	double timep0 = 0.0;	//start time from perturbers file
 
 	for(int i = Nperturbers; i < N; ++i){
 		vx_h[i] /= dayUnit;
@@ -1259,10 +1287,10 @@ printf("m %d %.20g\n", i, m_h[i]);
 
 	FILE *XVfile;
 	if(useHelio == 1){
-		XVfile = fopen("All_h.dat", "r");
+		XVfile = fopen("All_h.bin", "rb");
 	}
 	else{
-		XVfile = fopen("All_b.dat", "r");
+		XVfile = fopen("All_b.bin", "rb");
 	}
 
 	if(XVfile == NULL){
@@ -1272,47 +1300,65 @@ printf("m %d %.20g\n", i, m_h[i]);
 
 	// -----------------------------------------
 	//Read table
-	int countNodes = 0;
+
+	double *readBuffer_h;
+	//the buffer contains time, x, y, ,z from all perturbers 
+	//the buffer has 2 swaps
+	cudaHostAlloc((void **) &readBuffer_h, 2 * Nperturbers * 4 * sizeof(double), cudaHostAllocDefault);
+
+	double *XYdata_h, *XYdata_d;
+
+	if(useGPU == 0){
+		XYdata_h = (double*)malloc(Nperturbers * NTable * 4 * sizeof(double));
+	}
+	else{
+		cudaMalloc((void **) &XYdata_d, Nperturbers * NTable * 4 * sizeof(double));
+	}
+
+	int NTableC = 0;
 	for(int t = 0; t < 1000000; ++t){
 		int er;
-printf("CountNodes %d\n", countNodes);
-		for(int i = 0; i < Nperturbers; ++i){
-			double skip;
-			double timepp;
-			int id;
-			er = fscanf(XVfile, "%lf %d", &timepp, &id);
-			fscanf(XVfile, "%lf %lf %lf", &xp_h[id * Ninterpolate + countNodes], &yp_h[id * Ninterpolate + countNodes], &zp_h[id * Ninterpolate + countNodes]);
-			//remove velocities read later
-			fscanf(XVfile, "%lf %lf %lf", &skip, &skip, &skip);
 
-			if(er < 0) break;
-			timep_h[id * Ninterpolate + countNodes] = timepp;
+		int bSwap = (t % 2) * Nperturbers * 4;
+		er = fread(readBuffer_h + bSwap, Nperturbers * 4 * sizeof(double), 1, XVfile);
 
-//printf("read %.20g %d %.20g %.20g %.20g%d\n", timep_h[id * Ninterpolate + countNodes], id, xp_h[id * Ninterpolate + countNodes], yp_h[id * Ninterpolate + countNodes], zp_h[id * Ninterpolate + countNodes], id * Ninterpolate + countNodes);
-
-			//vxp[id * Ninterpolate + countNodes] /= dayUnit;
-			//vyp[id * Ninterpolate + countNodes] /= dayUnit;
-			//vzp[id * Ninterpolate + countNodes] /= dayUnit;
-
-
-			if(i == 0 && t == 0 && timep_h[id * Ninterpolate + countNodes] > time - (Ninterpolate/2 - 1) * dtime){
-				printf("Error, time too small, not enough data before time\n");
-				return 0;
-			}
-			if(i == Nperturbers - 1 && timep_h[id * Ninterpolate + countNodes] > time - Ninterpolate/2 * dtime){
-				++countNodes;
-			}
+		if(t == 0){
+			//set start time of perturbers file
+			timep0 = readBuffer_h[0];
 		}
-		if(er < 0) break;
-		if(countNodes >= Ninterpolate){
+
+		if(useGPU == 0){
+			memcpy(XYdata_h + t * Nperturbers * 4, readBuffer_h + bSwap, Nperturbers * 4 * sizeof(double));
+		}
+		else{
+			cudaMemcpyAsync(XYdata_d + t * Nperturbers * 4, readBuffer_h + bSwap, Nperturbers * 4 * sizeof(double), cudaMemcpyHostToDevice);
+		}
+
+		if(er <= 0){
+//printf("%d %d %d %.20g %g %g %g\n", er, t, bSwap, readBuffer_h[0], readBuffer_h[1], readBuffer_h[2], readBuffer_h[3]);
+			NTableC = t;
 			break;
 		}
+//printf("%d %d %d %.20g %g %g %g\n", er, t, bSwap, readBuffer_h[0], readBuffer_h[1], readBuffer_h[2], readBuffer_h[3]);
 	}
-	if(countNodes < Ninterpolate){
-		printf("Error, time too large, not enough data after time\n");
+	if(useGPU == 0){
+
+		bufferToX (XYdata_h, timep_h, xp_h, yp_h, zp_h, NTableC);
+		free(XYdata_h);
+	}
+	else{
+		bufferToX_kernel <<< (NTableC + 127) / 128, 128 >>> (XYdata_d, timep_d, xp_d, yp_d, zp_d, NTableC);
+		cudaFree(XYdata_d);
+
+	}
+
+	error = cudaGetLastError();
+	printf("Perturbers error = %d = %s\n",error, cudaGetErrorString(error));
+	if(error != 0.0){
 		return 0;
 	}
-	// ---------------------------------------
+	
+return 0;
 
 	
 
@@ -1371,11 +1417,6 @@ printf("CountNodes %d\n", countNodes);
 		cudaMemcpy(vx_d, vx_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(vy_d, vy_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(vz_d, vz_h, NN * sizeof(double), cudaMemcpyHostToDevice);
-
-		cudaMemcpy(timep_d, timep_h, Nperturbers * Ninterpolate * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(xp_d, xp_h, Nperturbers * Ninterpolate * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(yp_d, yp_h, Nperturbers * Ninterpolate * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(zp_d, zp_h, Nperturbers * Ninterpolate * sizeof(double), cudaMemcpyHostToDevice);
 	}
 	
 
@@ -1587,52 +1628,7 @@ printf("CountNodes %d\n", countNodes);
 		
 		time = time0 + t * dt / dayUnit;
 
-		//update table
-		if(time - time1 >= dtime){
-			int countNodes = Ninterpolate - 1;
-			int er;
-			for(int j = 0; j < Ninterpolate - 1; ++j){
-				for(int i = 0; i < Nperturbers; ++i){
-					xp_h[i * Ninterpolate + j] = xp_h[i * Ninterpolate + j + 1];
-					yp_h[i * Ninterpolate + j] = yp_h[i * Ninterpolate + j + 1];
-					zp_h[i * Ninterpolate + j] = zp_h[i * Ninterpolate + j + 1];
-					timep_h[i * Ninterpolate + j] = timep_h[i * Ninterpolate + j + 1];
-				}
-			}
 
-//printf("CountNodes %d\n", countNodes);
-			for(int i = 0; i < Nperturbers; ++i){
-				double skip;
-				double timepp;
-				int id;
-				er = fscanf(XVfile, "%lf %d", &timepp, &id);
-				fscanf(XVfile, "%lf %lf %lf", &xp_h[id * Ninterpolate + countNodes], &yp_h[id * Ninterpolate + countNodes], &zp_h[id * Ninterpolate + countNodes]);
-				//remove velocities read later
-				fscanf(XVfile, "%lf %lf %lf", &skip, &skip, &skip);
-
-				//vxp[id * Ninterpolate + countNodes] /= dayUnit;
-				//vyp[id * Ninterpolate + countNodes] /= dayUnit;
-				//vzp[id * Ninterpolate + countNodes] /= dayUnit;
-
-				if(er < 0) break;
-				timep_h[id * Ninterpolate + countNodes] = timepp;
-	
-//printf("%.20g %d %.20g %.20g %.20g %d\n", timep_h[id * Ninterpolate + countNodes], id, xp_h[id * Ninterpolate + countNodes], yp_h[id * Ninterpolate + countNodes], zp_h[id * Ninterpolate + countNodes], id * Ninterpolate + countNodes);
-
-			}
-			if(er < 0){
-				printf("Error, time too large, not enough data after time\n");
-				return 0;
-			}
-			time1 = time;
-			if(useGPU == 1){
-				cudaMemcpy(timep_d, timep_h, Nperturbers * Ninterpolate * sizeof(double), cudaMemcpyHostToDevice);
-				cudaMemcpy(xp_d, xp_h, Nperturbers * Ninterpolate * sizeof(double), cudaMemcpyHostToDevice);
-				cudaMemcpy(yp_d, yp_h, Nperturbers * Ninterpolate * sizeof(double), cudaMemcpyHostToDevice);
-				cudaMemcpy(zp_d, zp_h, Nperturbers * Ninterpolate * sizeof(double), cudaMemcpyHostToDevice);
-			}
-		}
-		
 		// ---------------------------------------
 		//interpolate on host
 		if(useGPU == 0){
