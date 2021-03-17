@@ -1,0 +1,4 @@
+run integrator for 400000 steps
+
+cat Outhelio10_0000000* > out105140_h.dat
+python3 compare.py > diff105140GPU_c.dat

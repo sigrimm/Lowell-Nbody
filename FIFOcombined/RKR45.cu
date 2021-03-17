@@ -296,10 +296,10 @@ __global__ void interpolate_kernel(int Nperturbers, double *xp_d, double *yp_d, 
 		__shared__ double Pz_s[Ninterpolate][Ninterpolate];
 		__shared__ double tn_s[Ninterpolate];
 
-		int it = floor((time - timep0 + 0.5 * dtimep) / dtimep);
-		it -= Ninterpolate / 2;
+		int it = floor((time - timep0) / dtimep);
+		it -= (Ninterpolate / 2 + 1);
 
-printf("interpolate %d %.20g %.20g %d\n", pid, timep0, time, it);
+//printf("interpolateA %d %.20g %.20g %d\n", pid, timep0, time, it);
 
 		if(idx < Ninterpolate){
 			Px_s[0][idx] = xp_d[Nperturbers * (idx + it) + pid];
@@ -307,17 +307,17 @@ printf("interpolate %d %.20g %.20g %d\n", pid, timep0, time, it);
 			Pz_s[0][idx] = zp_d[Nperturbers * (idx + it) + pid];
 			tn_s[idx] = timep_d[Nperturbers * (idx + it) + pid];
 
-if(pid == 0) printf("interpolate %d %d %.20g %.20g %.20g %.20g\n", pid, idx, timep0, time, tn_s[idx], Px_s[0][idx]);
+//if(pid == 1) printf("interpolateB %d %d %.20g %.20g %.20g %.20g\n", pid, idx, timep0, time, tn_s[idx], Px_s[0][idx]);
 		}
 		__syncthreads();
 
 		for(int j = 1; j < Ninterpolate; ++j){
-//printf("****\n");
+//if(pid == 1) printf("****\n");
 			if(idx < Ninterpolate - j){
 				Px_s[j][idx] = ((time - tn_s[idx + j]) * Px_s[j-1][idx] + (tn_s[idx] - time) * Px_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
 				Py_s[j][idx] = ((time - tn_s[idx + j]) * Py_s[j-1][idx] + (tn_s[idx] - time) * Py_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
 				Pz_s[j][idx] = ((time - tn_s[idx + j]) * Pz_s[j-1][idx] + (tn_s[idx] - time) * Pz_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
-//printf("%d %d %g %g %g %g %.20g\n", idx, idx+j, tn_s[idx], tn_s[idx + j], Px_s[j-1][idx], Px_s[j-1][idx + 1], Px_s[j][idx]);
+//if(pid == 1) printf("%d %d %.20g %.20g %g %g %.20g\n", idx, idx+j, tn_s[idx], tn_s[idx + j], Px_s[j-1][idx], Px_s[j-1][idx + 1], Px_s[j][idx]);
 			}
 			__syncthreads();
 		}
@@ -326,8 +326,8 @@ if(pid == 0) printf("interpolate %d %d %.20g %.20g %.20g %.20g\n", pid, idx, tim
 			xt_d[pid] = Px_s[Ninterpolate-1][0];
 			yt_d[pid] = Py_s[Ninterpolate-1][0];
 			zt_d[pid] = Pz_s[Ninterpolate-1][0];
+//printf("interpolateB %.20g %d %.20g %.20g %.20g\n", time, pid, xt_d[pid], yt_d[pid], zt_d[pid]);
 		}
-//printf("interpolate %.20g %d %.20g %.20g %.20g\n", time, pid, xt[pid], yt[pid], zt[pid]);
 
 	}
 }
@@ -476,18 +476,10 @@ __global__ void stageStep_kernel(double *m_d, double *x_d, double *y_d, double *
 
 
 	if(threadIdx.x < Nperturbers){
-		if(S == 0){
-			x_s[threadIdx.x] = x_d[idx];
-			y_s[threadIdx.x] = y_d[idx];
-			z_s[threadIdx.x] = z_d[idx];
-			m_s[threadIdx.x] = m_d[idx];
-		}
-		else{
 			x_s[threadIdx.x] = xt_d[idx];
 			y_s[threadIdx.x] = yt_d[idx];
 			z_s[threadIdx.x] = zt_d[idx];
 			m_s[threadIdx.x] = m_d[idx];
-		}
 	}
 	__syncthreads();
 
@@ -993,7 +985,7 @@ __global__ void bufferToX_kernel(double *XYdata_d, double *timep_d, double *xp_d
 		xp_d[id] = XYdata_d[id * 4 + 1];
 		yp_d[id] = XYdata_d[id * 4 + 2];
 		zp_d[id] = XYdata_d[id * 4 + 3];
-if(id < 30) printf("buffer %d %.20g %.20g %.20g %.20g\n", id, timep_d[id], xp_d[id], yp_d[id], zp_d[id]);
+if(id < 3 * 27) printf("buffer %d %d %.20g %.20g %.20g %.20g\n", id / 27, id, timep_d[id], xp_d[id], yp_d[id], zp_d[id]);
 	}
 }
 __host__ void bufferToX(double *XYdata_h, double *timep_h, double *xp_h, double *yp_h, double *zp_h,int N){
@@ -1032,6 +1024,7 @@ int main(int argc, char*argv[]){
 	//double dt = 0.1 * dayUnit;
 
 	//long long int Nsteps = 400000;	
+	//long long int Nsteps = 40000;
 	long long int Nsteps = 40000;
 	long long int outInterval = 100;
 	double dt = 0.01 * dayUnit;
@@ -1306,7 +1299,8 @@ printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i])
 	// -----------------------------------------
 	//Read table
 
-	double *readBuffer_h;
+	double *readBufferA_h;
+	double *readBufferB_h;
 	//the buffer contains time, x, y, ,z from all perturbers 
 	//the buffer has 2 swaps
 
@@ -1314,52 +1308,92 @@ printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i])
 
 	if(useGPU == 0){
 		XYdata_h = (double*)malloc(Nperturbers * NTable * 4 * sizeof(double));
-		readBuffer_h = (double*)malloc( 2 * Nperturbers * 4 * sizeof(double));
+		readBufferA_h = (double*)malloc(Nperturbers * 4 * sizeof(double));
+		readBufferB_h = (double*)malloc(Nperturbers * 4 * sizeof(double));
 	}
 	else{
-		cudaHostAlloc((void **) &readBuffer_h, 2 * Nperturbers * 4 * sizeof(double), cudaHostAllocDefault);
+		cudaHostAlloc((void **) &readBufferA_h, Nperturbers * 4 * sizeof(double), cudaHostAllocDefault);
+		cudaHostAlloc((void **) &readBufferB_h, Nperturbers * 4 * sizeof(double), cudaHostAllocDefault);
 		cudaMalloc((void **) &XYdata_d, Nperturbers * NTable * 4 * sizeof(double));
 	}
 
 	int NTableC = 0;
 	for(int t = 0; t < 1000000; ++t){
+	//for(int t = 0; t < 10; ++t){
+//printf("t %d\n", t);
 		int er;
 
-		int bSwap = (t % 2) * Nperturbers * 4;
-		er = fread(readBuffer_h + bSwap, Nperturbers * 4 * sizeof(double), 1, XVfile);
+		if(t % 2 == 0){
+//printf("start read A\n");
+			er = fread(readBufferA_h, Nperturbers * 4 * sizeof(double), 1, XVfile);
+//printf("end read A\n");
+		}
+		else{
+//printf("start read B\n");
+			er = fread(readBufferB_h, Nperturbers * 4 * sizeof(double), 1, XVfile);
+//printf("end read B\n");
+		}
+
+		/*
+		//only here for checking
+		if(t < 4){
+			for(int i = 0; i < Nperturbers; ++i){
+				if(t % 2 == 0) printf("XYa %d %.20g %g %g %g\n", i, readBufferA_h[i * 4 + 0], readBufferA_h[i * 4 + 1], readBufferA_h[i * 4 + 2], readBufferA_h[i * 4 + 3]);
+				if(t % 2 == 1) printf("XYb %d %.20g %g %g %g\n", i, readBufferB_h[i * 4 + 0], readBufferB_h[i * 4 + 1], readBufferB_h[i * 4 + 2], readBufferB_h[i * 4 + 3]);
+			}
+		}
+		*/
 
 		if(t == 0){
 			//set start time of perturbers file
-			timep0 = readBuffer_h[0];
+			timep0 = readBufferA_h[0];
 		}
 
 		if(useGPU == 0){
-			memcpy(XYdata_h + t * Nperturbers * 4, readBuffer_h + bSwap, Nperturbers * 4 * sizeof(double));
+			if(t % 2 == 0){
+				memcpy(XYdata_h + t * Nperturbers * 4, readBufferA_h, Nperturbers * 4 * sizeof(double));
+			}
+			else{
+				memcpy(XYdata_h + t * Nperturbers * 4, readBufferB_h, Nperturbers * 4 * sizeof(double));
+			}
 		}
 		else{
-			cudaMemcpyAsync(XYdata_d + t * Nperturbers * 4, readBuffer_h + bSwap, Nperturbers * 4 * sizeof(double), cudaMemcpyHostToDevice);
+			cudaDeviceSynchronize(); //this must be here
+
+			//both buffers A and B use the same stream, so copy can overlap with the next read, but not with the
+			//next copy. 
+			if(t % 2 == 0){
+//printf("start copy A\n");
+				cudaMemcpyAsync(XYdata_d + t * Nperturbers * 4, readBufferA_h, Nperturbers * 4 * sizeof(double), cudaMemcpyHostToDevice);
+			}
+			else{
+//printf("start copy B\n");
+				cudaMemcpyAsync(XYdata_d + t * Nperturbers * 4, readBufferB_h, Nperturbers * 4 * sizeof(double), cudaMemcpyHostToDevice);
+			}
 		}
 
 		if(er <= 0){
-//printf("%d %d %d %.20g %g %g %g\n", er, t, bSwap, readBuffer_h[0], readBuffer_h[1], readBuffer_h[2], readBuffer_h[3]);
+//printf("readbuffer %d %d %d %.20g %g %g %g\n", er, t, bSwap, readBuffer_h[0], readBuffer_h[1], readBuffer_h[2], readBuffer_h[3]);
 			NTableC = t;
 			break;
 		}
-//printf("%d %d %d %.20g %g %g %g\n", er, t, bSwap, readBuffer_h[0], readBuffer_h[1], readBuffer_h[2], readBuffer_h[3]);
-	}
 
+//if(t < 4) printf("readbuffer %d %d %d %.20g %g %g %g\n", er, t, bSwap, readBuffer_h[0], readBuffer_h[1], readBuffer_h[2], readBuffer_h[3]);
+	}
 	cudaDeviceSynchronize();
 
 	if(useGPU == 0){
 
 		bufferToX (XYdata_h, timep_h, xp_h, yp_h, zp_h, NTableC);
 		free(XYdata_h);
-		free(readBuffer_h);
+		free(readBufferA_h);
+		free(readBufferB_h);
 	}
 	else{
 		bufferToX_kernel <<< (NTableC + 127) / 128, 128 >>> (XYdata_d, timep_d, xp_d, yp_d, zp_d, NTableC);
 		cudaFree(XYdata_d);
-		cudaFreeHost(readBuffer_h);
+		cudaFreeHost(readBufferA_h);
+		cudaFreeHost(readBufferB_h);
 	}
 	
 
@@ -1540,7 +1574,8 @@ printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i])
 
 	for(long long int t = 1; t <= Nsteps; ++t){
 
-			
+//cudaDeviceSynchronize();
+//printf("%lld %d\n", t, 0);	
 		//stage 1
 		S = 0;
 		if(useGPU == 0){
@@ -1561,10 +1596,10 @@ printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i])
 			//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
 		}	
 	
-cudaDeviceSynchronize();
-return 0;			
 		//stage 2 - 6
 		for(int S = 1; S < 6; ++S){
+//cudaDeviceSynchronize();
+//printf("%lld %d\n", t, S);	
 			if(useGPU == 0){
 				for(int p = 0; p < Nperturbers; ++p){
 					//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
@@ -1584,6 +1619,7 @@ return 0;
 
 			}
 		}
+//cudaDeviceSynchronize();
 //		stageStepAll_kernel < Nperturbers, Ninterpolate, 128 > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time, dt, N, useHelio, GR);
 	
 		double sc = 1.0e-15;

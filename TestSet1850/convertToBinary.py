@@ -18,8 +18,8 @@ f = open(bfilename,"wb")
 
 for i in range(len(time)):
 
-	if(i < 10):
-		print(time[i], x[i], y[i], z[i])
+	if(i < 27 * 3):
+		print(i, time[i], x[i], y[i], z[i])
 	s = struct.pack('d', time[i])
 	f.write(s)
 	s = struct.pack('d', x[i])
