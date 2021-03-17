@@ -3,6 +3,7 @@
 A N-body integrator for small bodies of the Solar System
 Author: Simon Grimm, University of Bern, Switzerland
 
+
 # Instructions #
 
 ## Step 1A, get initial conditions ##
