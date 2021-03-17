@@ -201,7 +201,7 @@ __host__ void interpolate(int Ninterpolate, double *xp, double *yp, double *zp, 
 //printf("interpolate %.20g %d %.20g %.20g %.20g\n", time, p, xt[p], yt[p], zt[p]);
 
 }
-__host__ void interpolate2(int Ninterpolate, double *xp, double *yp, double *zp, double *timep, double time, double *xt, double *yt, double *zt, int p){
+__host__ void interpolate2(int Ninterpolate, double *xp, double *yp, double *zp, double *timep, double timep0, double dtimep, double time, double *xt, double *yt, double *zt, int p){
 
 
 	//p is the particle index
@@ -284,7 +284,7 @@ __host__ void interpolate2(int Ninterpolate, double *xp, double *yp, double *zp,
 
 
 template <int Ninterpolate>
-__global__ void interpolate_kernel(int Nperturbers, double *xp, double *yp, double *zp, double *timep, double time, double *xt, double *yt, double *zt){
+__global__ void interpolate_kernel(int Nperturbers, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *xt_d, double *yt_d, double *zt_d){
 
 	int pid = blockIdx.x;	//perturber index, Nperturbers
 	int idx = threadIdx.x;
@@ -296,13 +296,18 @@ __global__ void interpolate_kernel(int Nperturbers, double *xp, double *yp, doub
 		__shared__ double Pz_s[Ninterpolate][Ninterpolate];
 		__shared__ double tn_s[Ninterpolate];
 
-		if(idx < Ninterpolate){
-			Px_s[0][idx] = xp[pid * Ninterpolate + idx];
-			Py_s[0][idx] = yp[pid * Ninterpolate + idx];
-			Pz_s[0][idx] = zp[pid * Ninterpolate + idx];
-			tn_s[idx] = timep[pid * Ninterpolate + idx];
+		int it = floor((time - timep0 + 0.5 * dtimep) / dtimep);
+		it -= Ninterpolate / 2;
 
-//printf("interpolate %d %d %.20g %.20g %.20g\n", p, i, time, tn_s[i], Px_s[0][i]);
+printf("interpolate %d %.20g %.20g %d\n", pid, timep0, time, it);
+
+		if(idx < Ninterpolate){
+			Px_s[0][idx] = xp_d[Nperturbers * (idx + it) + pid];
+			Py_s[0][idx] = yp_d[Nperturbers * (idx + it) + pid];
+			Pz_s[0][idx] = zp_d[Nperturbers * (idx + it) + pid];
+			tn_s[idx] = timep_d[Nperturbers * (idx + it) + pid];
+
+if(pid == 0) printf("interpolate %d %d %.20g %.20g %.20g %.20g\n", pid, idx, timep0, time, tn_s[idx], Px_s[0][idx]);
 		}
 		__syncthreads();
 
@@ -318,9 +323,9 @@ __global__ void interpolate_kernel(int Nperturbers, double *xp, double *yp, doub
 		}
 
 		if(idx == 0){
-			xt[pid] = Px_s[Ninterpolate-1][0];
-			yt[pid] = Py_s[Ninterpolate-1][0];
-			zt[pid] = Pz_s[Ninterpolate-1][0];
+			xt_d[pid] = Px_s[Ninterpolate-1][0];
+			yt_d[pid] = Py_s[Ninterpolate-1][0];
+			zt_d[pid] = Pz_s[Ninterpolate-1][0];
 		}
 //printf("interpolate %.20g %d %.20g %.20g %.20g\n", time, pid, xt[pid], yt[pid], zt[pid]);
 
@@ -1009,7 +1014,7 @@ int main(int argc, char*argv[]){
 	const int NN = 27 + 1;//+ 8192 * 4; //28
 	const int Nperturbers = 27;
 	const int Ninterpolate = 10;	//number of interpolation points
-	const double dtime = 1.0;     //interval between stored time steps
+	const double dtimep = 1.0;     //interval between stored time steps
 
 	int GR = 2;
 	//2 Sitarski 1982, heliocentric coordinates
@@ -1304,14 +1309,15 @@ printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i])
 	double *readBuffer_h;
 	//the buffer contains time, x, y, ,z from all perturbers 
 	//the buffer has 2 swaps
-	cudaHostAlloc((void **) &readBuffer_h, 2 * Nperturbers * 4 * sizeof(double), cudaHostAllocDefault);
 
 	double *XYdata_h, *XYdata_d;
 
 	if(useGPU == 0){
 		XYdata_h = (double*)malloc(Nperturbers * NTable * 4 * sizeof(double));
+		readBuffer_h = (double*)malloc( 2 * Nperturbers * 4 * sizeof(double));
 	}
 	else{
+		cudaHostAlloc((void **) &readBuffer_h, 2 * Nperturbers * 4 * sizeof(double), cudaHostAllocDefault);
 		cudaMalloc((void **) &XYdata_d, Nperturbers * NTable * 4 * sizeof(double));
 	}
 
@@ -1341,16 +1347,21 @@ printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i])
 		}
 //printf("%d %d %d %.20g %g %g %g\n", er, t, bSwap, readBuffer_h[0], readBuffer_h[1], readBuffer_h[2], readBuffer_h[3]);
 	}
+
+	cudaDeviceSynchronize();
+
 	if(useGPU == 0){
 
 		bufferToX (XYdata_h, timep_h, xp_h, yp_h, zp_h, NTableC);
 		free(XYdata_h);
+		free(readBuffer_h);
 	}
 	else{
 		bufferToX_kernel <<< (NTableC + 127) / 128, 128 >>> (XYdata_d, timep_d, xp_d, yp_d, zp_d, NTableC);
 		cudaFree(XYdata_d);
-
+		cudaFreeHost(readBuffer_h);
 	}
+	
 
 	error = cudaGetLastError();
 	printf("Perturbers error = %d = %s\n",error, cudaGetErrorString(error));
@@ -1358,19 +1369,9 @@ printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i])
 		return 0;
 	}
 	
-return 0;
 
 	
 
-	// ---------------------------------------
-	//interpolate on host
-	for(int p = 0; p < Nperturbers; ++p){
-		//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
-		interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
-	}
-	// ---------------------------------------
-
-	
 
 	//first output
 	double comx = 0.0;
@@ -1528,14 +1529,25 @@ return 0;
 		cudaMemcpyToSymbol(c_c, c_h, 6 * sizeof(double), 0, cudaMemcpyHostToDevice);
 	}
 
+	cudaDeviceSynchronize();
+	error = cudaGetLastError();
+	printf("copy error = %d = %s\n",error, cudaGetErrorString(error));
+	if(error != 0.0){
+		return 0;
+	}
 
 	int S;
+
 	for(long long int t = 1; t <= Nsteps; ++t){
 
 			
 		//stage 1
 		S = 0;
 		if(useGPU == 0){
+			for(int p = 0; p < Nperturbers; ++p){
+				//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+				interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+			}
 			for(int i = 0; i < N; ++i){
 				update1(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, i);
 			}
@@ -1544,16 +1556,19 @@ return 0;
 			}
 		}
 		else{
-			//stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
-			stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+			interpolate_kernel < Ninterpolate > <<< Nperturbers, Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
+			stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+			//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
 		}	
-				
+	
+cudaDeviceSynchronize();
+return 0;			
 		//stage 2 - 6
 		for(int S = 1; S < 6; ++S){
 			if(useGPU == 0){
 				for(int p = 0; p < Nperturbers; ++p){
 					//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
-					interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
 				}
 				for(int i = Nperturbers; i < N; ++i){
 					update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, a_h);	//a21
@@ -1563,9 +1578,9 @@ return 0;
 				}
 			}
 			else{
-				//interpolate_kernel < Ninterpolate > <<< Nperturbers, Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
-				//stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
-				stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+				interpolate_kernel < Ninterpolate > <<< Nperturbers, Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
+				stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+				//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
 
 			}
 		}
@@ -1629,21 +1644,7 @@ return 0;
 		time = time0 + t * dt / dayUnit;
 
 
-		// ---------------------------------------
-		//interpolate on host
-		if(useGPU == 0){
-			for(int p = 0; p < Nperturbers; ++p){
-				//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
-				interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time, x_h, y_h, z_h, p);
-			}
-		}
-		else{
-			interpolate_kernel < Ninterpolate > <<< Nperturbers, Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, time, x_d, y_d, z_d);
-		}
-		// ---------------------------------------
 
-		
-		
 		if(t % outInterval == 0){
 			if(useGPU == 1){
 				cudaMemcpy(x_h, x_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
