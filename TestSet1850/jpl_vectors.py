@@ -3,7 +3,7 @@ from astroquery.jplsbdb import SBDB
 import sys
 
 epoch_start = '1850-01-01'  # no earlier than 1950 due to Horizons limits
-epoch_stop = '2020-12-31'
+epoch_stop = '2026-12-31'
 
 
 useHelioCentric = 1
@@ -126,7 +126,7 @@ print("R0 %s" % R0)
 if(useHelioCentric == 1):
 	f = open("%s_h.dat" % name, "w")
 else:
-	f = open("%s_d.dat" % name, "w")
+	f = open("%s_b.dat" % name, "w")
 
 for i in range(len(vec)):
 	print("%.20g %.30g %.30g %.30g %.30g %.30g %.30g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g" % (datetime_jd[i], x[i], y[i], z[i], vx[i], vy[i], vz[i], A1, A2, A3, ALN, NK, NM, NN, R0), file = f)

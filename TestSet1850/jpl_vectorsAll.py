@@ -1,7 +1,7 @@
 from astroquery.jplhorizons import Horizons
 
 epoch_start = '1850-01-01'  # no earlier than 1950 due to Horizons limits
-epoch_stop = '2020-12-31'
+epoch_stop = '2026-12-31'
 
 
 useHelioCentric = 1
@@ -63,7 +63,7 @@ for i in range(len(name)):
 	if(useHelioCentric == 1):
 		f = open("%s_h.dat" % name[i], "w")
 	else:
-		f = open("%s_d.dat" % name[i], "w")
+		f = open("%s_b.dat" % name[i], "w")
 
 	for i in range(len(vec)):
 		print("%.20g %.30g %.30g %.30g %.30g %.30g %.30g" % (datetime_jd[i], x[i], y[i], z[i], vx[i], vy[i], vz[i]), file = f)

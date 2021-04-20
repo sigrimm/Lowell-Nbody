@@ -1363,7 +1363,7 @@ int main(int argc, char*argv[]){
 		printf("Nsteps: %lld\n", Nsteps);
 
 		NTP = 1;
-		Nsteps = 1200;
+		Nsteps = 17000;
 	}
 
 	for(int i = 1; i < argc; i += 2){
