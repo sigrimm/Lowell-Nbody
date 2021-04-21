@@ -14,8 +14,8 @@ int main(){
 
 	int er;
 
-	for(int t = 0; t < 100; ++t){
-		for(int t = 0; t < N; ++t){
+	for(int t = 0; t < 1e6; ++t){
+		for(int i = 0; i < N; ++i){
 			er = fread(&id, sizeof(unsigned long long int), 1, infile);
 			er = fread(&time, sizeof(double), 1, infile);
 			er = fread(&x, sizeof(double), 1, infile);
@@ -26,10 +26,10 @@ int main(){
 			er = fread(&vz, sizeof(double), 1, infile);
 
 			if(er <= 0) break;
-			//unsigned long long int j = __builtin_bswap64 (id);
+			unsigned long long int j = __builtin_bswap64 (id);
 			//j is the correct index
 
-			printf("%.15g | %llu %.15g %.15g %.15g %.15g %.15g %.15g\n", time, id, x, y, z, vx, vy, vz);
+			printf("%.15g %llu %g %.15g %.15g %.15g %.15g %.15g %.15g\n", time, j, 0.0, x, y, z, vx, vy, vz);
 		}
 		if(er <= 0) break;
 	}

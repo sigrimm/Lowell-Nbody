@@ -1359,11 +1359,14 @@ int main(int argc, char*argv[]){
 
 	if(useFIFO == 2){
 		readHeader(binfile, time0, time1, outInterval, outStart, NTP, comet);
+
+		dt = 0.1 * dayUnit;
+
 		Nsteps = (time1 - time0) / dt;
 		printf("Nsteps: %lld\n", Nsteps);
 
 		NTP = 1;
-		Nsteps = 17000;
+		Nsteps = 18000;
 	}
 
 	for(int i = 1; i < argc; i += 2){
@@ -1536,7 +1539,7 @@ printf("m %d %.20g\n", i, m_h[i]);
 	vz_h[0] = 0.0;
 
 	for(int i = 1; i < NN; ++i){
-		id_h[i] = 0;
+		id_h[i] = Nperturbers + i;
 		x_h[i] = 0.0;
 		y_h[i] = 0.0;
 		z_h[i] = 0.0;
@@ -1548,9 +1551,11 @@ printf("m %d %.20g\n", i, m_h[i]);
 
 	if(useFIFO == 2){	
 		//read test particles
-		readFile(binfile, Nperturbers, x_h, y_h, z_h, vx_h, vy_h, vz_h, A1_h, A2_h, A3_h, id_h, NTP);
+		int er = 0;
+		er = readFile(binfile, Nperturbers, x_h, y_h, z_h, vx_h, vy_h, vz_h, A1_h, A2_h, A3_h, id_h, NTP);
 		fclose(binfile);
 		N += NTP;
+		if(er == 1) return 0;
 	}
 	else{
 
@@ -1749,7 +1754,6 @@ printf("m %d %.20g\n", i, m_h[i]);
 	double vcomx = 0.0;
 	double vcomy = 0.0;
 	double vcomz = 0.0;
-	double mtot = 0.0;	
 
 
 	if(useHelio == 0 && outHelio == 1){
@@ -1779,43 +1783,45 @@ printf("m %d %.20g\n", i, m_h[i]);
 			sprintf(outfilename, "Outbary10.bin");
 		}
 	}
-	if(OutBinary == 0){
-		outfile = fopen(outfilename, "w");
-	}
-	else{
-		outfile = fopen(outfilename, "wb");
-	}
+//add condition for backward integration
 
-
-	printf("%s\n", outfilename);
-	if(OutBinary == 0){
-		for(int i = 0; i < N; ++i){
-			fprintf(outfile, "%.10g %d %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time0, i, m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], vcomx + vx_h[i], vcomy + vy_h[i], vcomz + vz_h[i]);
+	if(time0 >= outStart){
+		if(OutBinary == 0){
+			outfile = fopen(outfilename, "w");
 		}
-	}
-	else{
-		for(int i = Nperturbers; i < N; ++i){
-			unsigned long long int id = i;
-			double xx = comx + x_h[i];
-			double yy = comy + y_h[i];
-			double zz = comz + z_h[i];
-			double vxx = vcomx + vx_h[i];
-			double vyy = vcomy + vy_h[i];
-			double vzz = vcomz + vz_h[i];
-
-			fwrite(&id, 1, sizeof(unsigned long long int), outfile);
-			fwrite(&time0, 1, sizeof(double), outfile);
-			fwrite(&xx, 1, sizeof(double), outfile);
-			fwrite(&yy, 1, sizeof(double), outfile);
-			fwrite(&zz, 1, sizeof(double), outfile);
-			fwrite(&vxx, 1, sizeof(double), outfile);
-			fwrite(&vyy, 1, sizeof(double), outfile);
-			fwrite(&vzz, 1, sizeof(double), outfile);
+		else{
+			outfile = fopen(outfilename, "wb");
 		}
 
-	}
-	fclose(outfile);
+		printf("%s\n", outfilename);
+		if(OutBinary == 0){
+			for(int i = Nperturbers; i < N; ++i){
+				fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time0, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], vcomx + vx_h[i], vcomy + vy_h[i], vcomz + vz_h[i]);
+			}
+		}
+		else{
+			for(int i = Nperturbers; i < N; ++i){
+				unsigned long long int id = id_h[i];
+				double xx = comx + x_h[i];
+				double yy = comy + y_h[i];
+				double zz = comz + z_h[i];
+				double vxx = vcomx + vx_h[i];
+				double vyy = vcomy + vy_h[i];
+				double vzz = vcomz + vz_h[i];
 
+				fwrite(&id, 1, sizeof(unsigned long long int), outfile);
+				fwrite(&time0, 1, sizeof(double), outfile);
+				fwrite(&xx, 1, sizeof(double), outfile);
+				fwrite(&yy, 1, sizeof(double), outfile);
+				fwrite(&zz, 1, sizeof(double), outfile);
+				fwrite(&vxx, 1, sizeof(double), outfile);
+				fwrite(&vyy, 1, sizeof(double), outfile);
+				fwrite(&vzz, 1, sizeof(double), outfile);
+			}
+
+		}
+		fclose(outfile);
+	}
 
 	//copy the data to the device
 	if(useGPU == 1){
@@ -2071,8 +2077,8 @@ cudaDeviceSynchronize();
 		time = time0 + t * dt / dayUnit;
 
 
-
-		if(t % outInterval == 0){
+//add condition for backward integration
+		if(t % outInterval == 0 && time >= outStart){
 			if(useGPU == 1){
 				cudaMemcpy(x_h, x_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
 				cudaMemcpy(y_h, y_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
@@ -2112,7 +2118,6 @@ cudaDeviceSynchronize();
 			vcomx = 0.0;
 			vcomy = 0.0;
 			vcomz = 0.0;
-			mtot = 0.0;
 
 			if(useHelio == 0 && outHelio == 1){
 				//convert to heliocentric output
@@ -2125,14 +2130,14 @@ cudaDeviceSynchronize();
 			}
 			
 			if(OutBinary == 0){
-				for(int i = 0; i < N; ++i){
-					fprintf(outfile, "%.10g %d %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time, i, m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], vcomx + vx_h[i], vcomy + vy_h[i], vcomz + vz_h[i]);
+				for(int i = Nperturbers; i < N; ++i){
+					fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], vcomx + vx_h[i], vcomy + vy_h[i], vcomz + vz_h[i]);
 				}
 			}
 			else{
 				for(int i = Nperturbers; i < N; ++i){
 
-					unsigned long long int id = i;
+					unsigned long long int id = id_h[i];
 					double xx = comx + x_h[i];
 					double yy = comy + y_h[i];
 					double zz = comz + z_h[i];

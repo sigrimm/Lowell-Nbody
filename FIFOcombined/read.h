@@ -51,9 +51,6 @@ int readHeader(FILE *infile, double &time0, double &time1, long long int &outInt
 int readFile(FILE *infile, int Nperturbers, double *x_h, double *y_h, double *z_h, double *vx_h, double *vy_h, double *vz_h, double *A1_h, double *A2_h, double *A3_h, unsigned long long int *id_h, int N){
 
 
-	unsigned long long int id;
-	double temp;
-	long long int header;
 	//printf("size %lu %lu\n", sizeof(unsigned long long int), sizeof(double));
 
 	int er = 0;
@@ -70,14 +67,25 @@ int readFile(FILE *infile, int Nperturbers, double *x_h, double *y_h, double *z_
 		er = fread(&A2_h[i], sizeof(double), 1, infile);
 		er = fread(&A3_h[i], sizeof(double), 1, infile);
 
-		unsigned long long int j = __builtin_bswap64 (id);
+		if(er <= 0.0){
+			printf("Error in reading initial conditions\n");
+			return 1;
+		}
+
+		unsigned long long int j = __builtin_bswap64 (id_h[i]);
 		//j is the correct index
 
-		if(i < 10 || i > N - 10) printf("%d | %llu %llu %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", i, id_h[i], j, x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+		if(i < 10 + Nperturbers || i > N + Nperturbers - 10) printf("%d %llu %llu | %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", i, id_h[i], j, x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+
+		if(A1_h[i] != 0.0 || A2_h[i] != 0.0 || A3_h[i] != 0.0){
+			printf("A %d %g %g %g\n", i, A1_h[i], A2_h[i], A3_h[i]);
+		}
 	}
 
 /*
 	//read trailer
+	double temp;
+	long long int header;
 	er = fread(&header, sizeof(unsigned long long int), 1, infile);
 	printf("header %lld %d\n", header, er);
 	if(header != 130 || er <= 0.0){
