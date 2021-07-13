@@ -1330,7 +1330,7 @@ int main(int argc, char*argv[]){
 
 	FILE *binfile;
 	if(useFIFO == 2){	
-		binfile = fopen("210327_1522_genga_req.bin", "rb");
+		binfile = fopen("210705_2315_genga_req.bin", "rb");
 	}	
 
 	int useHelio = 1;
@@ -1338,17 +1338,18 @@ int main(int argc, char*argv[]){
 	//1 print output in heliocentric coordinates
 	//0 print output in barycentric  coordinates
 
-	int OutBinary = 0;
+	int OutBinary = 1;
 
 	//long long int Nsteps = 40000;	
-	//long long int outInterval = 10;
-	//double dt = 0.1 * dayUnit;
+	long long int Nsteps = 18000;
+	long long int outInterval = 10;
+	double dt = 0.1 * dayUnit;
 
 	// short comparison
 	//long long int Nsteps = 40000;
-	long long int Nsteps = 400;
-	long long int outInterval = 100;
-	double dt = 0.01 * dayUnit;
+	//long long int Nsteps = 400;
+	//long long int outInterval = 100;
+	//double dt = 0.01 * dayUnit;
 	
 	//for timing
 	//long long int Nsteps = 1000;
@@ -1357,16 +1358,21 @@ int main(int argc, char*argv[]){
 
 	time1 = time0 + dt * Nsteps;
 
+
 	if(useFIFO == 2){
+		printf("read file\n");
 		readHeader(binfile, time0, time1, outInterval, outStart, NTP, comet);
 
-		dt = 0.1 * dayUnit;
+		//change this later to be more general
+		double ddt = 0.1;
+		outInterval /= ddt;
+		dt = ddt * dayUnit;
+		Nsteps = (time1 - time0) / ddt;
 
-		Nsteps = (time1 - time0) / dt;
-		printf("Nsteps: %lld\n", Nsteps);
+		printf("Nsteps: %lld %.20g %.20g\n", Nsteps, time1, time0);
 
-		NTP = 1;
-		Nsteps = 18000;
+		//NTP = 1;
+		//Nsteps = 18000;
 	}
 
 	for(int i = 1; i < argc; i += 2){
@@ -1485,6 +1491,7 @@ int main(int argc, char*argv[]){
 
 	double time = 0.0;
 
+	/*
 	//Units are 1/(mass of object in solar masses)
 	double pmass[] = {
 		//The sun has to be at the first position
@@ -1524,6 +1531,45 @@ int main(int argc, char*argv[]){
 		m_h[i] = 1.0/pmass[i];
 printf("m %d %.20g\n", i, m_h[i]);
 	}
+	*/
+
+	double mass1[] = {
+		//masses form DE440
+		//in units of GM
+		1.3271244004127942E+11,	//Sun		10
+		2.2031868551400003E+04,	//Mercury	1
+		3.2485859200000000E+05,	//Venus		2
+		3.9860043550702266E+05,	//Earth		399
+		4.2828375815756102E+04,	//Mars		4
+		1.2671276409999998E+08,	//Jupiter	5
+		3.7940584841799997E+07,	//Saturn	6
+		5.7945563999999985E+06,	//Uranus	7
+		6.8365271005803989E+06,	//Neptune	8
+		9.7550000000000000E+02,	//Pluto		9
+		4.9028001184575496E+03,	//Moon		301
+
+		6.2628888644409933E+01,	//Ceres		1
+		1.3665878145967422E+01,	//Pallas	2
+		1.9205707002025889E+00,	//Juno		3
+		1.7288232879171513E+01,	//Vesta		4
+		1.1398723232184107E+00,	//Iris		7
+		5.6251476453852289E+00,	//Hygiea	10
+		2.0230209871098284E+00,	//Eunomia	15
+		1.5896582441709424E+00,	//Psyche	16
+		1.0793714577033560E+00,	//Euphrosyne	31
+		2.6830359242821795E+00,	//Europa	52
+		9.3810575639151328E-01,	//Cybele	65
+		2.1682320736996910E+00,	//Sylvia	87
+		1.1898077088121908E+00,	//Thisbe	88
+		1.4437384031866001E+00,	//Camilla	107
+		3.8944831481705644E+00,	//Davida	511
+		2.8304096393299849E+00,	//Interamnia	704
+	};
+	for(int i = 0; i < Nperturbers; ++i){
+		m_h[i] = mass1[i] / mass1[0];
+printf("m %d %.20g\n", i, m_h[i]);
+	}
+
 
 //m[Nperturbers] = 1.e-11; //ca mass of Flora
 
@@ -1796,7 +1842,7 @@ printf("m %d %.20g\n", i, m_h[i]);
 		printf("%s\n", outfilename);
 		if(OutBinary == 0){
 			for(int i = Nperturbers; i < N; ++i){
-				fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time0, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], vcomx + vx_h[i], vcomy + vy_h[i], vcomz + vz_h[i]);
+				fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time0, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit);
 			}
 		}
 		else{
@@ -1805,9 +1851,9 @@ printf("m %d %.20g\n", i, m_h[i]);
 				double xx = comx + x_h[i];
 				double yy = comy + y_h[i];
 				double zz = comz + z_h[i];
-				double vxx = vcomx + vx_h[i];
-				double vyy = vcomy + vy_h[i];
-				double vzz = vcomz + vz_h[i];
+				double vxx = (vcomx + vx_h[i]) * dayUnit;
+				double vyy = (vcomy + vy_h[i]) * dayUnit;
+				double vzz = (vcomz + vz_h[i]) * dayUnit;
 
 				fwrite(&id, 1, sizeof(unsigned long long int), outfile);
 				fwrite(&time0, 1, sizeof(double), outfile);
@@ -2131,7 +2177,7 @@ cudaDeviceSynchronize();
 			
 			if(OutBinary == 0){
 				for(int i = Nperturbers; i < N; ++i){
-					fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], vcomx + vx_h[i], vcomy + vy_h[i], vcomz + vz_h[i]);
+					fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit);
 				}
 			}
 			else{
@@ -2141,9 +2187,9 @@ cudaDeviceSynchronize();
 					double xx = comx + x_h[i];
 					double yy = comy + y_h[i];
 					double zz = comz + z_h[i];
-					double vxx = vcomx + vx_h[i];
-					double vyy = vcomy + vy_h[i];
-					double vzz = vcomz + vz_h[i];
+					double vxx = (vcomx + vx_h[i]) * dayUnit;
+					double vyy = (vcomy + vy_h[i]) * dayUnit;
+					double vzz = (vcomz + vz_h[i]) * dayUnit;
 
 					fwrite(&id, 1, sizeof(unsigned long long int), outfile);
 					fwrite(&time, 1, sizeof(double), outfile);

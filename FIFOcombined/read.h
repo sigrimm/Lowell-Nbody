@@ -75,7 +75,7 @@ int readFile(FILE *infile, int Nperturbers, double *x_h, double *y_h, double *z_
 		unsigned long long int j = __builtin_bswap64 (id_h[i]);
 		//j is the correct index
 
-		if(i < 10 + Nperturbers || i > N + Nperturbers - 10) printf("%d %llu %llu | %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g %.15g\n", i, id_h[i], j, x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+		if(i < 10 + Nperturbers || i > N + Nperturbers - 10) printf("%d %llu %llu | %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], j, x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 
 		if(A1_h[i] != 0.0 || A2_h[i] != 0.0 || A3_h[i] != 0.0){
 			printf("A %d %g %g %g\n", i, A1_h[i], A2_h[i], A3_h[i]);

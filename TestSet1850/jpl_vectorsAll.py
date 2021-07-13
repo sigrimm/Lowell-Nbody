@@ -28,7 +28,8 @@ useHelioCentric = 1
 #obj = Horizons(id_type='majorbody', id='301',epochs={'start':epoch_start,'stop':epoch_stop,'step':'1d'},location='@sun')
 
 ii = ([0, 1, 2, 399, 4, 5, 6, 7, 8, 9, 301, 10])
-name = (['Barycenter', 'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto', 'Moon', 'Sun', 'Ceres', 'Pallas', 'Juno', 'Vesta', 'Hygiea', 'Eunomia', 'Euphrosyne', 'Europa', 'Davida', 'Interamnia', 'Psyche', 'Cybele', 'Thisbe', 'Doris', 'Patientia', 'Sylvia'])
+#name = (['Barycenter', 'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto', 'Moon', 'Sun', 'Ceres', 'Pallas', 'Juno', 'Vesta', 'Hygiea', 'Eunomia', 'Euphrosyne', 'Europa', 'Davida', 'Interamnia', 'Psyche', 'Cybele', 'Thisbe', 'Doris', 'Patientia', 'Sylvia'])
+name = (['Barycenter', 'Mercury', 'Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto', 'Moon', 'Sun', 'Ceres', 'Pallas', 'Juno', 'Vesta', 'Hygiea', 'Eunomia', 'Euphrosyne', 'Europa', 'Davida', 'Interamnia', 'Psyche', 'Cybele', 'Thisbe', 'Iris', 'Camilla', 'Sylvia'])
 
 for i in range(len(name)):
 

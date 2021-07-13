@@ -10,7 +10,7 @@ int main(){
 	unsigned long long int id;
 	double time, x, y, z, vx, vy, vz;
 
-	int N = 1;
+	int N = 1024;
 
 	int er;
 
