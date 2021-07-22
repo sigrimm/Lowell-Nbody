@@ -120,6 +120,7 @@ __host__ void accP2(double *m, double *x, double *y, double *z, double &ax, doub
 		ax += s * rx;
 		ay += s * ry;
 		az += s * rz;
+//printf("%d %d %g %g %g %g %g %g\n", i, j, rx, ry, rz, rsq, s, m[j]);
 	}
 }
 __device__ void accP2_device(double mj, double xj, double yj, double zj, double &ax, double &ay, double &az){
@@ -171,21 +172,23 @@ __device__ __host__ void acchGR2(double xi, double yi, double zi, double vxi, do
 
 //Neville-Aitken interpolation
 // p is perturber index
-__host__ void interpolate(int Ninterpolate, double *xp, double *yp, double *zp, double *timep, double time, double *xt, double *yt, double *zt, int p){
-
+__host__ void interpolate(int Ninterpolate, int Nperturbers, double *xp, double *yp, double *zp, double *timep, double timep0, double dtimep, double time, double *xt, double *yt, double *zt, int p){
 
 	double Px[Ninterpolate][Ninterpolate];
 	double Py[Ninterpolate][Ninterpolate];
 	double Pz[Ninterpolate][Ninterpolate];
 	double tn[Ninterpolate];
 
-	for(int i = 0; i < Ninterpolate; ++i){
-		Px[0][i] = xp[p * Ninterpolate + i];
-		Py[0][i] = yp[p * Ninterpolate + i];
-		Pz[0][i] = zp[p * Ninterpolate + i];
-		tn[i] = timep[p * Ninterpolate + i];
+	int it = floor((time - timep0) / dtimep);
+	it -= (Ninterpolate / 2);
 
-//printf("interpolate %d %d %.20g %.20g %.20g\n", p, i, time, tn[i], P[0][i]);
+	for(int i = 0; i < Ninterpolate; ++i){
+		Px[0][i] = xp[Nperturbers * (i + it) + p];
+		Py[0][i] = yp[Nperturbers * (i + it) + p];
+		Pz[0][i] = zp[Nperturbers * (i + it) + p];
+		tn[i] = timep[Nperturbers * (i + it) + p];
+
+//printf("interpolateP %d %d %d %.20g %.20g %.20g\n", p, i, p + Nperturbers * (i + it), time, tn[i], Px[0][i]);
 	}
 
 	for(int j = 1; j < Ninterpolate; ++j){
@@ -204,7 +207,7 @@ __host__ void interpolate(int Ninterpolate, double *xp, double *yp, double *zp, 
 //printf("interpolate %.20g %d %.20g %.20g %.20g\n", time, p, xt[p], yt[p], zt[p]);
 
 }
-__host__ void interpolate2(int Ninterpolate, double *xp, double *yp, double *zp, double *timep, double timep0, double dtimep, double time, double *xt, double *yt, double *zt, int p){
+__host__ void interpolate2(int Ninterpolate, int Nperturbers, double *xp, double *yp, double *zp, double *timep, double timep0, double dtimep, double time, double *xt, double *yt, double *zt, int p){
 
 
 	//p is the perturber index
@@ -219,28 +222,31 @@ __host__ void interpolate2(int Ninterpolate, double *xp, double *yp, double *zp,
 
 	double tn[Ninterpolate];
 
+	int it = floor((time - timep0) / dtimep);
+	it -= (Ninterpolate / 2);
+
 	for(int i = 0; i < Ninterpolate; ++i){
-		Cx[i] = xp[p * Ninterpolate + i];
-		Cy[i] = yp[p * Ninterpolate + i];
-		Cz[i] = zp[p * Ninterpolate + i];
+		Cx[i] = xp[Nperturbers * (i + it) + p];
+		Cy[i] = yp[Nperturbers * (i + it) + p];
+		Cz[i] = zp[Nperturbers * (i + it) + p];
 
 		Dx[i] = Cx[i];		
 		Dy[i] = Cy[i];		
 		Dz[i] = Cz[i];		
 
-		tn[i] = timep[p * Ninterpolate + i];
+		tn[i] = timep[Nperturbers * (i + it) + p];
 
-//printf("interpolate %d %d %.20g %.20g %.20g\n", p, i, time, tn[i], Cx[i]);
+//printf("interpolateC %d %d %.20g %.20g %.20g\n", p, i, time, tn[i], Cx[i]);
 	}
 
 	//initialize with closest solution
 	//Assume that the closest solution is in the middle
 
-	int ii = Ninterpolate / 2 - 1;
+	int ii = Ninterpolate / 2;
 	xt[p] = Cx[ii];
 	yt[p] = Cy[ii];
 	zt[p] = Cz[ii];
-
+//printf("%d %d %g %g %g\n", p, ii, xt[p], yt[p], zt[p]);
 	--ii;
 
 	for(int j = 1; j < Ninterpolate; ++j){
@@ -264,7 +270,7 @@ __host__ void interpolate2(int Ninterpolate, double *xp, double *yp, double *zp,
 			Cz[i] = dtn0 * dPz;
 
 	
-//printf("%d %d %g %g %g %g %.20g\n", i, i+j, tn[i], tn[i+j], P[j-1][i], P[j-1][i+1], P[j][i]);
+//printf("%d %d %.15g %.15g %g %g %g %g\n", i, i+j, tn[i], tn[i+j], dPx, dtn0, dtn1, dtn);
 
 		}
 
@@ -300,7 +306,7 @@ __global__ void interpolate_kernel(int Nperturbers, double *xp_d, double *yp_d, 
 		__shared__ double tn_s[Ninterpolate];
 
 		int it = floor((time - timep0) / dtimep);
-		it -= (Ninterpolate / 2 + 1);
+		it -= (Ninterpolate / 2);
 
 //printf("interpolateA %d %.20g %.20g %d\n", pid, timep0, time, it);
 
@@ -310,12 +316,12 @@ __global__ void interpolate_kernel(int Nperturbers, double *xp_d, double *yp_d, 
 			Pz_s[0][idx] = zp_d[Nperturbers * (idx + it) + pid];
 			tn_s[idx] = timep_d[Nperturbers * (idx + it) + pid];
 
-//if(pid == 1) printf("interpolateB %d %d %.20g %.20g %.20g %.20g\n", pid, idx, timep0, time, tn_s[idx], Px_s[0][idx]);
+///*if(pid == 1)*/ printf("interpolateP %d %d %.20g %.20g %.20g %.20g\n", pid, idx, timep0, time, tn_s[idx], Px_s[0][idx]);
 		}
 		__syncthreads();
 
 		for(int j = 1; j < Ninterpolate; ++j){
-//if(pid == 1) printf("****\n");
+////if(pid == 1) printf("****\n");
 			if(idx < Ninterpolate - j){
 				Px_s[j][idx] = ((time - tn_s[idx + j]) * Px_s[j-1][idx] + (tn_s[idx] - time) * Px_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
 				Py_s[j][idx] = ((time - tn_s[idx + j]) * Py_s[j-1][idx] + (tn_s[idx] - time) * Py_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
@@ -361,7 +367,7 @@ __global__ void interpolate2_kernel(double *xp_d, double *yp_d, double *zp_d, do
 		double x, y, z;
 
 		int it = floor((time - timep0) / dtimep);
-		it -= (Ninterpolate / 2 + 1);
+		it -= (Ninterpolate / 2);
 
 //printf("interpolateA %d %.20g %.20g %d\n", pid, timep0, time, it);
 
@@ -384,7 +390,7 @@ __global__ void interpolate2_kernel(double *xp_d, double *yp_d, double *zp_d, do
 		//initialize with closest solution
 		//Assume that the closest solution is in the middle
 
-		int ii = Ninterpolate / 2 - 1;
+		int ii = Ninterpolate / 2;
 		x = Cx_s[ii][pid];
 		y = Cy_s[ii][pid];
 		z = Cz_s[ii][pid];
@@ -462,7 +468,7 @@ __global__ void interpolate2b_kernel(int Nperturbers, double *xp_d, double *yp_d
 		double tn[Ninterpolate];
 
 		int it = floor((time - timep0) / dtimep);
-		it -= (Ninterpolate / 2 + 1);
+		it -= (Ninterpolate / 2);
 
 //printf("interpolateA %d %.20g %.20g %d\n", pid, timep0, time, it);
 
@@ -485,7 +491,7 @@ __global__ void interpolate2b_kernel(int Nperturbers, double *xp_d, double *yp_d
 		//initialize with closest solution
 		//Assume that the closest solution is in the middle
 
-		int ii = Ninterpolate / 2 - 1;
+		int ii = Ninterpolate / 2;
 		x = Cx[ii];
 		y = Cy[ii];
 		z = Cz[ii];
@@ -561,7 +567,7 @@ __global__ void interpolate3_kernel(int Nperturbers, double *xp_d, double *yp_d,
 		double tn[Ninterpolate];
 
 		int it = floor((time - timep0) / dtimep);
-		it -= (Ninterpolate / 2 + 1);
+		it -= (Ninterpolate / 2);
 
 //printf("interpolateA %d %.20g %.20g %d\n", pid, timep0, time, it);
 
@@ -584,7 +590,7 @@ __global__ void interpolate3_kernel(int Nperturbers, double *xp_d, double *yp_d,
 		//initialize with closest solution
 		//Assume that the closest solution is in the middle
 
-		int ii = Ninterpolate / 2 - 1;
+		int ii = Ninterpolate / 2;
 		x = Cx[ii];
 		y = Cy[ii];
 		z = Cz[ii];
@@ -1338,7 +1344,7 @@ int main(int argc, char*argv[]){
 	//1 print output in heliocentric coordinates
 	//0 print output in barycentric  coordinates
 
-	int OutBinary = 1;
+	int OutBinary = 0;
 
 	//long long int Nsteps = 40000;	
 	long long int Nsteps = 18000;
@@ -1385,6 +1391,7 @@ int main(int argc, char*argv[]){
 		}
 		else if(strcmp(argv[i], "-dt") == 0){
 			dt = atof(argv[i + 1]);
+			dt *= dayUnit;
 		}
 		else if(strcmp(argv[i], "-N") == 0){
 			NTP = atoi(argv[i + 1]);
@@ -1608,7 +1615,6 @@ printf("m %d %.20g\n", i, m_h[i]);
 		FILE *infile;
 		char infilename[160];
 
-		//sprintf(infilename, "initial1.dat");
 		sprintf(infilename, "initial.dat");
 		infile = fopen(infilename, "r");
 		for(int i = Nperturbers; i < NN; ++i){
@@ -2017,8 +2023,8 @@ printf("m %d %.20g\n", i, m_h[i]);
 		S = 0;
 		if(useGPU == 0){
 			for(int p = 0; p < Nperturbers; ++p){
-				//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
-				interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+				interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+				//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
 			}
 			for(int i = 0; i < N; ++i){
 				update1(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, i);
@@ -2042,8 +2048,8 @@ printf("m %d %.20g\n", i, m_h[i]);
 //printf("%lld %d\n", t, S);	
 			if(useGPU == 0){
 				for(int p = 0; p < Nperturbers; ++p){
-					//interpolate(Ninterpolate, xp_h, yp_h, zp_h, timep_h, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
-					interpolate2(Ninterpolate, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
 				}
 				for(int i = Nperturbers; i < N; ++i){
 					update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, a_h);	//a21
