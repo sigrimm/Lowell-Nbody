@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "read.h"
+#include "perturbers.h"
 
 #define dayUnit 0.01720209895
 //#define dayUnit 0.01720209894846
@@ -732,7 +733,7 @@ void J2(double *m, double *x, double *y, double *z, double &ax, double &ay, doub
 
 }
 
-__host__ void stageStep(double *m, double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int S, int i, int Nperturbers, int N, int useHelio, int GR){
+__host__ void stageStep(unsigned long long int *id, double *m, double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int S, int i, int Nperturbers, int N, int useHelio, int GR){
 
 	kx[i + S * N] = vxt[i];
 	ky[i + S * N] = vyt[i];
@@ -744,21 +745,27 @@ __host__ void stageStep(double *m, double *xt, double *yt, double *zt, double *v
 
 	if(useHelio == 0){
 		for(int j = Nperturbers-1; j >= 0; --j){
-			accP(m, xt, yt, zt, ax, ay, az, i, j);
+			if(id[i] != id[j]){
+				accP(m, xt, yt, zt, ax, ay, az, i, j);
+			}
 		}
 	}
 	else{
 		for(int j = Nperturbers-1; j >= 1; --j){
-			accP(m, xt, yt, zt, ax, ay, az, i, j);
-//if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+			if(id[i] != id[j]){
+				accP(m, xt, yt, zt, ax, ay, az, i, j);
+//if(id[i] == 72057594037948950) printf("Nij %d %d %llu %llu %.20g %.20g %.20g\n", i, j, id[i], id[j], ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+			}
 		}
 		accS(m, xt, yt, zt, ax, ay, az, i);
 //if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 //printf("N0 %d %.20g %.20g %.20g\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 		for(int j = Nperturbers-1; j >= 1; --j){
-			accP2(m, xt, yt, zt, ax, ay, az, i, j);
+			if(id[i] != id[j]){
+				accP2(m, xt, yt, zt, ax, ay, az, i, j);
+			}
 		}
-//if(i == 27) printf("Np %d %.20g %.20g %.20g %d\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+//if(id[i] == 72057594037948950) printf("Np %d %.20g %.20g %.20g %d\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
 	}
 
 
@@ -775,7 +782,7 @@ __host__ void stageStep(double *m, double *xt, double *yt, double *zt, double *v
 }
 
 template < int NN >
-__global__ void stageStep_kernel(double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xt_d, double *yt_d, double *zt_d, double *vxt_d, double *vyt_d, double *vzt_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double dt, int S, int Nperturbers, int N, int useHelio, int GR){
+__global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xt_d, double *yt_d, double *zt_d, double *vxt_d, double *vyt_d, double *vzt_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double dt, int S, int Nperturbers, int N, int useHelio, int GR){
 
 	int itx = threadIdx.x;
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -786,6 +793,7 @@ __global__ void stageStep_kernel(double *m_d, double *x_d, double *y_d, double *
 	__shared__ double y_s[NN];
 	__shared__ double z_s[NN];
 	__shared__ double m_s[NN];
+	__shared__ unsigned long long int id_s[NN];
 
 
 	if(threadIdx.x < Nperturbers){
@@ -793,6 +801,7 @@ __global__ void stageStep_kernel(double *m_d, double *x_d, double *y_d, double *
 			y_s[threadIdx.x] = yt_d[itx];
 			z_s[threadIdx.x] = zt_d[itx];
 			m_s[threadIdx.x] = m_d[itx];
+			id_s[threadIdx.x] = id_d[itx];
 	}
 	__syncthreads();
 
@@ -808,6 +817,7 @@ __global__ void stageStep_kernel(double *m_d, double *x_d, double *y_d, double *
 		double vyi = vy_d[idx];
 		double vzi = vz_d[idx];
 		double mi = m_d[idx];
+		unsigned long long int idi = id_d[idx];
 
 		for(int s = 0; s < S; ++s){
 			double aa = a_c[S * 6 + s];
@@ -830,20 +840,27 @@ __global__ void stageStep_kernel(double *m_d, double *x_d, double *y_d, double *
 
 		if(useHelio == 0){
 			for(int j = Nperturbers-1; j >= 0; --j){
-				accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+				if(idi != id_s[j]){
+					accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+				}
 			}
 		}
 		else{
 			for(int j = Nperturbers-1; j >= 1; --j){
-				accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
-//printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//if(idi == 72057594037948950) printf("%llu %llu\n", idi, id_s[j]);
+				if(idi != id_s[j]){
+					accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+//if(idi == 72057594037948950) printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+				}
 			}
 			accS_device(m_s[0] + mi, xi, yi, zi, ax, ay, az);
 
 //printf("N0 %d %.20g %.20g %.20g\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 			for(int j = Nperturbers-1; j >= 1; --j){
-				accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
+				if(idi != id_s[j]){
+					accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
 //printf("Npi %d %d %.20g %.20g %.20g %d\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+				}
 			}
 //printf("Np %d %.20g %.20g %.20g %d\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
 		}
@@ -865,7 +882,7 @@ __global__ void stageStep_kernel(double *m_d, double *x_d, double *y_d, double *
 
 //combine stage step and interpolation kernel
 template < const int NN, const int Ninterpolate >
-__global__ void stageStep1_kernel(double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double dt, int S, int Nperturbers, int N, int useHelio, int GR){
+__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double dt, int S, int Nperturbers, int N, int useHelio, int GR){
 
 	int idx = threadIdx.x;
 	int id = blockIdx.x * blockDim.x + idx;
@@ -876,6 +893,7 @@ __global__ void stageStep1_kernel(double *m_d, double *x_d, double *y_d, double 
 	__shared__ double y_s[NN];
 	__shared__ double z_s[NN];
 	__shared__ double m_s[NN];
+	__shared__ unsigned long long int id_s[NN];
 
 	
 	//needs at least Nperturbers threads per block
@@ -922,6 +940,7 @@ __global__ void stageStep1_kernel(double *m_d, double *x_d, double *y_d, double 
 		y_s[idx] = Cy[ii];
 		z_s[idx] = Cz[ii];
 		m_s[idx] = m_d[idx]; 
+		id_s[idx] = id_d[idx];
 
 		--ii;
 
@@ -978,6 +997,7 @@ __global__ void stageStep1_kernel(double *m_d, double *x_d, double *y_d, double 
 		double vyi = vy_d[id];
 		double vzi = vz_d[id];
 		double mi = m_d[id];
+		unsigned long long int idi = id_d[id];
 
 		for(int s = 0; s < S; ++s){
 			double aa = a_c[S * 6 + s];
@@ -1000,20 +1020,26 @@ __global__ void stageStep1_kernel(double *m_d, double *x_d, double *y_d, double 
 
 		if(useHelio == 0){
 			for(int j = Nperturbers-1; j >= 0; --j){
-				accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+				if(idi != id_s[j]){
+					accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+				}
 			}
 		}
 		else{
 			for(int j = Nperturbers-1; j >= 1; --j){
-				accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+				if(idi != id_s[j]){
+					accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
 //printf("Nij %d %d %.20g %.20g %.20g\n", id, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+				}
 			}
 			accS_device(m_s[0] + mi, xi, yi, zi, ax, ay, az);
 
 //printf("N0 %d %.20g %.20g %.20g\n", id, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 			for(int j = Nperturbers-1; j >= 1; --j){
-				accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
+				if(idi != id_s[j]){
+					accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
 //printf("Npi %d %d %.20g %.20g %.20g %d\n", id, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+				}
 			}
 //printf("Np %d %.20g %.20g %.20g %d\n", id, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
 		}
@@ -1036,7 +1062,7 @@ __global__ void stageStep1_kernel(double *m_d, double *x_d, double *y_d, double 
 //combine stage step and interpolation kernel
 //all stages in the same kernel
 template < const int Nperturbers, const int Ninterpolate, const int nn >
-__global__ void stageStepAll_kernel(double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double time0, double dt, int N, int useHelio, int GR){
+__global__ void stageStepAll_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double time0, double dt, int N, int useHelio, int GR){
 
 	int idx = threadIdx.x;
 	int id = blockIdx.x * blockDim.x + idx;
@@ -1047,6 +1073,7 @@ __global__ void stageStepAll_kernel(double *m_d, double *x_d, double *y_d, doubl
 	__shared__ double y_s[Nperturbers];
 	__shared__ double z_s[Nperturbers];
 	__shared__ double m_s[Nperturbers];
+	__shared__ unsigned long long int id_s[Nperturbers];
 
 
 	__shared__ double kx_s[nn * 6];
@@ -1104,6 +1131,7 @@ __global__ void stageStepAll_kernel(double *m_d, double *x_d, double *y_d, doubl
 			y_s[idx] = Cy[ii];
 			z_s[idx] = Cz[ii];
 			m_s[idx] = m_d[idx]; 
+			id_s[idx] = id_d[idx]; 
 
 			--ii;
 
@@ -1162,6 +1190,7 @@ __global__ void stageStepAll_kernel(double *m_d, double *x_d, double *y_d, doubl
 			double vyi = vy_d[id];
 			double vzi = vz_d[id];
 			double mi = m_d[id];
+			unsigned long long int idi = id_d[id];
 
 			for(int s = 0; s < S; ++s){
 				double aa = a_c[S * 6 + s];
@@ -1184,22 +1213,28 @@ __global__ void stageStepAll_kernel(double *m_d, double *x_d, double *y_d, doubl
 
 			if(useHelio == 0){
 				for(int j = Nperturbers-1; j >= 0; --j){
-					accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+					if(idi != id_s[j]){
+						accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+					}
 				}
 			}
 			else{
 				for(int j = Nperturbers-1; j >= 1; --j){
-					accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
-	//printf("Nij %d %d %.20g %.20g %.20g\n", id, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+					if(idi != id_s[j]){
+						accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+//printf("Nij %d %d %.20g %.20g %.20g\n", id, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+					}
 				}
 				accS_device(m_s[0] + mi, xi, yi, zi, ax, ay, az);
 
-	//printf("N0 %d %.20g %.20g %.20g\n", id, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//printf("N0 %d %.20g %.20g %.20g\n", id, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 				for(int j = Nperturbers-1; j >= 1; --j){
-					accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
-	//printf("Npi %d %d %.20g %.20g %.20g %d\n", id, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+					if(idi != id_s[j]){
+						accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
+//printf("Npi %d %d %.20g %.20g %.20g %d\n", id, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+					}
 				}
-	//printf("Np %d %.20g %.20g %.20g %d\n", id, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+//printf("Np %d %.20g %.20g %.20g %d\n", id, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
 			}
 
 
@@ -1240,6 +1275,7 @@ __host__ void update1(double *xt, double *yt, double *zt, double *vxt, double *v
 	vxt[i] = vx[i];
 	vyt[i] = vy[i];
 	vzt[i] = vz[i];
+//printf("update 1 %d %g %g %g %g %g %g\n", i, xt[i], yt[i], zt[i], vxt[i], vyt[i], vzt[i]);
 }
 
 
@@ -1332,10 +1368,11 @@ int main(int argc, char*argv[]){
 	//2 Sitarski 1982, heliocentric coordinates
 
 	int useFIFO = 2;	//use 0 or 2
-	int useGPU = 1;
+	int useGPU = 1;		// 0 or 1
 
 	FILE *binfile;
 	if(useFIFO == 2){	
+		//binfile = fopen("210801_2342_genga_de440_perturbers.bin", "rb");
 		binfile = fopen("210705_2315_genga_req.bin", "rb");
 	}	
 
@@ -1344,7 +1381,9 @@ int main(int argc, char*argv[]){
 	//1 print output in heliocentric coordinates
 	//0 print output in barycentric  coordinates
 
-	int OutBinary = 0;
+	int OutBinary = 1;
+	//0 print output files in ASCII format	
+	//1 print output files in binary format	
 
 	//long long int Nsteps = 40000;	
 	long long int Nsteps = 18000;
@@ -1379,6 +1418,9 @@ int main(int argc, char*argv[]){
 
 		//NTP = 1;
 		//Nsteps = 18000;
+		//Nsteps = 1000;
+		//outInterval = 1;
+		//outStart = 0;
 	}
 
 	for(int i = 1; i < argc; i += 2){
@@ -1491,99 +1533,9 @@ int main(int argc, char*argv[]){
 		A3_h[i] = 0.0;
 	}
 	
-
-	FILE *outfile;
-	char outfilename[160];	
-
-
-	double time = 0.0;
-
-	/*
-	//Units are 1/(mass of object in solar masses)
-	double pmass[] = {
-		//The sun has to be at the first position
-		1.000000000000000e0,      // Sun        (0)
-		6023682.155592479e0,      // Mercury    (1)
-		408523.7186582996e0,      // Venus      (2)
-		332946.0488339480e0,      // Earth      (3)
-		3098703.590290707e0,      // Mars       (4)
-		1047.348625463337e0,      // Jupiter    (5)
-		3497.901767786633e0,      // Saturn     (6)
-		22902.98161308703e0,      // Uranus     (7)
-		19412.25977597307e0,      // Neptune    (8)
-		135836683.7686175e0,      // Pluto      (9)
-		2112939391.8192508,                  // Ceres      (10)
-		9531877787.0654011,                  // Pallas     (11)
-		81799329362.428986,                  // Juno       (12)
-		7676559929.1351004,                  // Vesta      (13)
-		23944976514.662392,                  // Hygiea     (14)
-		63251980219.354561,                  // Eunomia    (15)
-		46649712166.264168,                  // Euphrosyne (16)
-		119474172269.94408,                  // Europa     (17)
-		56926698684.931702,                  // Davida     (18)
-		56298080671.641434,                  // Interamnia (19)
-		27068703.24120323e0,      // Moon       (20)
-
-		86737410876.841156,		  // Psyche
-		93034865412.812271,		  // Cybele
-		114823090351.20033,		  // Thisbe
-		116910898662.48077,		  // Doris
-		128906361339.41116,		  // Patientia
-		134548655333.38321,		  // Sylvia
-
-		0.0			  // test particle
-
-	};
-	for(int i = 0; i < Nperturbers; ++i){
-		m_h[i] = 1.0/pmass[i];
-printf("m %d %.20g\n", i, m_h[i]);
-	}
-	*/
-
-	double mass1[] = {
-		//masses form DE440
-		//in units of GM
-		1.3271244004127942E+11,	//Sun		10
-		2.2031868551400003E+04,	//Mercury	1
-		3.2485859200000000E+05,	//Venus		2
-		3.9860043550702266E+05,	//Earth		399
-		4.2828375815756102E+04,	//Mars		4
-		1.2671276409999998E+08,	//Jupiter	5
-		3.7940584841799997E+07,	//Saturn	6
-		5.7945563999999985E+06,	//Uranus	7
-		6.8365271005803989E+06,	//Neptune	8
-		9.7550000000000000E+02,	//Pluto		9
-		4.9028001184575496E+03,	//Moon		301
-
-		6.2628888644409933E+01,	//Ceres		1
-		1.3665878145967422E+01,	//Pallas	2
-		1.9205707002025889E+00,	//Juno		3
-		1.7288232879171513E+01,	//Vesta		4
-		1.1398723232184107E+00,	//Iris		7
-		5.6251476453852289E+00,	//Hygiea	10
-		2.0230209871098284E+00,	//Eunomia	15
-		1.5896582441709424E+00,	//Psyche	16
-		1.0793714577033560E+00,	//Euphrosyne	31
-		2.6830359242821795E+00,	//Europa	52
-		9.3810575639151328E-01,	//Cybele	65
-		2.1682320736996910E+00,	//Sylvia	87
-		1.1898077088121908E+00,	//Thisbe	88
-		1.4437384031866001E+00,	//Camilla	107
-		3.8944831481705644E+00,	//Davida	511
-		2.8304096393299849E+00,	//Interamnia	704
-	};
-	for(int i = 0; i < Nperturbers; ++i){
-		m_h[i] = mass1[i] / mass1[0];
-printf("m %d %.20g\n", i, m_h[i]);
-	}
-
-
-//m[Nperturbers] = 1.e-11; //ca mass of Flora
-
-	int N = Nperturbers;
-
 	//Sun
-	id_h[0] = 20;
+	id_h[0] = 10;
+	m_h[0] = 1.0;
 	x_h[0] = 0.0;
 	y_h[0] = 0.0;
 	z_h[0] = 0.0;
@@ -1593,6 +1545,7 @@ printf("m %d %.20g\n", i, m_h[i]);
 
 	for(int i = 1; i < NN; ++i){
 		id_h[i] = Nperturbers + i;
+		m_h[i] = 0.0;
 		x_h[i] = 0.0;
 		y_h[i] = 0.0;
 		z_h[i] = 0.0;
@@ -1600,6 +1553,24 @@ printf("m %d %.20g\n", i, m_h[i]);
 		vy_h[i] = 0.0;
 		vz_h[i] = 0.0;
 	}
+
+	FILE *outfile;
+	char outfilename[160];	
+
+
+	double time = 0.0;
+
+
+	// ********************************
+	// Read perturbers masses from perturbers.h file
+	perturbersMass(m_h, Nperturbers);
+	perturbersIDs(id_h, Nperturbers);
+	// ********************************
+
+
+//m[Nperturbers] = 1.e-11; //ca mass of Flora
+
+	int N = Nperturbers;
 	printf("Read initial conditions\n");
 
 	if(useFIFO == 2){	
@@ -1853,7 +1824,8 @@ printf("m %d %.20g\n", i, m_h[i]);
 		}
 		else{
 			for(int i = Nperturbers; i < N; ++i){
-				unsigned long long int id = id_h[i];
+				//unsigned long long int id = id_h[i];
+				unsigned long long int id = __builtin_bswap64 (id_h[i]);
 				double xx = comx + x_h[i];
 				double yy = comy + y_h[i];
 				double zz = comz + z_h[i];
@@ -1878,6 +1850,7 @@ printf("m %d %.20g\n", i, m_h[i]);
 	//copy the data to the device
 	if(useGPU == 1){
 		cudaMemcpy(m_d, m_h, NN * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(id_d, id_h, NN * sizeof(unsigned long long int), cudaMemcpyHostToDevice);
 		cudaMemcpy(x_d, x_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(y_d, y_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(z_d, z_h, NN * sizeof(double), cudaMemcpyHostToDevice);
@@ -2023,14 +1996,14 @@ printf("m %d %.20g\n", i, m_h[i]);
 		S = 0;
 		if(useGPU == 0){
 			for(int p = 0; p < Nperturbers; ++p){
-				interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
-				//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+				//interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+				interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_h, yt_h, zt_h, p);
 			}
-			for(int i = 0; i < N; ++i){
+			for(int i = Nperturbers; i < N; ++i){
 				update1(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, i);
 			}
 			for(int i = Nperturbers; i < N; ++i){
-				stageStep(m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, S, i, Nperturbers, N, useHelio, GR);
+				stageStep(id_h, m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, S, i, Nperturbers, N, useHelio, GR);
 			}
 		}
 		else{
@@ -2038,8 +2011,8 @@ printf("m %d %.20g\n", i, m_h[i]);
 			//interpolate2_kernel < Ninterpolate, Nperturbers > <<< NTP, Nperturbers >>> (xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
 			//interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
 			//interpolate3_kernel < Ninterpolate > <<< (NTP + 127) / 128, 128 >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
-			stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
-			//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+			stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+			//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
 		}	
 	
 		//stage 2 - 6
@@ -2048,14 +2021,14 @@ printf("m %d %.20g\n", i, m_h[i]);
 //printf("%lld %d\n", t, S);	
 			if(useGPU == 0){
 				for(int p = 0; p < Nperturbers; ++p){
-					interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
-					//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					//interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
 				}
 				for(int i = Nperturbers; i < N; ++i){
 					update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, a_h);	//a21
 				}
 				for(int i = Nperturbers; i < N; ++i){
-					stageStep(m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, S, i, Nperturbers, N, useHelio, GR);
+					stageStep(id_h, m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, S, i, Nperturbers, N, useHelio, GR);
 				}
 			}
 			else{
@@ -2063,13 +2036,13 @@ printf("m %d %.20g\n", i, m_h[i]);
 				//interpolate2_kernel < Ninterpolate, Nperturbers > <<< NTP, Nperturbers >>> (xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
 				//interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
 				//interpolate3_kernel < Ninterpolate > <<< (NTP + 127) / 128, 128 >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
-				stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
-				//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+				stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
+				//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, dt, S, Nperturbers, N, useHelio, GR);
 
 			}
 		}
 cudaDeviceSynchronize();
-//		stageStepAll_kernel < Nperturbers, Ninterpolate, 128 > <<< (NN + 127) / 128, 128 >>> (m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time, dt, N, useHelio, GR);
+//		stageStepAll_kernel < Nperturbers, Ninterpolate, 128 > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, time, dt, N, useHelio, GR);
 	
 		double sc = 1.0e-15;
 
@@ -2189,7 +2162,8 @@ cudaDeviceSynchronize();
 			else{
 				for(int i = Nperturbers; i < N; ++i){
 
-					unsigned long long int id = id_h[i];
+					//unsigned long long int id = id_h[i];
+					unsigned long long int id = __builtin_bswap64 (id_h[i]);
 					double xx = comx + x_h[i];
 					double yy = comy + y_h[i];
 					double zz = comz + z_h[i];

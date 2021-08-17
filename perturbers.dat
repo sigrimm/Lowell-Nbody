@@ -1,0 +1,52 @@
+      SUBROUTINE AISET
+C
+C     Set up a given object for integration by setting the appropriate
+C     planet masses
+C     19-Sep-2020 Change asteroid masses to those from JPL DE-430
+C     As of April,2020, the planetary masses and asteroid masses from 
+C     DE440. The values below are M-Sun/M-object
+C
+      IMPLICIT REAL*8 (A-H,O-Z)
+      REAL*8 JDEP00,PM(27),PMASS(27)
+      LOGICAL*1 CERESFLG,PALLASFLG,JUNOFLG,VESTAFLG,HYGIEAFLG
+     1,EUNOMIAFLG,EUPHFLG,EUROPAFLG,DAVIDAFLG,INTERAMFLG
+     1,PSYCHEFLG,CYBELEFLG,THISBEFLG,CAMILLAFLG,IRISFLG,SYLVIAFLG
+     1,PLUTOFLG,FORCE
+      COMMON/INTFLGS/CERESFLG,PALLASFLG,JUNOFLG,VESTAFLG,HYGIEAFLG
+     1,EUNOMIAFLG,EUPHFLG,EUROPAFLG,DAVIDAFLG,INTERAMFLG
+     1,PSYCHEFLG,CYBELEFLG,THISBEFLG,CAMILLAFLG,IRISFLG,SYLVIAFLG
+     1,PLUTOFLG
+      COMMON/INTCOM/JDEP00,PM,TIMEFAC,FSTEP,NSTEPS,FORCE
+      DATA PMASS/
+     1          6.02365794492933620D+06,    !Mercury    (1)
+     1          4.08523718656268204D+05,    !Venus      (2)
+     1          3.32946048773048213D+05,    !Earth      (3)
+     1          3.09870354673725273D+06,    !Mars       (4)
+     1          1.04734863124400454D+03,    !Jupiter    (5)
+     1          3.49790180079320044D+03,    !Saturn     (6)
+     1          2.29029507834766191D+04,    !Uranus     (7)
+     1          1.94122597758754673D+04,    !Neptune    (8)
+     1          1.36045556167380244D+08,    !Pluto      (9)
+     1          2.11902913996742201D+09,    !Ceres      (10)
+     1          9.71122664959812355D+09,    !Pallas     (11)
+     1          6.91005231035131531D+10,    !Juno       (12)
+     1          7.67646068680440331D+09,    !Vesta      (13)
+     1          2.35927034111103439D+10,    !Hygiea     (14)
+     1          6.56011187658897781D+10,    !Eunomia    (15)
+     1          1.22953445817123718D+11,    !Euphrosyne (16)
+     1          4.94635345133462448D+10,    !Europa     (17)
+     1          3.40770353836609001D+10,    !Davida     (18)
+     1          4.68880681429191055D+10,    !Interamnia (19)
+     1          8.34848877284898376D+10,    !Psyche     (20)
+     1          1.41468527548287018D+11,    !Cybele     (21)
+     1          1.11541082696269424D+11,    !Thisbe     (22)
+     1          9.19227747550098419D+10,    !Camilla    (23)
+     1          1.16427460635738602D+11,    !Iris       (24)
+     1          6.12076731319770355D+10,    !Sylvia     (25)
+     1          2.70687029523511454D+07,    !Moon       (26)
+     1          1.00000000000000000D+00/    !Sun        (27)
+      DO I=1,27
+         PM(I)=1.D0/PMASS(I)
+      ENDDO
+      RETURN
+      END

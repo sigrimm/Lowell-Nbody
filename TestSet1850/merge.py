@@ -86,16 +86,16 @@ for i in range(len(t0)):
 	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t10[i], 11, x10[i], y10[i], z10[i], vx10[i], vy10[i], vz10[i]), file=f)	#Pallas
 	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t11[i], 12, x11[i], y11[i], z11[i], vx11[i], vy11[i], vz11[i]), file=f)	#Juno
 	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t12[i], 13, x12[i], y12[i], z12[i], vx12[i], vy12[i], vz12[i]), file=f)	#Vesta
+	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t23[i], 24, x23[i], y23[i], z23[i], vx23[i], vy23[i], vz23[i]), file=f)	#Iris
 	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t13[i], 14, x13[i], y13[i], z13[i], vx13[i], vy13[i], vz13[i]), file=f)	#Hygiea
 	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t14[i], 15, x14[i], y14[i], z14[i], vx14[i], vy14[i], vz14[i]), file=f)	#Eunomia
+	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t20[i], 21, x20[i], y20[i], z20[i], vx20[i], vy20[i], vz20[i]), file=f)	#Psyche
 	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t15[i], 16, x15[i], y15[i], z15[i], vx15[i], vy15[i], vz15[i]), file=f) #Euphrosyne
 	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t16[i], 17, x16[i], y16[i], z16[i], vx16[i], vy16[i], vz16[i]), file=f) #Europa
+	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t21[i], 22, x21[i], y21[i], z21[i], vx21[i], vy21[i], vz21[i]), file=f)	#Cybele
+	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t25[i], 26, x25[i], y25[i], z25[i], vx25[i], vy25[i], vz25[i]), file=f)	#Sylvia
+	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t22[i], 23, x22[i], y22[i], z22[i], vx22[i], vy22[i], vz22[i]), file=f)	#Thisbe
+	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t24[i], 25, x24[i], y24[i], z24[i], vx24[i], vy24[i], vz24[i]), file=f)	#Camilla
 	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t17[i], 18, x17[i], y17[i], z17[i], vx17[i], vy17[i], vz17[i]), file=f)	#Davida
 	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t18[i], 19, x18[i], y18[i], z18[i], vx18[i], vy18[i], vz18[i]), file=f) #Interamnia
-	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t20[i], 21, x20[i], y20[i], z20[i], vx20[i], vy20[i], vz20[i]), file=f)	#Psyche
-	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t21[i], 22, x21[i], y21[i], z21[i], vx21[i], vy21[i], vz21[i]), file=f)	#Cybele
-	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t22[i], 23, x22[i], y22[i], z22[i], vx22[i], vy22[i], vz22[i]), file=f)	#Thisbe
-	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t23[i], 24, x23[i], y23[i], z23[i], vx23[i], vy23[i], vz23[i]), file=f)	#Iris
-	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t24[i], 25, x24[i], y24[i], z24[i], vx24[i], vy24[i], vz24[i]), file=f)	#Camilla
-	print("%.20g %d %.30g %.30g %.30g %.30g %.30g %.30g" % (t25[i], 26, x25[i], y25[i], z25[i], vx25[i], vy25[i], vz25[i]), file=f)	#Sylvia
 f.close()
