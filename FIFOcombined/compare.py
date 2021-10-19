@@ -6,7 +6,8 @@ import math
 startTime = 2459200.5
 
 #name ='105140'
-name ='Hidalgo'
+#name ='Hidalgo'
+name = '2016RB1'
 
 #t2, i2, x2, y2, z2 = np.loadtxt("out%s_b.dat" % name, usecols=(0,1,3,4,5), skiprows=0, unpack=True)
 #skr = int(t2[0] - startTime);
@@ -24,8 +25,8 @@ xx2 = x2[i2==ii]
 yy2 = y2[i2==ii]
 zz2 = z2[i2==ii]
 
-#print('A', t1[0], x1[0], y1[0], z1[0]);
-#print('B', tt2[0], xx2[0], yy2[0], zz2[0]);
+print('A', t1[0], x1[0], y1[0], z1[0]);
+print('B', tt2[0], xx2[0], yy2[0], zz2[0]);
 
 for i in range(len(tt2)):
 	dx = x1[i] - xx2[i]
