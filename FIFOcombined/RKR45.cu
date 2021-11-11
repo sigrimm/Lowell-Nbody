@@ -9,7 +9,7 @@
 
 #include "read.h"
 #include "perturbers.h"
-#include "adaptive.h"
+#include "integrator.h"
 
 #define dayUnit 0.01720209895
 //#define dayUnit 0.01720209894846
@@ -20,9 +20,9 @@
 #define def_AU 149597870700.0           //AU in m
 
 //constant memory
-__constant__ double  a_c[6 * 6];
-__constant__ double  b_c[6];
-__constant__ double  c_c[6];
+__constant__ double  a_c[20 * 20];	//20 is considered here to be large enough (>RKFn)
+__constant__ double  b_c[20];
+__constant__ double  c_c[20];
 
 
 // --------------------------------
@@ -783,7 +783,7 @@ __host__ void stageStep(unsigned long long int *id, double *m, double *xt, doubl
 }
 
 template < int NN >
-__global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xt_d, double *yt_d, double *zt_d, double *vxt_d, double *vyt_d, double *vzt_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, int S, int Nperturbers, int N, int useHelio, int GR){
+__global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xt_d, double *yt_d, double *zt_d, double *vxt_d, double *vyt_d, double *vzt_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, int S, int RKFn, int Nperturbers, int N, int useHelio, int GR){
 
 	int itx = threadIdx.x;
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -824,7 +824,7 @@ __global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, doub
 		unsigned long long int idi = id_d[idx];
 
 		for(int s = 0; s < S; ++s){
-			double aa = a_c[S * 6 + s];
+			double aa = a_c[S * RKFn + s];
 			xi  += dt * aa * kx_d[idx + s * N];
 			yi  += dt * aa * ky_d[idx + s * N];
 			zi  += dt * aa * kz_d[idx + s * N];
@@ -886,7 +886,7 @@ __global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, doub
 
 //combine stage step and interpolation kernel
 template < const int NN, const int Ninterpolate >
-__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, int S, int Nperturbers, int N, int useHelio, int GR){
+__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, int S, int RKFn, int Nperturbers, int N, int useHelio, int GR){
 
 	int idx = threadIdx.x;
 	int id = blockIdx.x * blockDim.x + idx;
@@ -1007,7 +1007,7 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 		unsigned long long int idi = id_d[id];
 
 		for(int s = 0; s < S; ++s){
-			double aa = a_c[S * 6 + s];
+			double aa = a_c[S * RKFn + s];
 			xi  += dt * aa * kx_d[id + s * N];
 			yi  += dt * aa * ky_d[id + s * N];
 			zi  += dt * aa * kz_d[id + s * N];
@@ -1068,7 +1068,7 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 
 //combine stage step and interpolation kernel
 //all stages in the same kernel
-template < const int Nperturbers, const int Ninterpolate, const int nn >
+template < const int Nperturbers, const int Ninterpolate, const int nn, const int RKFn >
 __global__ void stageStepAll_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *A1_d, double *A2_d, double *A3_d, double *timep_d, double time0, double dt, int N, int useHelio, int GR){
 
 	int idx = threadIdx.x;
@@ -1083,13 +1083,13 @@ __global__ void stageStepAll_kernel(unsigned long long int *id_d, double *m_d, d
 	__shared__ unsigned long long int id_s[Nperturbers];
 
 
-	__shared__ double kx_s[nn * 6];
-	__shared__ double ky_s[nn * 6];
-	__shared__ double kz_s[nn * 6];
+	__shared__ double kx_s[nn * RKFn];
+	__shared__ double ky_s[nn * RKFn];
+	__shared__ double kz_s[nn * RKFn];
 
-	__shared__ double kvx_s[nn * 6];
-	__shared__ double kvy_s[nn * 6];
-	__shared__ double kvz_s[nn * 6];
+	__shared__ double kvx_s[nn * RKFn];
+	__shared__ double kvy_s[nn * RKFn];
+	__shared__ double kvz_s[nn * RKFn];
 	
 	//needs at least Nperturbers threads per block
 	// *******************************************************
@@ -1109,7 +1109,7 @@ __global__ void stageStepAll_kernel(unsigned long long int *id_d, double *m_d, d
 	double tn[Ninterpolate];
 
 
-	for(int S = 0; S < 6; ++S){
+	for(int S = 0; S < RKFn; ++S){
 
 		double time = time0 + c_c[S] * dt / dayUnit;
 		// **********************************3
@@ -1200,7 +1200,7 @@ __global__ void stageStepAll_kernel(unsigned long long int *id_d, double *m_d, d
 			unsigned long long int idi = id_d[id];
 
 			for(int s = 0; s < S; ++s){
-				double aa = a_c[S * 6 + s];
+				double aa = a_c[S * RKFn + s];
 				xi  += dt * aa * kx_s[idx + s * nn];
 				yi  += dt * aa * ky_s[idx + s * nn];
 				zi  += dt * aa * kz_s[idx + s * nn];
@@ -1286,7 +1286,7 @@ __host__ void update1(double *xt, double *yt, double *zt, double *vxt, double *v
 }
 
 
-__host__ void update2(double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *x, double *y, double *z, double *vx, double *vy, double *vz, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int i, int N, double dt, int S, double *a){
+__host__ void update2(double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *x, double *y, double *z, double *vx, double *vy, double *vz, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int i, int N, double dt, int S, int RKFn, double *a){
 
 	xt[i]  = x[i];
 	yt[i]  = y[i];
@@ -1296,12 +1296,12 @@ __host__ void update2(double *xt, double *yt, double *zt, double *vxt, double *v
 	vzt[i] = vz[i];
 
 	for(int s = 0; s < S; ++s){
-		xt[i]  += dt * a[S * 6 + s] * kx[i + s * N];
-		yt[i]  += dt * a[S * 6 + s] * ky[i + s * N];
-		zt[i]  += dt * a[S * 6 + s] * kz[i + s * N];
-		vxt[i] += dt * a[S * 6 + s] * kvx[i + s * N];
-		vyt[i] += dt * a[S * 6 + s] * kvy[i + s * N];
-		vzt[i] += dt * a[S * 6 + s] * kvz[i + s * N];
+		xt[i]  += dt * a[S * RKFn + s] * kx[i + s * N];
+		yt[i]  += dt * a[S * RKFn + s] * ky[i + s * N];
+		zt[i]  += dt * a[S * RKFn + s] * kz[i + s * N];
+		vxt[i] += dt * a[S * RKFn + s] * kvx[i + s * N];
+		vyt[i] += dt * a[S * RKFn + s] * kvy[i + s * N];
+		vzt[i] += dt * a[S * RKFn + s] * kvz[i + s * N];
 	}
 }
 
@@ -1411,6 +1411,13 @@ int main(int argc, char*argv[]){
 	//long long int outInterval = 1000;
 	//double dt = 0.01 * dayUnit;
 
+
+	//Integrator
+	//const int RKFn = 6; //RKF45
+	const int RKFn = 13; //RKF78
+
+
+
 	time1 = time0 + dt * Nsteps;
 
 
@@ -1419,7 +1426,7 @@ int main(int argc, char*argv[]){
 		readHeader(binfile, time0, time1, outInterval, outStart, NTP, comet);
 
 		//change this later to be more general
-		Nsteps = 500000;
+		Nsteps = 1e9;
 		dt = 0.1 * dayUnit;
 		//NTP = 1;
 
@@ -1899,14 +1906,7 @@ int main(int argc, char*argv[]){
 	double *kvy_h, *kvy_d;
 	double *kvz_h, *kvz_d;
 
-	double *errorkx_h;
-	double *errorky_h;
-	double *errorkz_h;
-	double *errorkvx_h;
-	double *errorkvy_h;
-	double *errorkvz_h;
-
-	double *errorMax_d;
+	double *snew_h, *snew_d;
 
 	xt_h = (double*)malloc(NN * sizeof(double));
 	yt_h = (double*)malloc(NN * sizeof(double));
@@ -1915,19 +1915,14 @@ int main(int argc, char*argv[]){
 	vyt_h = (double*)malloc(NN * sizeof(double));
 	vzt_h = (double*)malloc(NN * sizeof(double));
 
-	kx_h = (double*)malloc(NN * 6 * sizeof(double));
-	ky_h = (double*)malloc(NN * 6 * sizeof(double));
-	kz_h = (double*)malloc(NN * 6 * sizeof(double));
-	kvx_h = (double*)malloc(NN * 6 * sizeof(double));
-	kvy_h = (double*)malloc(NN * 6 * sizeof(double));
-	kvz_h = (double*)malloc(NN * 6 * sizeof(double));
+	kx_h = (double*)malloc(NN * RKFn * sizeof(double));
+	ky_h = (double*)malloc(NN * RKFn * sizeof(double));
+	kz_h = (double*)malloc(NN * RKFn * sizeof(double));
+	kvx_h = (double*)malloc(NN * RKFn * sizeof(double));
+	kvy_h = (double*)malloc(NN * RKFn * sizeof(double));
+	kvz_h = (double*)malloc(NN * RKFn * sizeof(double));
 
-	errorkx_h = (double*)malloc(NN * sizeof(double));
-	errorky_h = (double*)malloc(NN * sizeof(double));
-	errorkz_h = (double*)malloc(NN * sizeof(double));
-	errorkvx_h = (double*)malloc(NN * sizeof(double));
-	errorkvy_h = (double*)malloc(NN * sizeof(double));
-	errorkvz_h = (double*)malloc(NN * sizeof(double));
+	snew_h = (double*)malloc(NN * sizeof(double));
 
 	if(useGPU == 1){
 		cudaMalloc((void **) &xt_d, NN * sizeof(double));
@@ -1937,71 +1932,47 @@ int main(int argc, char*argv[]){
 		cudaMalloc((void **) &vyt_d, NN * sizeof(double));
 		cudaMalloc((void **) &vzt_d, NN * sizeof(double));
 
-		cudaMalloc((void **) &kx_d, NN * 6 * sizeof(double));
-		cudaMalloc((void **) &ky_d, NN * 6 * sizeof(double));
-		cudaMalloc((void **) &kz_d, NN * 6 * sizeof(double));
-		cudaMalloc((void **) &kvx_d, NN * 6 * sizeof(double));
-		cudaMalloc((void **) &kvy_d, NN * 6 * sizeof(double));
-		cudaMalloc((void **) &kvz_d, NN * 6 * sizeof(double));
+		cudaMalloc((void **) &kx_d, NN * RKFn * sizeof(double));
+		cudaMalloc((void **) &ky_d, NN * RKFn * sizeof(double));
+		cudaMalloc((void **) &kz_d, NN * RKFn * sizeof(double));
+		cudaMalloc((void **) &kvx_d, NN * RKFn * sizeof(double));
+		cudaMalloc((void **) &kvy_d, NN * RKFn * sizeof(double));
+		cudaMalloc((void **) &kvz_d, NN * RKFn * sizeof(double));
 
-		cudaMalloc((void **) &errorMax_d, 1 * sizeof(double));
+		cudaMalloc((void **) &snew_d, NN * sizeof(double));
 	}
 	
-	double *a_h;
-	a_h = (double*)malloc(6 * 6 * sizeof(double));
 
-	a_h[1 * 6 + 0] = 1.0/4.0;	//21
 
-	a_h[2 * 6 + 0] = 3.0/32.0;	//31
-	a_h[2 * 6 + 1] = 9.0/32.0;	//32
+	// *******************************************************************
+	// Allocate and set parameters for the Runge-Kutta-Fehlberg integrator
+	// *******************************************************************
+	double *a_h, *b_h, *bb_h, *c_h;
 
-	a_h[3 * 6 + 0] = 1932.0/2197.0;	//41
-	a_h[3 * 6 + 1] = -7200.0/2197.0;//42
-	a_h[3 * 6 + 2] = 7296.0/2197.0;	//43
+	a_h = (double*)malloc(RKFn * RKFn * sizeof(double));
+	b_h = (double*)malloc(RKFn * sizeof(double));
+	bb_h = (double*)malloc(RKFn * sizeof(double));
+	c_h = (double*)malloc(RKFn * sizeof(double));
 
-	a_h[4 * 6 + 0] = 439.0/216.0;	//51
-	a_h[4 * 6 + 1] = -8.0;		//52
-	a_h[4 * 6 + 2] = 3680.0/513.0;	//53
-	a_h[4 * 6 + 3] = -845.0/4104.0;	//54
+	double ee;
 
-	a_h[5 * 6 + 0] = -8.0/27.0;	//61
-	a_h[5 * 6 + 1] = 2.0;		//62
-	a_h[5 * 6 + 2] = -3544/2565.0;	//63
-	a_h[5 * 6 + 3] = 1859.0/4104.0;	//64
-	a_h[5 * 6 + 4] = -11.0/40.0;	//65
-
-	double *b_h, *bb_h;
-	b_h = (double*)malloc(6 * sizeof(double));
-	bb_h = (double*)malloc(6 * sizeof(double));
-
-	b_h[0] = 25.0/216.0;
-	b_h[1] = 0.0;
-	b_h[2] = 1408.0/2565.0;
-	b_h[3] = 2197.0/4104.0;
-	b_h[4] = -1.0/5.0;
-	b_h[5] = 0.0;
-
-	bb_h[0] = 16.0/135.0;
-	bb_h[1] = 0.0;
-	bb_h[2] = 6656.0/12825.0;
-	bb_h[3] = 28561.0/56430.0;
-	bb_h[4] = -9.0/50.0;
-	bb_h[5] = 2.0/55.0;
-
-	double *c_h;
-	c_h = (double*)malloc(6 * sizeof(double));
-
-	c_h[0] = 0.0;
-	c_h[1] = 0.25;
-	c_h[2] = 3.0 / 8.0;
-	c_h[3] = 12.0 / 13.0;
-	c_h[4] = 1.0;
-	c_h[5] = 0.5;
+	if(RKFn == 6){
+		setRKF45(a_h, b_h, bb_h, c_h);
+		ee = 1.0 / 4.0;
+	}
+	else if(RKFn == 13){
+		setRKF78(a_h, b_h, bb_h, c_h);
+		ee = 1.0 / 7.0;
+	}
+	else{
+		printf("RKFn values not valid %d\n", RKFn);
+		return 0;
+	}
 
 	if(useGPU == 1){
-		cudaMemcpyToSymbol(a_c, a_h, 6 * 6 * sizeof(double), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(b_c, b_h, 6 * sizeof(double), 0, cudaMemcpyHostToDevice);
-		cudaMemcpyToSymbol(c_c, c_h, 6 * sizeof(double), 0, cudaMemcpyHostToDevice);
+		cudaMemcpyToSymbol(a_c, a_h, RKFn * RKFn * sizeof(double), 0, cudaMemcpyHostToDevice);
+		cudaMemcpyToSymbol(b_c, b_h, RKFn * sizeof(double), 0, cudaMemcpyHostToDevice);
+		cudaMemcpyToSymbol(c_c, c_h, RKFn * sizeof(double), 0, cudaMemcpyHostToDevice);
 	}
 
 	cudaDeviceSynchronize();
@@ -2051,12 +2022,12 @@ int main(int argc, char*argv[]){
 			//interpolate2_kernel < Ninterpolate, Nperturbers > <<< NTP, Nperturbers >>> (xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
 			//interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
 			//interpolate3_kernel < Ninterpolate > <<< (NTP + 127) / 128, 128 >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
-			stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, Nperturbers, N, useHelio, GR);
-			//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, Nperturbers, N, useHelio, GR);
+			stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, GR);
+			//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, GR);
 		}	
 	
-		//stage 2 - 6
-		for(int S = 1; S < 6; ++S){
+		//stage 2 - RKFn
+		for(int S = 1; S < RKFn; ++S){
 //cudaDeviceSynchronize();
 //printf("%lld %d\n", t, S);	
 			if(useGPU == 0){
@@ -2065,7 +2036,7 @@ int main(int argc, char*argv[]){
 					interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
 				}
 				for(int i = Nperturbers; i < N; ++i){
-					update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, a_h);	//a21
+					update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, RKFn, a_h);	//a21
 				}
 				for(int i = Nperturbers; i < N; ++i){
 					stageStep(id_h, m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, A1_h, A2_h, A3_h, S, i, Nperturbers, N, useHelio, GR);
@@ -2076,37 +2047,28 @@ int main(int argc, char*argv[]){
 				//interpolate2_kernel < Ninterpolate, Nperturbers > <<< NTP, Nperturbers >>> (xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
 				//interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
 				//interpolate3_kernel < Ninterpolate > <<< (NTP + 127) / 128, 128 >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
-				stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, Nperturbers, N, useHelio, GR);
-				//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, Nperturbers, N, useHelio, GR);
+				stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, GR);
+				//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, GR);
 
 			}
 		}
 cudaDeviceSynchronize();
-//		stageStepAll_kernel < Nperturbers, Ninterpolate, 128 > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, A1_d, A2_d, A3_d, timep_d, time, dt, N, useHelio, GR);
+		if(RKFn == 6){
+//			stageStepAll_kernel < Nperturbers, Ninterpolate, 128, 6 > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, A1_d, A2_d, A3_d, timep_d, time, dt, N, useHelio, GR);
+		}
 
 
 		double newTime = time + dt / dayUnit;
 
-		double errmax = 0.0;
 		double snew = 1.0;
 
 		if(useGPU == 0){
-			computeError(errorkx_h, errorky_h, errorkz_h, errorkvx_h, errorkvy_h, errorkvz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, b_h, bb_h, Nperturbers, N, errmax);
+			computeError(snew_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, b_h, bb_h, RKFn, Nperturbers, N, snew, ee);
 		}
 
-		
-		double ee = 1.0/5.0;	
 
-		double s = pow( 1.0  / errmax, ee);
 
-		double fac = 0.8; //safty factor
-		double facmax = 1.5;
-		double facmin = 0.8;
-
-		snew = fmax(facmin, fac * s);
-		snew = fmin(facmax, snew);
-
-//printf("%.20g %.20g %.20g dt: %.20g %.20g %.20g\n", time, newTime, errmax, dt / dayUnit, s, snew);
+printf("%.20g %.20g dt: %.20g %.20g\n", time, newTime, dt / dayUnit, snew);
 //printf("%.20g %.20g\n", nextOuttime, outStart);
 
 
@@ -2115,26 +2077,26 @@ cudaDeviceSynchronize();
 			printOutput = 1;
 		}
 
-
 		if(newTime > nextOuttime){
 			dtOld = dt;
 			dt = (nextOuttime - time) * dayUnit;
 //printf("   correct %.20g %.20g %.20g %.20g\n", newTime, nextOuttime, dt / dayUnit, dtOld / dayUnit);
-			errmax = 10.0;
+//			errmax = 10.0;
 			snew = 1.0;
 			nextOuttime += outInterval;
 			printOutput = 2;
 		}
 		else{
 
-			if(dt / dayUnit < 1.0e-3 && snew < 1.0){
-errmax = 0.0;
+			if(dt / dayUnit < 1.0e-3 && snew < 1.0){	//e-3
+//errmax = 0.0;
 snew = 1.0;
-printf("dtmin\n");
+//printf("dtmin %d %.20g %.20g\n", i, time, dt / dayUnit);
 			}
 		}
 
-		if(errmax < 1.0){		
+		//if(errmax < 1.0){		
+		if(snew >= 1.0){		
 			if(useGPU == 0){
 				for(int i = Nperturbers; i < N; ++i){
 					update(x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, b_h);	
