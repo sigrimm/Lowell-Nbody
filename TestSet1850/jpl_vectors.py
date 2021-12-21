@@ -1,3 +1,6 @@
+#example: python3 jpl_vectors.py '2012 TC4'
+#mv '2012 TC4' to 2012TC4
+
 from astroquery.jplhorizons import Horizons
 from astroquery.jplsbdb import SBDB
 import sys

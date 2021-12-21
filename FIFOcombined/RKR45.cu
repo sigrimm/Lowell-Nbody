@@ -693,6 +693,7 @@ printf("gr %.20g %.20g\n", gr1, gr);
 }
 
 //J2 perturbation from Earth
+//Walter 2018, 12.2.10
 __host__ __device__ void J2(double *m, double *x, double *y, double *z, double &ax, double &ay, double &az, int i){
 
 	double J2E = 0.00108262545; // J2 Earth from DE 430
@@ -707,6 +708,8 @@ __host__ __device__ void J2(double *m, double *x, double *y, double *z, double &
 	int iE = 3; 	//index of Earth
 
 	double muE = m[iE];
+
+	//muE = 3.986004415e5 km^3s-2
 
 	double xE = x[i] - x[iE];
 	double yE = y[i] - y[iE];
@@ -728,13 +731,13 @@ __host__ __device__ void J2(double *m, double *x, double *y, double *z, double &
 	ax += tx;
 	ay += ty;
 	az += tz;
- 
-//printf("J2 %d %.20g %.20g %.20g | %.20g %.20g %.20g\n", i, tx * dayUnit * dayUnit, ty * dayUnit * dayUnit, tz * dayUnit * dayUnit, xE, yE, zE); 
+
+//printf("J2 %d %.20g %.20g %.20g %.20g | %.20g %.20g %.20g\n", i, r, tx * dayUnit * dayUnit, ty * dayUnit * dayUnit, tz * dayUnit * dayUnit, xE, yE, zE); 
 
 
 }
 
-__host__ void stageStep(unsigned long long int *id, double *m, double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, double *A1, double *A2, double *A3, int S, int i, int Nperturbers, int N, int useHelio, int GR){
+__host__ void stageStep(unsigned long long int *id, double *m, double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, double *A1, double *A2, double *A3, int S, int i, int Nperturbers, int N, int useHelio, int useGR, int useJ2, int useNonGrav){
 
 	kx[i + S * N] = vxt[i];
 	ky[i + S * N] = vyt[i];
@@ -770,12 +773,15 @@ __host__ void stageStep(unsigned long long int *id, double *m, double *xt, doubl
 	}
 
 
-	if(GR == 2){
+	if(useGR == 2){
 		acchGR2(xt[i], yt[i], zt[i], vxt[i], vyt[i], vzt[i], ax, ay, az);
 	}
 
 	NonGrav(xt[i], yt[i], zt[i], vxt[i], vyt[i], vzt[i], ax, ay, az, A1[i], A2[i], A3[i]);
-	J2(m, xt, yt, zt, ax, ay, az, i);
+
+	if(useJ2 == 1){
+		J2(m, xt, yt, zt, ax, ay, az, i);
+	}
 
 	kvx[i + S * N] = ax;
 	kvy[i + S * N] = ay;
@@ -783,7 +789,7 @@ __host__ void stageStep(unsigned long long int *id, double *m, double *xt, doubl
 }
 
 template < int NN >
-__global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xt_d, double *yt_d, double *zt_d, double *vxt_d, double *vyt_d, double *vzt_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, int S, int RKFn, int Nperturbers, int N, int useHelio, int GR){
+__global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xt_d, double *yt_d, double *zt_d, double *vxt_d, double *vyt_d, double *vzt_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, int S, int RKFn, int Nperturbers, int N, int useHelio, int useGR, int useJ2, int useNonGrav){
 
 	int itx = threadIdx.x;
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -870,12 +876,15 @@ __global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, doub
 		}
 
 
-		if(GR == 2){
+		if(useGR == 2){
 			acchGR2(xi, yi, zi, vxi, vyi, vzi, ax, ay, az);
 		}
 
 		NonGrav(xi, yi, zi, vxi, vyi, vzi, ax, ay, az, A1i, A2i, A3i);
-		J2(m_d, x_d, y_d, z_d, ax, ay, az, idx);
+
+		if(useJ2 == 1){
+			J2(m_d, x_d, y_d, z_d, ax, ay, az, idx);
+		}
 
 		kvx_d[idx + S * N] = ax;
 		kvy_d[idx + S * N] = ay;
@@ -886,7 +895,7 @@ __global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, doub
 
 //combine stage step and interpolation kernel
 template < const int NN, const int Ninterpolate >
-__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, int S, int RKFn, int Nperturbers, int N, int useHelio, int GR){
+__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, int S, int RKFn, int Nperturbers, int N, int useHelio, int useGR, int useJ2, int useNonGrav){
 
 	int idx = threadIdx.x;
 	int id = blockIdx.x * blockDim.x + idx;
@@ -1052,12 +1061,15 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 		}
 
 
-		if(GR == 2){
+		if(useGR == 2){
 			acchGR2(xi, yi, zi, vxi, vyi, vzi, ax, ay, az);
 		}
 
 		NonGrav(xi, yi, zi, vxi, vyi, vzi, ax, ay, az, A1i, A2i, A3i);
-		J2(m_d, x_d, y_d, z_d, ax, ay, az, id);
+
+		if(useJ2 == 1){
+			J2(m_d, x_d, y_d, z_d, ax, ay, az, id);
+		}
 
 		kvx_d[id + S * N] = ax;
 		kvy_d[id + S * N] = ay;
@@ -1069,7 +1081,7 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 //combine stage step and interpolation kernel
 //all stages in the same kernel
 template < const int Nperturbers, const int Ninterpolate, const int nn, const int RKFn >
-__global__ void stageStepAll_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *A1_d, double *A2_d, double *A3_d, double *timep_d, double time0, double dt, int N, int useHelio, int GR){
+__global__ void stageStepAll_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xp_d, double *yp_d, double *zp_d, double *A1_d, double *A2_d, double *A3_d, double *timep_d, double time0, double dt, int N, int useHelio, int useGR, int useJ2, int useNonGrav){
 
 	int idx = threadIdx.x;
 	int id = blockIdx.x * blockDim.x + idx;
@@ -1245,12 +1257,16 @@ __global__ void stageStepAll_kernel(unsigned long long int *id_d, double *m_d, d
 			}
 
 
-			if(GR == 2){
+			if(useGR == 2){
 				acchGR2(xi, yi, zi, vxi, vyi, vzi, ax, ay, az);
 			}
 
 			NonGrav(xi, yi, zi, vxi, vyi, vzi, ax, ay, az, A1_d[id], A2_d[id], A3_d[id]);
-			J2(m_d, x_d, y_d, z_d, ax, ay, az, id);
+		
+
+			if(useJ2 == 1){
+				J2(m_d, x_d, y_d, z_d, ax, ay, az, id);
+			}
 
 			kvx_s[idx + S * nn] = ax;
 			kvy_s[idx + S * nn] = ay;
@@ -1306,29 +1322,33 @@ __host__ void update2(double *xt, double *yt, double *zt, double *vxt, double *v
 }
 
 
-__host__ void update(double *x, double *y, double *z, double *vx, double *vy, double *vz, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int i, int N, double dt, double *b){
-	//RKF45
-	x[i] += dt * (b[0] * kx[i + 0 * N] + b[2] * kx[i + 2 * N] + b[3] * kx[i + 3 * N] + b[4] * kx[i + 4 * N] + b[5] * kx[i + 5 * N]);
-	y[i] += dt * (b[0] * ky[i + 0 * N] + b[2] * ky[i + 2 * N] + b[3] * ky[i + 3 * N] + b[4] * ky[i + 4 * N] + b[5] * ky[i + 5 * N]);
-	z[i] += dt * (b[0] * kz[i + 0 * N] + b[2] * kz[i + 2 * N] + b[3] * kz[i + 3 * N] + b[4] * kz[i + 4 * N] + b[5] * kz[i + 5 * N]);
+__host__ void update(double *x, double *y, double *z, double *vx, double *vy, double *vz, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int i, int N, double dt, int RKFn, double *b){
 
-	vx[i] += dt * (b[0] * kvx[i + 0 * N] + b[2] * kvx[i + 2 * N] + b[3] * kvx[i + 3 * N] + b[4] * kvx[i + 4 * N] + b[5] * kvx[i + 5 * N]);
-	vy[i] += dt * (b[0] * kvy[i + 0 * N] + b[2] * kvy[i + 2 * N] + b[3] * kvy[i + 3 * N] + b[4] * kvy[i + 4 * N] + b[5] * kvy[i + 5 * N]);
-	vz[i] += dt * (b[0] * kvz[i + 0 * N] + b[2] * kvz[i + 2 * N] + b[3] * kvz[i + 3 * N] + b[4] * kvz[i + 4 * N] + b[5] * kvz[i + 5 * N]);
+
+	for(int s = 0; s < RKFn; ++s){
+		x[i] += dt * b[s] * kx[i + s * N];
+		y[i] += dt * b[s] * ky[i + s * N];
+		z[i] += dt * b[s] * kz[i + s * N];
+
+		vx[i] += dt * b[s] * kvx[i + s * N];
+		vy[i] += dt * b[s] * kvy[i + s * N];
+		vz[i] += dt * b[s] * kvz[i + s * N];
+	}
 }
 
-__global__ void update_kernel(double *x, double *y, double *z, double *vx, double *vy, double *vz, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int N, int Nperturbers, double dt){
+__global__ void update_kernel(double *x, double *y, double *z, double *vx, double *vy, double *vz, double *kx, double *ky, double *kz, double *kvx, double *kvy, double *kvz, int N, int Nperturbers, double dt, int RKFn){
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if(idx >= Nperturbers && idx < N){
-	//RKF45
-		x[idx] += dt * (b_c[0] * kx[idx + 0 * N] + b_c[2] * kx[idx + 2 * N] + b_c[3] * kx[idx + 3 * N] + b_c[4] * kx[idx + 4 * N] + b_c[5] * kx[idx + 5 * N]);
-		y[idx] += dt * (b_c[0] * ky[idx + 0 * N] + b_c[2] * ky[idx + 2 * N] + b_c[3] * ky[idx + 3 * N] + b_c[4] * ky[idx + 4 * N] + b_c[5] * ky[idx + 5 * N]);
-		z[idx] += dt * (b_c[0] * kz[idx + 0 * N] + b_c[2] * kz[idx + 2 * N] + b_c[3] * kz[idx + 3 * N] + b_c[4] * kz[idx + 4 * N] + b_c[5] * kz[idx + 5 * N]);
+		for(int s = 0; s < RKFn; ++s){
+			x[idx] += dt * b_c[s] * kx[idx + s * N];
+			y[idx] += dt * b_c[s] * ky[idx + s * N];
+			z[idx] += dt * b_c[s] * kz[idx + s * N];
 
-		vx[idx] += dt * (b_c[0] * kvx[idx + 0 * N] + b_c[2] * kvx[idx + 2 * N] + b_c[3] * kvx[idx + 3 * N] + b_c[4] * kvx[idx + 4 * N] + b_c[5] * kvx[idx + 5 * N]);
-		vy[idx] += dt * (b_c[0] * kvy[idx + 0 * N] + b_c[2] * kvy[idx + 2 * N] + b_c[3] * kvy[idx + 3 * N] + b_c[4] * kvy[idx + 4 * N] + b_c[5] * kvy[idx + 5 * N]);
-		vz[idx] += dt * (b_c[0] * kvz[idx + 0 * N] + b_c[2] * kvz[idx + 2 * N] + b_c[3] * kvz[idx + 3 * N] + b_c[4] * kvz[idx + 4 * N] + b_c[5] * kvz[idx + 5 * N]);
+			vx[idx] += dt * b_c[s] * kvx[idx + s * N];
+			vy[idx] += dt * b_c[s] * kvy[idx + s * N];
+			vz[idx] += dt * b_c[s] * kvz[idx + s * N];
+		}
 	}
 }
 
@@ -1371,17 +1391,19 @@ int main(int argc, char*argv[]){
 
 	int comet = 0;
 
-	int GR = 2;
+	int useGR = 2;		//2
+	int useJ2 = 1;		//1
+	int useNonGrav = 1;	//1
 	//2 Sitarski 1982, heliocentric coordinates
 
-	int useFIFO = 2;	//use 0 or 2
+	int useFIFO = 0;	//use 0 or 2
 	int useGPU = 0;		// 0 or 1
 
 	FILE *binfile;
 	if(useFIFO == 2){	
 		//binfile = fopen("210801_2342_genga_de440_perturbers.bin", "rb");
-		//binfile = fopen("210805_1839_genga_in_yarkovsky_elements.bin", "rb");
-		binfile = fopen("210921_2148_genga_in_yarkovsky_elements.bin", "rb");
+		//binfile = fopen("210921_2148_genga_in_yarkovsky_elements.bin", "rb");
+		binfile = fopen("211208_1916_genga_in_2021-12-08_specific_desig.bin", "rb");
 		//binfile = fopen("210801_2104_genga_in_GA.bin", "rb");
 		//binfile = fopen("210705_2315_genga_req.bin", "rb");
 	}	
@@ -1391,13 +1413,13 @@ int main(int argc, char*argv[]){
 	//1 print output in heliocentric coordinates
 	//0 print output in barycentric  coordinates
 
-	int OutBinary = 1;
+	int OutBinary = 0;
 	//0 print output files in ASCII format	
 	//1 print output files in binary format	
 
 	//long long int Nsteps = 40000;
-	long long int Nsteps = 175000;
-	long long int outInterval = 10;
+	long long int Nsteps = 1750000;
+	long long int outInterval = 1;
 	double dt = 0.1 * dayUnit;
 
 	// short comparison
@@ -1414,6 +1436,7 @@ int main(int argc, char*argv[]){
 
 	//Integrator
 	//const int RKFn = 6; //RKF45
+	//const int RKFn = 7; //DP54
 	const int RKFn = 13; //RKF78
 
 
@@ -1430,8 +1453,9 @@ int main(int argc, char*argv[]){
 		dt = 0.1 * dayUnit;
 		//NTP = 1;
 
-		//outInterval = 1;
-		//outStart = 0;
+		outInterval = 1.0;
+		//outInterval = 1e8;
+		outStart = 2450800.5;
 	}
 
 	for(int i = 1; i < argc; i += 2){
@@ -1472,8 +1496,8 @@ int main(int argc, char*argv[]){
 		read(fd, &nn, sizeof(int));
 		close(fd);
 		printf("fifo n: %d\n", nn);
-			// ###############################
-			// send back N to check
+		// ###############################
+		// send back N to check
 		// ###############################
 		int fd1;
 		fd1 = open(fifoCheck, O_WRONLY);	
@@ -1606,6 +1630,29 @@ int main(int argc, char*argv[]){
 		int er = 0;
 		er = readFile(binfile, Nperturbers, x_h, y_h, z_h, vx_h, vy_h, vz_h, A1_h, A2_h, A3_h, id_h, NTP);
 		fclose(binfile);
+
+
+		// -----------------------------------
+		// Use this to extract a single object
+		int ii = 27; //84;
+		id_h[N] = id_h[ii];
+		x_h[N] = x_h[ii];
+		y_h[N] = y_h[ii];
+		z_h[N] = z_h[ii];
+		vx_h[N] = vx_h[ii];
+		vy_h[N] = vy_h[ii];
+		vz_h[N] = vz_h[ii];
+		A1_h[N] = A1_h[ii];
+		A2_h[N] = A2_h[ii];
+		A3_h[N] = A3_h[ii];
+		NTP = 1;
+
+printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[N], y_h[N], z_h[N], vx_h[N], vy_h[N], vz_h[N], A1_h[N], A2_h[N], A3_h[N]);
+//x_h[N] += 1.0e-6;
+
+		// -----------------------------------
+
+
 		N += NTP;
 		if(er == 1) return 0;
 	}
@@ -1626,9 +1673,9 @@ int main(int argc, char*argv[]){
 			fscanf(infile, "%lf", &vx_h[i]);
 			fscanf(infile, "%lf", &vy_h[i]);
 			er= fscanf(infile, "%lf", &vz_h[i]);
-			//fscanf(infile, "%lf", &A1[i]);
-			//fscanf(infile, "%lf", &A2[i]);
-			//fscanf(infile, "%lf", &A3[i]);
+			fscanf(infile, "%lf", &A1_h[i]);
+			fscanf(infile, "%lf", &A2_h[i]);
+			fscanf(infile, "%lf", &A3_h[i]);
 			//fscanf(infile, "%lf", &ALN[i]);
 			//fscanf(infile, "%lf", &NK[i]);
 			//fscanf(infile, "%lf", &NM[i]);
@@ -1636,10 +1683,12 @@ int main(int argc, char*argv[]){
 			//er = fscanf(infile, "%lf", &R0[i]);
 			if(er < 0) break;
 			++N;
-	printf("er %d %llu %d %d %.20g %.20g %.20g\n", i, id_h[i], er, N, x_h[i], y_h[i], z_h[i]);
+//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+//printf("er %d %llu %d %d %.20g %.20g %.20g\n", i, id_h[i], er, N, x_h[i], y_h[i], z_h[i]);
 		}
 		fclose(infile);
 		time0 = time;	//start time from simulation
+time1 = 2461000.5;
 	}
 
 	double timep0 = 0.0;	//start time from perturbers file
@@ -1954,11 +2003,24 @@ int main(int argc, char*argv[]){
 	bb_h = (double*)malloc(RKFn * sizeof(double));
 	c_h = (double*)malloc(RKFn * sizeof(double));
 
+	for(int i = 0; i < RKFn; ++i){
+		for(int j = 0; j < RKFn; ++j){
+			a_h[i * RKFn + j] = 0.0;
+		}
+		b_h[i] = 0.0;
+		bb_h[i] = 0.0;
+		c_h[i] = 0.0;
+	}
+
 	double ee;
 
 	if(RKFn == 6){
 		setRKF45(a_h, b_h, bb_h, c_h);
 		ee = 1.0 / 4.0;
+	}
+	else if(RKFn == 7){
+		setDP54(a_h, b_h, bb_h, c_h);
+		ee = 1.0 / 5.0;
 	}
 	else if(RKFn == 13){
 		setRKF78(a_h, b_h, bb_h, c_h);
@@ -2014,7 +2076,7 @@ int main(int argc, char*argv[]){
 				update1(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, i);
 			}
 			for(int i = Nperturbers; i < N; ++i){
-				stageStep(id_h, m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, A1_h, A2_h, A3_h, S, i, Nperturbers, N, useHelio, GR);
+				stageStep(id_h, m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, A1_h, A2_h, A3_h, S, i, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
 			}
 		}
 		else{
@@ -2022,8 +2084,8 @@ int main(int argc, char*argv[]){
 			//interpolate2_kernel < Ninterpolate, Nperturbers > <<< NTP, Nperturbers >>> (xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
 			//interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
 			//interpolate3_kernel < Ninterpolate > <<< (NTP + 127) / 128, 128 >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[0] * dt / dayUnit, xt_d, yt_d, zt_d);
-			stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, GR);
-			//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, GR);
+			stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
+			//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
 		}	
 	
 		//stage 2 - RKFn
@@ -2039,7 +2101,7 @@ int main(int argc, char*argv[]){
 					update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, RKFn, a_h);	//a21
 				}
 				for(int i = Nperturbers; i < N; ++i){
-					stageStep(id_h, m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, A1_h, A2_h, A3_h, S, i, Nperturbers, N, useHelio, GR);
+					stageStep(id_h, m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, A1_h, A2_h, A3_h, S, i, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
 				}
 			}
 			else{
@@ -2047,14 +2109,17 @@ int main(int argc, char*argv[]){
 				//interpolate2_kernel < Ninterpolate, Nperturbers > <<< NTP, Nperturbers >>> (xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
 				//interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
 				//interpolate3_kernel < Ninterpolate > <<< (NTP + 127) / 128, 128 >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
-				stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, GR);
-				//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, GR);
+				stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, vxt_d, vyt_d, vzt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
+				//stageStep1_kernel < Nperturbers, Ninterpolate > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
 
 			}
 		}
 cudaDeviceSynchronize();
 		if(RKFn == 6){
-//			stageStepAll_kernel < Nperturbers, Ninterpolate, 128, 6 > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, A1_d, A2_d, A3_d, timep_d, time, dt, N, useHelio, GR);
+//			stageStepAll_kernel < Nperturbers, Ninterpolate, 128, 6 > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, A1_d, A2_d, A3_d, timep_d, time, dt, N, useHelio, useGR, useJ2, useNonGrav);
+		}
+		if(RKFn == 13){
+//			stageStepAll_kernel < Nperturbers, Ninterpolate, 128, 13 > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xp_d, yp_d, zp_d, A1_d, A2_d, A3_d, timep_d, time, dt, N, useHelio, useGR, useJ2, useNonGrav);
 		}
 
 
@@ -2063,12 +2128,13 @@ cudaDeviceSynchronize();
 		double snew = 1.0;
 
 		if(useGPU == 0){
-			computeError(snew_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, b_h, bb_h, RKFn, Nperturbers, N, snew, ee);
+			computeError(snew_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, b_h, bb_h, RKFn, Nperturbers, N, snew, dt, ee);
 		}
 
 
 
-printf("%.20g %.20g dt: %.20g %.20g\n", time, newTime, dt / dayUnit, snew);
+//printf("%.20g %.20g dt: %.20g %.20g\n", time, newTime, dt / dayUnit, snew);
+printf("%.20g %.20g dt: %.20g %.20g | %.20g %.20g %.20g\n", time, newTime, dt / dayUnit, snew, x_h[Nperturbers], y_h[Nperturbers], z_h[Nperturbers]);
 //printf("%.20g %.20g\n", nextOuttime, outStart);
 
 
@@ -2081,29 +2147,19 @@ printf("%.20g %.20g dt: %.20g %.20g\n", time, newTime, dt / dayUnit, snew);
 			dtOld = dt;
 			dt = (nextOuttime - time) * dayUnit;
 //printf("   correct %.20g %.20g %.20g %.20g\n", newTime, nextOuttime, dt / dayUnit, dtOld / dayUnit);
-//			errmax = 10.0;
 			snew = 1.0;
 			nextOuttime += outInterval;
 			printOutput = 2;
 		}
-		else{
 
-			if(dt / dayUnit < 1.0e-3 && snew < 1.0){	//e-3
-//errmax = 0.0;
-snew = 1.0;
-//printf("dtmin %d %.20g %.20g\n", i, time, dt / dayUnit);
-			}
-		}
-
-		//if(errmax < 1.0){		
-		if(snew >= 1.0){		
+		if(snew >= 1.0 && printOutput != 2){		
 			if(useGPU == 0){
 				for(int i = Nperturbers; i < N; ++i){
-					update(x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, b_h);	
+					update(x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, RKFn, b_h);	
 				}
 			}
 			else{
-				update_kernel <<< (NN + 127) / 128, 128 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, N, Nperturbers, dt);	
+				update_kernel <<< (NN + 127) / 128, 128 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, N, Nperturbers, dt, RKFn);	
 			}
 		
 			time += dt / dayUnit;
@@ -2208,10 +2264,10 @@ snew = 1.0;
 			fclose(outfile);
 
 
-			if(time > time1){
-				printf("Reached the end\n");
-				break;
-			}
+		}
+		if(time > time1){
+			printf("Reached the end\n");
+			break;
 		}
 		
 	}	// end of time step loop
