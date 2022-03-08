@@ -9,5 +9,6 @@
 //constant memory
 __constant__ double a_c[20 * 20];       //20 is considered here to be large enough (>RKFn)
 __constant__ double b_c[20];
+__constant__ double bb_c[20];
 __constant__ double c_c[20];
 
