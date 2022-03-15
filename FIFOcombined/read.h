@@ -5,7 +5,7 @@
  
 
 
-int readHeader(FILE *infile, double &time0, double &time1, long long int &outInterval, double &outStart, int &N, int &comet){
+int readHeader(FILE *infile, double &time0, double &time1, long long int &outInterval, double &outStart, int &N, int &comet, double &InVersion){
 
 	double temp;
 	long long int header;
@@ -36,25 +36,34 @@ int readHeader(FILE *infile, double &time0, double &time1, long long int &outInt
 	printf("N %d\n", N);
 
 	er = fread(&time0, sizeof(double), 1, infile);
+	printf("epoch (start time), used in Version 1: %.20g\n", time0);
 
-	printf("epoch (start time): %.20g\n", time0);
 
+	er = fread(&InVersion, sizeof(double), 1, infile);
+	printf("File format version number: %g\n", InVersion);
 
 	er = fread(&temp, sizeof(double), 1, infile);
 	er = fread(&temp, sizeof(double), 1, infile);
-	er = fread(&temp, sizeof(double), 1, infile);
 
+	if(InVersion > 1.0){
+		er = fread(&temp, sizeof(double), 1, infile);
+	}
 	return 0;
 
 }
  
-int readFile(FILE *infile, int Nperturbers, double *x_h, double *y_h, double *z_h, double *vx_h, double *vy_h, double *vz_h, double *A1_h, double *A2_h, double *A3_h, unsigned long long int *id_h, int N){
+int readFile(FILE *infile, int Nperturbers, double *x_h, double *y_h, double *z_h, double *vx_h, double *vy_h, double *vz_h, double *A1_h, double *A2_h, double *A3_h, unsigned long long int *id_h, double *jd_init_h, int N, double &time0, double InVersion, int &DoPreIntegration){
 
 
 	//printf("size %lu %lu\n", sizeof(unsigned long long int), sizeof(double));
 
 	int er = 0;
 
+	if(InVersion > 1.0){
+		//search for smallest starting time
+		time0 = 1.0e10;
+	}
+	int timeOld = 0.0;
 	for(int i = Nperturbers; i < N + Nperturbers; ++i){
 		er = fread(&id_h[i], sizeof(unsigned long long int), 1, infile);
 		er = fread(&x_h[i], sizeof(double), 1, infile);
@@ -66,6 +75,15 @@ int readFile(FILE *infile, int Nperturbers, double *x_h, double *y_h, double *z_
 		er = fread(&A1_h[i], sizeof(double), 1, infile);
 		er = fread(&A2_h[i], sizeof(double), 1, infile);
 		er = fread(&A3_h[i], sizeof(double), 1, infile);
+		if(InVersion > 1.0){
+			er = fread(&jd_init_h[i], sizeof(double), 1, infile);
+			time0 = fmin(time0, jd_init_h[i]);
+			//Check if initial times are different for some bodies
+			//If this is the case then a pre-integration is needed to the starting point
+			if(i > Nperturbers && jd_init_h[i] != jd_init_h[i-1]){
+				DoPreIntegration = 1;
+			}
+		}
 
 		if(er <= 0.0){
 			printf("Error in reading initial conditions\n");
@@ -74,9 +92,9 @@ int readFile(FILE *infile, int Nperturbers, double *x_h, double *y_h, double *z_
 
 		unsigned long long int j = __builtin_bswap64 (id_h[i]);
 		//j is the correct index
-		id_h[i] = j;
 
-		/*if(i < 10 + Nperturbers || i > N + Nperturbers - 10)*/ printf("%d %llu %llu | %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], j, x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+		/*if(i < 10 + Nperturbers || i > N + Nperturbers - 10)*/ printf("%d %llu %llu | %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], j, jd_init_h[i], x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+		id_h[i] = j;
 
 		if(A1_h[i] != 0.0 || A2_h[i] != 0.0 || A3_h[i] != 0.0){
 			printf("A %d %g %g %g\n", i, A1_h[i], A2_h[i], A3_h[i]);

@@ -277,7 +277,7 @@ __host__ void stageStep(unsigned long long int *id, double *m, double *xt, doubl
 		for(int j = Nperturbers-1; j >= 1; --j){
 			if(id[i] != id[j]){
 				accP(m, xt, yt, zt, ax, ay, az, i, j);
-//if(id[i] == 72057594037948950) printf("Nij %d %d %llu %llu %.20g %.20g %.20g\n", i, j, id[i], id[j], ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//if(i == 27) printf("Nij %d %d %llu %llu %.20g %.20g %.20g\n", i, j, id[i], id[j], ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 			}
 		}
 		accS(m, xt, yt, zt, ax, ay, az, i);
@@ -419,7 +419,7 @@ __global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, doub
 
 
 template < int NN >
-__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, long long int sid, int S, int RKFn, int Nperturbers, int NTable, int N, int useHelio, int useGR, int useJ2, int useNonGrav){
+__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double dt, long long int sid, int RKFn, int Nperturbers, int NTable, int N, int useHelio, int useGR, int useJ2, int useNonGrav){
 
 	int itx = threadIdx.x;
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -433,99 +433,102 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 	__shared__ unsigned long long int id_s[NN];
 
 
-	if(threadIdx.x < Nperturbers){
-			int ii = itx * NTable * RKFn + sid * RKFn + S;
-			x_s[threadIdx.x] = xTable_d[ii];
-			y_s[threadIdx.x] = yTable_d[ii];
-			z_s[threadIdx.x] = zTable_d[ii];
-			m_s[threadIdx.x] = m_d[itx];
-			id_s[threadIdx.x] = id_d[itx];
-//if(itx == 1 && sid < 10) printf("%lld %d %.20g\n", sid, S, x_s[itx]);
+	for(int S = 0; S < RKFn; ++S){
+
+
+		if(threadIdx.x < Nperturbers){
+				int ii = itx * NTable * RKFn + sid * RKFn + S;
+				x_s[threadIdx.x] = xTable_d[ii];
+				y_s[threadIdx.x] = yTable_d[ii];
+				z_s[threadIdx.x] = zTable_d[ii];
+				m_s[threadIdx.x] = m_d[itx];
+				id_s[threadIdx.x] = id_d[itx];
+	//if(itx == 1 && sid < 10) printf("%lld %d %.20g\n", sid, S, x_s[itx]);
+		}
+		__syncthreads();
+
+		if(idx >= Nperturbers && idx < N){
+
+
+			// ***********************
+			// update
+			double xi = x_d[idx];
+			double yi = y_d[idx];
+			double zi = z_d[idx];
+			double vxi = vx_d[idx];
+			double vyi = vy_d[idx];
+			double vzi = vz_d[idx];
+			double mi = m_d[idx];
+			double A1i = A1_d[idx];
+			double A2i = A2_d[idx];
+			double A3i = A3_d[idx];
+			unsigned long long int idi = id_d[idx];
+
+			for(int s = 0; s < S; ++s){
+				double aa = a_c[S * RKFn + s];
+				xi  += dt * aa * kx_d[idx + s * N];
+				yi  += dt * aa * ky_d[idx + s * N];
+				zi  += dt * aa * kz_d[idx + s * N];
+				vxi += dt * aa * kvx_d[idx + s * N];
+				vyi += dt * aa * kvy_d[idx + s * N];
+				vzi += dt * aa * kvz_d[idx + s * N];
+			}
+			// end update
+			// *****************************
+
+			kx_d[idx + S * N] = vxi;
+			ky_d[idx + S * N] = vyi;
+			kz_d[idx + S * N] = vzi;
+
+			double ax = 0.0;
+			double ay = 0.0;
+			double az = 0.0;
+
+			if(useHelio == 0){
+				for(int j = Nperturbers-1; j >= 0; --j){
+					if(idi != id_s[j]){
+						accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+					}
+				}
+			}
+			else{
+				for(int j = Nperturbers-1; j >= 1; --j){
+	//if(idi == 72057594037948950) printf("%llu %llu\n", idi, id_s[j]);
+					if(idi != id_s[j]){
+						accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+	///*if(idi == 72057594037948950)*/ printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+					}
+				}
+				accS_device(m_s[0] + mi, xi, yi, zi, ax, ay, az);
+
+	//printf("N0 %d %.20g %.20g %.20g\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+				for(int j = Nperturbers-1; j >= 1; --j){
+					if(idi != id_s[j]){
+						accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
+	//printf("Npi %d %d %.20g %.20g %.20g %d\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+					}
+				}
+	//printf("Np %d %.20g %.20g %.20g %d\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+			}
+
+
+			if(useGR == 2){
+				acchGR2(xi, yi, zi, vxi, vyi, vzi, ax, ay, az);
+			}
+
+			if(useNonGrav == 1){
+				NonGrav(xi, yi, zi, vxi, vyi, vzi, ax, ay, az, A1i, A2i, A3i);
+			}
+
+			if(useJ2 == 1){
+				J2(m_d, x_d, y_d, z_d, ax, ay, az, idx);
+			}
+
+			kvx_d[idx + S * N] = ax;
+			kvy_d[idx + S * N] = ay;
+			kvz_d[idx + S * N] = az;
+		}
 	}
-	__syncthreads();
-
-	if(idx >= Nperturbers && idx < N){
-
-
-		// ***********************
-		// update
-		double xi = x_d[idx];
-		double yi = y_d[idx];
-		double zi = z_d[idx];
-		double vxi = vx_d[idx];
-		double vyi = vy_d[idx];
-		double vzi = vz_d[idx];
-		double mi = m_d[idx];
-		double A1i = A1_d[idx];
-		double A2i = A2_d[idx];
-		double A3i = A3_d[idx];
-		unsigned long long int idi = id_d[idx];
-
-		for(int s = 0; s < S; ++s){
-			double aa = a_c[S * RKFn + s];
-			xi  += dt * aa * kx_d[idx + s * N];
-			yi  += dt * aa * ky_d[idx + s * N];
-			zi  += dt * aa * kz_d[idx + s * N];
-			vxi += dt * aa * kvx_d[idx + s * N];
-			vyi += dt * aa * kvy_d[idx + s * N];
-			vzi += dt * aa * kvz_d[idx + s * N];
-		}
-		// end update
-		// *****************************
-
-		kx_d[idx + S * N] = vxi;
-		ky_d[idx + S * N] = vyi;
-		kz_d[idx + S * N] = vzi;
-
-		double ax = 0.0;
-		double ay = 0.0;
-		double az = 0.0;
-
-		if(useHelio == 0){
-			for(int j = Nperturbers-1; j >= 0; --j){
-				if(idi != id_s[j]){
-					accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
-				}
-			}
-		}
-		else{
-			for(int j = Nperturbers-1; j >= 1; --j){
-//if(idi == 72057594037948950) printf("%llu %llu\n", idi, id_s[j]);
-				if(idi != id_s[j]){
-					accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
-///*if(idi == 72057594037948950)*/ printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
-				}
-			}
-			accS_device(m_s[0] + mi, xi, yi, zi, ax, ay, az);
-
-//printf("N0 %d %.20g %.20g %.20g\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
-			for(int j = Nperturbers-1; j >= 1; --j){
-				if(idi != id_s[j]){
-					accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
-//printf("Npi %d %d %.20g %.20g %.20g %d\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
-				}
-			}
-//printf("Np %d %.20g %.20g %.20g %d\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
-		}
-
-
-		if(useGR == 2){
-			acchGR2(xi, yi, zi, vxi, vyi, vzi, ax, ay, az);
-		}
-
-		if(useNonGrav == 1){
-			NonGrav(xi, yi, zi, vxi, vyi, vzi, ax, ay, az, A1i, A2i, A3i);
-		}
-
-		if(useJ2 == 1){
-			J2(m_d, x_d, y_d, z_d, ax, ay, az, idx);
-		}
-
-		kvx_d[idx + S * N] = ax;
-		kvy_d[idx + S * N] = ay;
-		kvz_d[idx + S * N] = az;
-	}
-
 }
 
 __host__ void update1(double *xt, double *yt, double *zt, double *vxt, double *vyt, double *vzt, double *x, double *y, double *z, double *vx, double *vy, double *vz, int i){
@@ -557,6 +560,7 @@ __host__ void update2(double *xt, double *yt, double *zt, double *vxt, double *v
 		vyt[i] += dt * a[S * RKFn + s] * kvy[i + s * N];
 		vzt[i] += dt * a[S * RKFn + s] * kvz[i + s * N];
 	}
+//printf("update 2 %d %g %g %g %g %g %g\n", i, xt[i], yt[i], zt[i], vxt[i], vyt[i], vzt[i]);
 }
 
 
@@ -642,9 +646,10 @@ int main(int argc, char*argv[]){
 	if(useFIFO == 2){	
 		//binfile = fopen("210801_2342_genga_de440_perturbers.bin", "rb");
 		//binfile = fopen("210921_2148_genga_in_yarkovsky_elements.bin", "rb");
-		binfile = fopen("211208_1916_genga_in_2021-12-08_specific_desig.bin", "rb");
+		//binfile = fopen("211208_1916_genga_in_2021-12-08_specific_desig.bin", "rb");
 		//binfile = fopen("210801_2104_genga_in_GA.bin", "rb");
 		//binfile = fopen("210705_2315_genga_req.bin", "rb");
+		binfile = fopen("220301_2048_genga_in_new_last_14_days.bin", "rb");
 	}	
 
 	int useHelio = 1;
@@ -660,6 +665,9 @@ int main(int argc, char*argv[]){
 	long long int Nsteps = 1750000;
 	long long int outInterval = 1;
 	double dt = 0.1 * dayUnit;
+
+	double InVersion = 0.0;	//version of Input file format
+	int DoPreIntegration = 0; //If this is 1 then do a pre-Integration to synchronize all initial conditions
 
 	// short comparison
 	//long long int Nsteps = 40000;
@@ -685,7 +693,7 @@ int main(int argc, char*argv[]){
 
 	if(useFIFO == 2){
 		printf("read file\n");
-		readHeader(binfile, time0, time1, outInterval, outStart, NTP, comet);
+		readHeader(binfile, time0, time1, outInterval, outStart, NTP, comet, InVersion);
 
 		//change this later to be more general
 		Nsteps = 1e9;
@@ -694,7 +702,7 @@ int main(int argc, char*argv[]){
 
 		outInterval = 1.0;
 		//outInterval = 1e8;
-		outStart = 2450800.5;
+		//outStart = 2450800.5;
 	}
 
 	for(int i = 1; i < argc; i += 2){
@@ -714,6 +722,7 @@ int main(int argc, char*argv[]){
 		}
 	}
 	int NN = Nperturbers + NTP;//+ 8192 * 4; //28
+	printf("NN %d %d %d\n", Nperturbers, NTP, NN);
 
 	float milliseconds = 0.0f;
 
@@ -758,6 +767,7 @@ int main(int argc, char*argv[]){
 	double *A1_h, *A1_d;
 	double *A2_h, *A2_d;
 	double *A3_h, *A3_d;
+	double *jd_init_h, *jd_init_d;
 
 	//coordinates from data table
 	double *timep_h, *timep_d;
@@ -780,6 +790,7 @@ int main(int argc, char*argv[]){
 	A1_h = (double*)malloc(NN * sizeof(double));
 	A2_h = (double*)malloc(NN * sizeof(double));
 	A3_h = (double*)malloc(NN * sizeof(double));
+	jd_init_h = (double*)malloc(NN * sizeof(double));
 
 	timep_h = (double*)malloc(Nperturbers * NTable * sizeof(double));
 	xp_h = (double*)malloc(Nperturbers * NTable * sizeof(double));
@@ -798,6 +809,7 @@ int main(int argc, char*argv[]){
 	cudaMalloc((void **) &A1_d, NN * sizeof(double));
 	cudaMalloc((void **) &A2_d, NN * sizeof(double));
 	cudaMalloc((void **) &A3_d, NN * sizeof(double));
+	cudaMalloc((void **) &jd_init_d, NN * sizeof(double));
 
 	cudaMalloc((void **) &timep_d, Nperturbers * NTable * sizeof(double));
 	cudaMalloc((void **) &xp_d, Nperturbers * NTable * sizeof(double));
@@ -810,6 +822,7 @@ int main(int argc, char*argv[]){
 		A1_h[i] = 0.0;
 		A2_h[i] = 0.0;
 		A3_h[i] = 0.0;
+		jd_init_h[i] = 0.0;
 	}
 	
 	//Sun
@@ -867,10 +880,11 @@ int main(int argc, char*argv[]){
 	if(useFIFO == 2){	
 		//read test particles
 		int er = 0;
-		er = readFile(binfile, Nperturbers, x_h, y_h, z_h, vx_h, vy_h, vz_h, A1_h, A2_h, A3_h, id_h, NTP);
+		er = readFile(binfile, Nperturbers, x_h, y_h, z_h, vx_h, vy_h, vz_h, A1_h, A2_h, A3_h, id_h, jd_init_h, NTP, time0, InVersion, DoPreIntegration);
+		printf("read file OK\n");
 		fclose(binfile);
 
-		
+		/*				
 		// -----------------------------------
 		// Use this to extract a single object
 		int ii = 29;//166;//29; //84;
@@ -884,13 +898,14 @@ int main(int argc, char*argv[]){
 		A1_h[N] = A1_h[ii];
 		A2_h[N] = A2_h[ii];
 		A3_h[N] = A3_h[ii];
+		jd_init_h[N] = jd_init_h[ii];
 		NTP = 1;
 
-printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[N], y_h[N], z_h[N], vx_h[N], vy_h[N], vz_h[N], A1_h[N], A2_h[N], A3_h[N]);
+printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g\n", x_h[N], y_h[N], z_h[N], vx_h[N], vy_h[N], vz_h[N], A1_h[N], A2_h[N], A3_h[N], jd_init_h[N]);
 //x_h[N] += 1.0e-6;
 
 		// -----------------------------------
-		
+		*/
 
 		N += NTP;
 		if(er == 1) return 0;
@@ -911,10 +926,10 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[N], y_
 			fscanf(infile, "%lf", &z_h[i]);
 			fscanf(infile, "%lf", &vx_h[i]);
 			fscanf(infile, "%lf", &vy_h[i]);
-			er= fscanf(infile, "%lf", &vz_h[i]);
-			fscanf(infile, "%lf", &A1_h[i]);
-			fscanf(infile, "%lf", &A2_h[i]);
-			fscanf(infile, "%lf", &A3_h[i]);
+			er = fscanf(infile, "%lf", &vz_h[i]);
+			er = fscanf(infile, "%lf", &A1_h[i]);
+			er = fscanf(infile, "%lf", &A2_h[i]);
+			er = fscanf(infile, "%lf", &A3_h[i]);
 			//fscanf(infile, "%lf", &ALN[i]);
 			//fscanf(infile, "%lf", &NK[i]);
 			//fscanf(infile, "%lf", &NM[i]);
@@ -927,6 +942,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[N], y_
 		}
 		fclose(infile);
 		time0 = time;	//start time from simulation
+
 time1 = 2461000.5;
 	}
 
@@ -1055,7 +1071,6 @@ time1 = 2461000.5;
 	cudaDeviceSynchronize();
 
 	if(useGPU == 0){
-
 		bufferToX (XYdata_h, timep_h, xp_h, yp_h, zp_h, NTableC * Nperturbers);
 		free(XYdata_h);
 		free(readBufferA_h);
@@ -1176,6 +1191,7 @@ time1 = 2461000.5;
 		cudaMemcpy(A1_d, A1_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(A2_d, A2_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(A3_d, A3_h, NN * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(jd_init_d, jd_init_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 	}
 	
 
@@ -1303,8 +1319,89 @@ time1 = 2461000.5;
 
 	cudaEventRecord(LoopStart);
 
-	time = time0;
 	double dtOld = dt;
+
+	if(DoPreIntegration == 1){
+		//Do pre-Integration to syncrhonize all initial conditions
+		printf("Start pre-Integration up to time %.20g\n", outStart);
+		for(int i = Nperturbers; i < N; ++i){
+			time = jd_init_h[i];
+			double snew = 1.0;
+			dt = 1.0 * dayUnit;
+			int stop = 0;
+
+printf("preIntegration %d %.20g %.20g\n", i, time, outStart);
+
+			if(time == outStart){
+				continue;
+			}
+			if(time > outStart){
+				dt = -dt;
+			}
+			
+			for(long long int t = 1; t <= Nsteps; ++t){
+//printf("A %d %lld %.20g %.20g %.20g %.20g\n", i, id_h[i], time, x_h[i], y_h[i], z_h[i]);
+
+				for(int S = 0; S < RKFn; ++S){
+					for(int p = 0; p < Nperturbers; ++p){
+						interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+						//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					}
+					if(S == 0) update1(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, i);
+					else update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, RKFn, a_h);
+
+					stageStep(id_h, m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, A1_h, A2_h, A3_h, S, i, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
+
+				}
+				computeError1(snew_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, b_h, bb_h, RKFn, i, N, snew, dt, ee);
+
+				if(snew >= 1.0){		
+					update(x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, RKFn, b_h);	
+		
+					time += dt / dayUnit;
+
+					dt *= snew;
+
+					if(stop == 1){
+						break;
+					}
+				}
+				else{
+					dt *= snew;
+					stop = 0;
+				}
+
+
+//printf("B %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dt / dayUnit, snew, x_h[i], y_h[i], z_h[i]);
+
+
+				if(dt > 0.0 && time + dt / dayUnit > outStart){
+					dt = (outStart - time) * dayUnit;
+					stop = 1;
+//printf("Final time step %.20g\n", dt/dayUnit);
+				}
+				if(dt < 0.0 && time + dt / dayUnit < outStart){
+					dt = (outStart - time) * dayUnit;
+					stop = 1;
+//printf("Final time step %.20g\n", dt/dayUnit);
+				}
+
+			}
+printf("C %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dt / dayUnit, snew, x_h[i], y_h[i], z_h[i]);
+			if(fabs(time - outStart) > 1.0e-10){
+				printf("Error in pre-integration of particle %d, start time not reached\n", i);
+				return 0;
+			}
+		}
+		dt = dtOld;
+	}
+
+
+return 0;
+
+
+
+	time = time0;
 	int printOutput = 0;
 	double nextOuttime = outInterval + time0;
 
@@ -1313,8 +1410,8 @@ time1 = 2461000.5;
 	for(long long int t = 1; t <= Nsteps; ++t){
 	//for(long long int t = 1; t < 3; ++t){
 
-//cudaDeviceSynchronize();
-//printf("%lld %d | %d %d\n", t, 0, NTP, Nperturbers);	
+cudaDeviceSynchronize();
+printf("%lld %d | %d %d\n", t, 0, NTP, Nperturbers);	
 
 		if(useGPU == 1 && cTable >= NTable1){
 			//Precalculate interpolation points on 0.1 time steps for NTable1 steps and store them in global memory
@@ -1333,7 +1430,6 @@ time1 = 2461000.5;
 
 			//return 0;
 		}
-
 		++cTable;
 
 		double newTime = time + dt / dayUnit;
@@ -1342,8 +1438,8 @@ time1 = 2461000.5;
 		if(useGPU == 0){
 			for(int S = 0; S < RKFn; ++S){
 				for(int p = 0; p < Nperturbers; ++p){
-					//interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
-					interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
 				}
 				for(int i = Nperturbers; i < N; ++i){
 					if(S == 0) update1(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, i);
@@ -1359,15 +1455,15 @@ time1 = 2461000.5;
 		// -----------------------------------
 		}
 		else{
-			for(int S = 0; S < RKFn; ++S){
+			//for(int S = 0; S < RKFn; ++S){
 //cudaDeviceSynchronize();
 //printf("%lld %d\n", t, S);	
 				//interpolate_kernel < Ninterpolate > <<< dim3(Nperturbers, NTP,1), Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
 				//interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
 				//stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
-				stageStep1_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, cTable - 1, S, RKFn, Nperturbers, NTable1, N, useHelio, useGR, useJ2, useNonGrav);
 
-			}
+			//}
+			stageStep1_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, cTable - 1, RKFn, Nperturbers, NTable1, N, useHelio, useGR, useJ2, useNonGrav);
 cudaDeviceSynchronize();
 		}
 
