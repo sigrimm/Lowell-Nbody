@@ -63,7 +63,6 @@ int readFile(FILE *infile, int Nperturbers, double *x_h, double *y_h, double *z_
 		//search for smallest starting time
 		time0 = 1.0e10;
 	}
-	int timeOld = 0.0;
 	for(int i = Nperturbers; i < N + Nperturbers; ++i){
 		er = fread(&id_h[i], sizeof(unsigned long long int), 1, infile);
 		er = fread(&x_h[i], sizeof(double), 1, infile);

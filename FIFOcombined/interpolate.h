@@ -273,7 +273,7 @@ __global__ void interpolate2b_kernel(int Nperturbers, double *xp_d, double *yp_d
 }
 
 template < int Ninterpolate >
-__global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *xTable_d, double *yTable_d, double *zTable_d){
+__global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double dts, double *xTable_d, double *yTable_d, double *zTable_d){
 
 	int pid = blockIdx.x;	//perturber index, Nperturbers
 	int sid = blockIdx.y;	//parallel time step index
@@ -287,7 +287,7 @@ __global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, d
 		__shared__ double Pz_s[Ninterpolate][Ninterpolate];
 		__shared__ double tn_s[Ninterpolate];
 
-		time += (sid + c_c[S]) * 0.1;
+		time += (sid + c_c[S]) * dts;
 
 		int it = floor((time - timep0) / dtimep);
 		it -= (Ninterpolate / 2);
@@ -328,7 +328,7 @@ __global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, d
 
 //using local memory arrays
 template <int Ninterpolate>
-__global__ void interpolate2bTable_kernel(int Nperturbers, int NTable, int RKFn, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *xTable_d, double *yTable_d, double *zTable_d){
+__global__ void interpolate2bTable_kernel(int Nperturbers, int NTable, int RKFn, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double dts, double *xTable_d, double *yTable_d, double *zTable_d){
 
 	//every perturber is a thread
 	//every particle is a block
@@ -351,7 +351,7 @@ __global__ void interpolate2bTable_kernel(int Nperturbers, int NTable, int RKFn,
 
 		double tn[Ninterpolate];
 
-		time += (sid + c_c[S]) * 0.1;
+		time += (sid + c_c[S]) * dts;
 
 		int it = floor((time - timep0) / dtimep);
 		it -= (Ninterpolate / 2);

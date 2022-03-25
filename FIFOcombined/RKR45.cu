@@ -13,7 +13,7 @@
 #include "perturbers.h"
 #include "integrator.h"
 #include "interpolate.h"
-
+#include "output.h"
 
 // --------------------------------
 //barycentric coordinates
@@ -646,10 +646,10 @@ int main(int argc, char*argv[]){
 	if(useFIFO == 2){	
 		//binfile = fopen("210801_2342_genga_de440_perturbers.bin", "rb");
 		//binfile = fopen("210921_2148_genga_in_yarkovsky_elements.bin", "rb");
-		//binfile = fopen("211208_1916_genga_in_2021-12-08_specific_desig.bin", "rb");
+		binfile = fopen("211208_1916_genga_in_2021-12-08_specific_desig.bin", "rb");
 		//binfile = fopen("210801_2104_genga_in_GA.bin", "rb");
 		//binfile = fopen("210705_2315_genga_req.bin", "rb");
-		binfile = fopen("220301_2048_genga_in_new_last_14_days.bin", "rb");
+		//binfile = fopen("220301_2048_genga_in_new_last_14_days.bin", "rb");
 	}	
 
 	int useHelio = 1;
@@ -657,14 +657,18 @@ int main(int argc, char*argv[]){
 	//1 print output in heliocentric coordinates
 	//0 print output in barycentric coordinates
 
-	int OutBinary = 0;
+	int outBinary = 0;
 	//0 print output files in ASCII format	
 	//1 print output files in binary format	
 
 	//long long int Nsteps = 40000;
 	long long int Nsteps = 1750000;
 	long long int outInterval = 1;
-	double dt = 0.1 * dayUnit;
+
+	double dti = 0.1;
+	double dt = dti * dayUnit;
+
+	double dts = 0.1;	//interval of interpolated points
 
 	double InVersion = 0.0;	//version of Input file format
 	int DoPreIntegration = 0; //If this is 1 then do a pre-Integration to synchronize all initial conditions
@@ -673,12 +677,14 @@ int main(int argc, char*argv[]){
 	//long long int Nsteps = 40000;
 	//long long int Nsteps = 400;
 	//long long int outInterval = 100;
-	//double dt = 0.01 * dayUnit;
+	//double dti = 0.01;
+	//double dt = dti * dayUnit;
 	
 	//for timing
 	//long long int Nsteps = 1000;
 	//long long int outInterval = 1000;
-	//double dt = 0.01 * dayUnit;
+	//double dti = 0.01;
+	//double dt = dti * dayUnit;
 
 
 	//Integrator
@@ -697,12 +703,13 @@ int main(int argc, char*argv[]){
 
 		//change this later to be more general
 		Nsteps = 1e9;
-		dt = 10.0 * dayUnit;
+		dti = 10.0;
+		dt = dti * dayUnit;
 		//NTP = 1;
 
-		outInterval = 1.0;
+		outInterval = 10.0;
 		//outInterval = 1e8;
-		//outStart = 2450800.5;
+		outStart = 2450800.5;
 	}
 
 	for(int i = 1; i < argc; i += 2){
@@ -714,8 +721,8 @@ int main(int argc, char*argv[]){
 			outInterval = atoll(argv[i + 1]);
 		}
 		else if(strcmp(argv[i], "-dt") == 0){
-			dt = atof(argv[i + 1]);
-			dt *= dayUnit;
+			dti = atof(argv[i + 1]);
+			dt = dti * dayUnit;
 		}
 		else if(strcmp(argv[i], "-N") == 0){
 			NTP = atoi(argv[i + 1]);
@@ -860,7 +867,7 @@ int main(int argc, char*argv[]){
 	// ********************************
 
 	//Erase Outbinary file
-	if(OutBinary == 1){
+	if(outBinary == 1){
 		if(outHelio == 1){
 			sprintf(outfilename, "Outhelio10.bin");
 		}
@@ -884,7 +891,7 @@ int main(int argc, char*argv[]){
 		printf("read file OK\n");
 		fclose(binfile);
 
-		/*				
+						
 		// -----------------------------------
 		// Use this to extract a single object
 		int ii = 29;//166;//29; //84;
@@ -905,7 +912,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g\n", x_h[
 //x_h[N] += 1.0e-6;
 
 		// -----------------------------------
-		*/
+		
 
 		N += NTP;
 		if(er == 1) return 0;
@@ -1243,7 +1250,7 @@ time1 = 2461000.5;
 
 	cudaEventRecord(LoopStart);
 
-	double dtOld = dt;
+	double dtiOld = dti;
 	time = time0;
 
 	//###########################################
@@ -1265,7 +1272,8 @@ time1 = 2461000.5;
 		for(int i = Nperturbers; i < N; ++i){
 			time = jd_init_h[i];
 			double snew = 1.0;
-			dt = 10.0 * dayUnit;
+			dti = 10.0;
+			dt = dti * dayUnit;
 			int stop = 0;
 
 printf("preIntegration %d %.20g %.20g\n", i, time, outStart);
@@ -1274,6 +1282,7 @@ printf("preIntegration %d %.20g %.20g\n", i, time, outStart);
 				continue;
 			}
 			if(time > outStart){
+				dti = -dti;
 				dt = -dt;
 			}
 			
@@ -1282,8 +1291,8 @@ printf("preIntegration %d %.20g %.20g\n", i, time, outStart);
 
 				for(int S = 0; S < RKFn; ++S){
 					for(int p = 0; p < Nperturbers; ++p){
-						interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
-						//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+						interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dti, xt_h, yt_h, zt_h, p);
+						//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dti, xt_h, yt_h, zt_h, p);
 					}
 					if(S == 0) update1(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, i);
 					else update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, RKFn, a_h);
@@ -1296,9 +1305,10 @@ printf("preIntegration %d %.20g %.20g\n", i, time, outStart);
 				if(snew >= 1.0){		
 					update(x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, RKFn, b_h);	
 		
-					time += dt / dayUnit;
+					time += dti;
 
-					dt *= snew;
+					dti *= snew;
+					dt = dti * dayUnit;
 
 					if(stop == 1){
 						break;
@@ -1308,32 +1318,35 @@ printf("preIntegration %d %.20g %.20g\n", i, time, outStart);
 					}
 				}
 				else{
-					dt *= snew;
+					dti *= snew;
+					dt = dti * dayUnit;
 					stop = 0;
 				}
 
-//printf("B %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dt / dayUnit, snew, x_h[i], y_h[i], z_h[i]);
+//printf("B %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dti, snew, x_h[i], y_h[i], z_h[i]);
 
 
-				if(dt > 0.0 && time + dt / dayUnit > outStart){
-					dt = (outStart - time) * dayUnit;
+				if(dti > 0.0 && time + dti > outStart){
+					dti = (outStart - time);
+					dt = dti * dayUnit;
 					stop = 1;
-//printf("Final time step %.20g\n", dt/dayUnit);
+//printf("Final time step %.20g\n", dti);
 				}
-				if(dt < 0.0 && time + dt / dayUnit < outStart){
-					dt = (outStart - time) * dayUnit;
+				if(dti < 0.0 && time + dti < outStart){
+					dti = (outStart - time);
+					dt = dti * dayUnit;
 					stop = 1;
-//printf("Final time step %.20g\n", dt/dayUnit);
+//printf("Final time step %.20g\n", dti);
 				}
 
 			}
-printf("C %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dt / dayUnit, snew, x_h[i], y_h[i], z_h[i]);
+printf("C %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dti, snew, x_h[i], y_h[i], z_h[i]);
 			if(fabs(time - outStart) > 1.0e-10){
 				printf("Error in pre-integration of particle %d, start time not reached\n", i);
 				return 0;
 			}
 		}
-		dt = dtOld;
+		dti = dtiOld;
 		time = outStart;
 		if(useGPU == 1){
 			cudaMemcpy(x_d, x_h, NN * sizeof(double), cudaMemcpyHostToDevice);
@@ -1348,85 +1361,7 @@ printf("C %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dt /
 	//###########################################
 	// First output
 	//###########################################
-
-	double comx = 0.0;
-	double comy = 0.0;
-	double comz = 0.0;
-	double vcomx = 0.0;
-	double vcomy = 0.0;
-	double vcomz = 0.0;
-
-
-	if(useHelio == 0 && outHelio == 1){
-		//convert to heliocentric output
-
-		comx = -x_h[0];
-		comy = -y_h[0];
-		comz = -z_h[0];
-		vcomx = -vx_h[0];
-		vcomy = -vy_h[0];
-		vcomz = -vz_h[0];
-	}
-	
-	if(outHelio == 1){
-		if(OutBinary == 0){
-			sprintf(outfilename, "Outhelio10_%.12d.dat", 0);
-		}
-		else{
-			sprintf(outfilename, "Outhelio10.bin");
-		}
-	}
-	else{
-		if(OutBinary == 0){
-			sprintf(outfilename, "Outbary10_%.12d.dat", 0);
-		}
-		else{
-			sprintf(outfilename, "Outbary10.bin");
-		}
-	}
-
-
-//add condition for backward integration
-
-	if(time >= outStart){
-		if(OutBinary == 0){
-			outfile = fopen(outfilename, "w");
-		}
-		else{
-			outfile = fopen(outfilename, "wb");
-		}
-
-		printf("%s\n", outfilename);
-		if(OutBinary == 0){
-			for(int i = Nperturbers; i < N; ++i){
-				//fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit);
-				fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit, dtmin_h[i]);
-			}
-		}
-		else{
-			for(int i = Nperturbers; i < N; ++i){
-				//unsigned long long int id = id_h[i];
-				unsigned long long int id = __builtin_bswap64 (id_h[i]);
-				double xx = comx + x_h[i];
-				double yy = comy + y_h[i];
-				double zz = comz + z_h[i];
-				double vxx = (vcomx + vx_h[i]) * dayUnit;
-				double vyy = (vcomy + vy_h[i]) * dayUnit;
-				double vzz = (vcomz + vz_h[i]) * dayUnit;
-
-				fwrite(&id, 1, sizeof(unsigned long long int), outfile);
-				fwrite(&time, 1, sizeof(double), outfile);
-				fwrite(&xx, 1, sizeof(double), outfile);
-				fwrite(&yy, 1, sizeof(double), outfile);
-				fwrite(&zz, 1, sizeof(double), outfile);
-				fwrite(&vxx, 1, sizeof(double), outfile);
-				fwrite(&vyy, 1, sizeof(double), outfile);
-				fwrite(&vzz, 1, sizeof(double), outfile);
-			}
-
-		}
-		fclose(outfile);
-	}
+	output(x_d, y_d, z_d, vx_d, vy_d, vz_d, x_h, y_h, z_h, vx_h, vy_h, vz_h, m_h, id_h, 0, time, N, Nperturbers, NN, useGPU, useHelio, outHelio, outBinary);
 
 
 	//###########################################
@@ -1434,44 +1369,58 @@ printf("C %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dt /
 	//###########################################
 
 
-	int printOutput = 0;
 	double nextOuttime = outInterval + time;
 
 	int cTable = NTable1;	//counter for interpolation table
-
+	int cTableOld = 0;
+	double newTime = time + dti;
 	//for(long long int t = 1; t <= Nsteps; ++t){
-	for(long long int t = 1; t < 2; ++t){
+	for(long long int t = 1; t < 25; ++t){
 
 //cudaDeviceSynchronize();
 //printf("%lld %d | %d %d\n", t, 0, NTP, Nperturbers);	
 
-		if(useGPU == 1 && cTable >= NTable1){
-			//Precalculate interpolation points on 0.1 time steps for NTable1 steps and store them in global memory
+		int ci = (dti + 0.5 * dts) / dts;
+		cTable += ci;
+		if(useGPU == 1 && (cTable >= NTable1 || dti <= 2.0 * dts)){
+printf("\n\nCompute interpolation table %d %d %g %g\n", cTable, NTable1, dti, dts);
+			if(dti <= 2.0 * dts){
+				//refine interpolation points
+				dts *= 0.1;
+			}
 
-			//interpolateTable_kernel < Ninterpolate > <<< dim3(Nperturbers, NTable1, RKFn), dim3(Ninterpolate) >>> (Nperturbers, NTable1, RKFn, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, xTable_d, yTable_d, zTable_d);
-			interpolate2bTable_kernel < Ninterpolate > <<< dim3((NTable1 + 255) / 256, Nperturbers, RKFn), dim3(256) >>> (Nperturbers, NTable1, RKFn, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, xTable_d, yTable_d, zTable_d);
+			//Precalculate interpolation points on dts time steps for NTable1 steps and store them in global memory
 
-			cTable = 0;
+			//interpolateTable_kernel < Ninterpolate > <<< dim3(Nperturbers, NTable1, RKFn), dim3(Ninterpolate) >>> (Nperturbers, NTable1, RKFn, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, dts, xTable_d, yTable_d, zTable_d);
+			interpolate2bTable_kernel < Ninterpolate > <<< dim3((NTable1 + 255) / 256, Nperturbers, RKFn), dim3(256) >>> (Nperturbers, NTable1, RKFn, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, dts, xTable_d, yTable_d, zTable_d);
+
+			int ci = (dti + 0.5 * dts) / dts;
+			cTable = ci;
+
+			if(dti <= 2.0 * dts){
+				//refine interpolation points
+				dts *= 0.1;
+			}
 
 			cudaDeviceSynchronize();
 			error = cudaGetLastError();
-			printf("Interpolate table  error = %d = %s\n",error, cudaGetErrorString(error));
+			printf("Interpolate table  error = %d = %s\n\n",error, cudaGetErrorString(error));
 			if(error != 0.0){
 				return 0;
 			}
 
 			//return 0;
 		}
-		++cTable;
 
-		double newTime = time + dt / dayUnit;
+printf("cTable %lld %g %d\n", t, dti, cTable);
+
 		double snew = 1.0;
 
 		if(useGPU == 0){
 			for(int S = 0; S < RKFn; ++S){
 				for(int p = 0; p < Nperturbers; ++p){
-					interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
-					//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_h, yt_h, zt_h, p);
+					interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dti, xt_h, yt_h, zt_h, p);
+					//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dti, xt_h, yt_h, zt_h, p);
 				}
 				for(int i = Nperturbers; i < N; ++i){
 					if(S == 0) update1(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, i);
@@ -1490,22 +1439,19 @@ printf("C %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dt /
 			//for(int S = 0; S < RKFn; ++S){
 //cudaDeviceSynchronize();
 //printf("%lld %d\n", t, S);	
-				//interpolate_kernel < Ninterpolate > <<< dim3(Nperturbers, NTP,1), Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
-				//interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dt / dayUnit, xt_d, yt_d, zt_d);
+				//interpolate_kernel < Ninterpolate > <<< dim3(Nperturbers, NTP,1), Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dti, xt_d, yt_d, zt_d);
+				//interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dti, xt_d, yt_d, zt_d);
 				//stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, S, RKFn, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
 
 			//}
-			stageStep1_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, cTable - 1, RKFn, Nperturbers, NTable1, N, useHelio, useGR, useJ2, useNonGrav);
+			stageStep1_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, cTable, RKFn, Nperturbers, NTable1, N, useHelio, useGR, useJ2, useNonGrav);
 
 
-			if(N > 512){
-				int nct = 512;
-				int ncb = min((N + nct - 1) / nct, 1024);
-				int WarpSize = 32;
-printf(" %d %d %d\n", nct, ncb, N);
-				computeError_d1_kernel <<< ncb, nct, WarpSize * sizeof(double)  >>> (snew_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, RKFn, Nperturbers, N, dt, ee);
-				computeError_d2_kernel <<< 1, ((ncb + WarpSize - 1) / WarpSize) * WarpSize, WarpSize * sizeof(double)  >>> (snew_d, ncb);
-			}
+			int nct = 512;
+			int ncb = min((N + nct - 1) / nct, 1024);
+			int WarpSize = 32;
+			computeError_d1_kernel <<< ncb, nct, WarpSize * sizeof(double)  >>> (snew_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, RKFn, Nperturbers, N, dt, ee);
+			computeError_d2_kernel <<< 1, ((ncb + WarpSize - 1) / WarpSize) * WarpSize, WarpSize * sizeof(double)  >>> (snew_d, ncb);
 			cudaMemcpy(snew_h, snew_d, sizeof(double), cudaMemcpyDeviceToHost);
 			cudaDeviceSynchronize();
 			snew = snew_h[0];
@@ -1513,26 +1459,15 @@ printf("snew %g\n", snew_h[0]);
 		}
 
 
-//printf("%.20g %.20g dt: %.20g %.20g\n", time, newTime, dt / dayUnit, snew);
-printf("%.20g %.20g dt: %.20g %.20g | %.20g %.20g %.20g\n", time, newTime, dt / dayUnit, snew, x_h[Nperturbers], y_h[Nperturbers], z_h[Nperturbers]);
+printf("%.20g %.20g dt: %.20g %.20g | %.20g %.20g %.20g\n", time, newTime, dti, snew, x_h[Nperturbers], y_h[Nperturbers], z_h[Nperturbers]);
 //printf("%.20g %.20g\n", nextOuttime, outStart);
 
 
-/*
-		if(printOutput == 2){
-			printOutput = 1;
-		}
 
-		if(newTime > nextOuttime){
-			dtOld = dt;
-			dt = (nextOuttime - time) * dayUnit;
-//printf("   correct %.20g %.20g %.20g %.20g\n", newTime, nextOuttime, dt / dayUnit, dtOld / dayUnit);
-			snew = 1.0;
-			nextOuttime += outInterval;
-			printOutput = 2;
-		}
-*/
-		if(snew >= 1.0 && printOutput != 2){		
+
+
+		if(snew >= 1.0){
+printf("accept step\n");		
 			if(useGPU == 0){
 				for(int i = Nperturbers; i < N; ++i){
 					update(x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, RKFn, b_h);	
@@ -1542,110 +1477,50 @@ printf("%.20g %.20g dt: %.20g %.20g | %.20g %.20g %.20g\n", time, newTime, dt / 
 				update_kernel <<< (NN + 127) / 128, 128 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, N, Nperturbers, dt, RKFn);	
 			}
 		
-			time += dt / dayUnit;
+			time += dti;
 
-			dt *= snew;
+			if(time >= nextOuttime && time >= outStart){
+				//if(t % 10 == 0){
+				output(x_d, y_d, z_d, vx_d, vy_d, vz_d, x_h, y_h, z_h, vx_h, vy_h, vz_h, m_h, id_h, t, time, N, Nperturbers, NN, useGPU, useHelio, outHelio, outBinary);
+				nextOuttime += outInterval;
+				dti = dtiOld;
+				dt = dti * dayUnit;
+				newTime = time + dti;
+				snew = 1.0;
+
+			}
+			cTableOld = cTable;
 		}
 		else{
+printf("repeat step\n");		
 		
-			dt *= snew;
+			cTable = cTableOld;
 		}
-printf("dt %g\n", dt / dayUnit);
+
+		dti *= snew;
+		
+		//round dti to dts intervals
+		int dtt = dti / dts;
+printf("dta %.20gg %d %g\n", dti, dtt, dts);
+		dti = dtt * dts;
+
+		dt = dti * dayUnit;
+
+printf("dtb %.20g %d %g\n", dti, dtt, dts);
+
+		newTime = time + dti;
+
+		if(newTime > nextOuttime){
+			dtiOld = dti;
+			dti = (nextOuttime - time);
+			dt = dti * dayUnit;
+printf("   correct %.20g %.20g %.20g %.20g %.20g\n", time, newTime, nextOuttime, dti, dtiOld);
+			newTime = time + dti;
+printf("dtc %.20g %d %g\n", dti, dtt, dts);
+		}
+
 
 //add condition for backward integration
-		//if(printOutput == 1 && time >= outStart){
-		if(t % 10 == 0){
-
-			printf("Output %.20g %lld\n", time, t);
-
-			//printOutput = 0;
-			//dt = dtOld;
-
-
-			if(useGPU == 1){
-				cudaMemcpy(x_h, x_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
-				cudaMemcpy(y_h, y_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
-				cudaMemcpy(z_h, z_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
-				cudaMemcpy(vx_h, vx_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
-				cudaMemcpy(vy_h, vy_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
-				cudaMemcpy(vz_h, vz_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
-			}
-			
-			if(outHelio == 1){
-				if(OutBinary == 0){	
-					sprintf(outfilename, "Outhelio10_%.12lld.dat", t);
-				}
-				else{
-					sprintf(outfilename, "Outhelio10.bin");
-				}
-			}
-			else{
-				if(OutBinary == 0){
-					sprintf(outfilename, "Outbary10_%.12lld.dat", t);
-				}
-				else{
-					sprintf(outfilename, "Outbary10.bin");
-				}
-			}
-			if(OutBinary == 0){
-				outfile = fopen(outfilename, "w");
-			}
-			else{
-				outfile = fopen(outfilename, "ab");
-			}
-//			printf("%s\n", outfilename);
-
-			comx = 0.0;
-			comy = 0.0;
-			comz = 0.0;
-			vcomx = 0.0;
-			vcomy = 0.0;
-			vcomz = 0.0;
-
-			if(useHelio == 0 && outHelio == 1){
-				//convert to heliocentric output
-				comx = -x_h[0];
-				comy = -y_h[0];
-				comz = -z_h[0];
-				vcomx = -vx_h[0];
-				vcomy = -vy_h[0];
-				vcomz = -vz_h[0];
-			}
-			
-			if(OutBinary == 0){
-				for(int i = Nperturbers; i < N; ++i){
-					fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit);
-				}
-			}
-			else{
-				for(int i = Nperturbers; i < N; ++i){
-
-					//unsigned long long int id = id_h[i];
-					unsigned long long int id = __builtin_bswap64 (id_h[i]);
-					double xx = comx + x_h[i];
-					double yy = comy + y_h[i];
-					double zz = comz + z_h[i];
-					double vxx = (vcomx + vx_h[i]) * dayUnit;
-					double vyy = (vcomy + vy_h[i]) * dayUnit;
-					double vzz = (vcomz + vz_h[i]) * dayUnit;
-
-					fwrite(&id, 1, sizeof(unsigned long long int), outfile);
-					fwrite(&time, 1, sizeof(double), outfile);
-					fwrite(&xx, 1, sizeof(double), outfile);
-					fwrite(&yy, 1, sizeof(double), outfile);
-					fwrite(&zz, 1, sizeof(double), outfile);
-					fwrite(&vxx, 1, sizeof(double), outfile);
-					fwrite(&vyy, 1, sizeof(double), outfile);
-					fwrite(&vzz, 1, sizeof(double), outfile);
-
-					//printf("%llu %g %g %g %g %g %g %g\n", id, time, xx, yy, zz, vxx, vyy, vzz);
-				}
-				
-			}
-			fclose(outfile);
-
-
-		}
 		if(time > time1){
 			printf("Reached the end\n");
 			break;
