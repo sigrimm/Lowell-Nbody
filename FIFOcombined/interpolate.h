@@ -356,7 +356,7 @@ __global__ void interpolate2bTable_kernel(int Nperturbers, int NTable, int RKFn,
 		int it = floor((time - timep0) / dtimep);
 		it -= (Ninterpolate / 2);
 
-//printf("interpolateA %d %.20g %.20g %d\n", pid, timep0, time, it);
+if(sid == 5) printf("interpolateA %d %d %g %.20g %.20g %d\n", pid, S, c_c[S], timep0, time, it);
 
 
 		for(int i = 0; i < Ninterpolate; ++i){
