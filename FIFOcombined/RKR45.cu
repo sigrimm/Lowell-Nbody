@@ -213,7 +213,7 @@ printf("gr %.20g %.20g\n", gr1, gr);
 
 //J2 perturbation from Earth
 //Walter 2018, 12.2.10
-__host__ __device__ void J2(double *m, double *x, double *y, double *z, double &ax, double &ay, double &az, int i){
+__host__ __device__ void J2(double mj, double xj, double yj, double zj, double xi, double yi, double zi, double &ax, double &ay, double &az){
 
 	double J2E = 0.00108262545; // J2 Earth from DE 430
 	double RE = 6378136.3; // Earth radius in m from DE 430
@@ -224,15 +224,14 @@ __host__ __device__ void J2(double *m, double *x, double *y, double *z, double &
 
 	RE /= def_AU;	//Earth radius in AU
 
-	int iE = 3; 	//index of Earth
-
-	double muE = m[iE];
+	//int iE = 3; 	//index of Earth
 
 	//muE = 3.986004415e5 km^3s-2
+	double muE = mj;
 
-	double xE = x[i] - x[iE];
-	double yE = y[i] - y[iE];
-	double zE = z[i] - z[iE];
+	double xE = xi - xj;
+	double yE = yi - yj;
+	double zE = zi - zj;
 
 	double rsq = xE * xE + yE * yE + zE * zE;
 	double r = sqrt(rsq);
@@ -301,7 +300,8 @@ __host__ void stageStep(unsigned long long int *id, double *m, double *xt, doubl
 	}
 
 	if(useJ2 == 1){
-		J2(m, xt, yt, zt, ax, ay, az, i);
+		J2(m[3], xt[3], yt[3], zt[3], xt[i], yt[i], zt[i], ax, ay, az);
+		//J2(m, xt, yt, zt, ax, ay, az, i);
 	}
 
 	kvx[i + S * N] = ax;
@@ -330,6 +330,7 @@ __global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, doub
 			z_s[threadIdx.x] = zt_d[itx];
 			m_s[threadIdx.x] = m_d[itx];
 			id_s[threadIdx.x] = id_d[itx];
+//printf("%d %d %.20g\n", itx, S, x_s[itx]);
 	}
 	__syncthreads();
 
@@ -382,7 +383,7 @@ __global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, doub
 //if(idi == 72057594037948950) printf("%llu %llu\n", idi, id_s[j]);
 				if(idi != id_s[j]){
 					accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
-///*if(idi == 72057594037948950) */printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 //if(sid > 399000) printf("%lld %d %d %.20g\n", sid, S, j, x_s[j]);
 				}
 			}
@@ -408,7 +409,8 @@ __global__ void stageStep_kernel(unsigned long long int *id_d, double *m_d, doub
 		}
 
 		if(useJ2 == 1){
-			J2(m_d, x_d, y_d, z_d, ax, ay, az, idx);
+			J2(m_s[3], x_s[3], y_s[3], z_s[3], xi, yi, zi, ax, ay, az);
+			//J2(m_d, x_d, y_d, z_d, ax, ay, az, idx);
 		}
 
 		kvx_d[idx + S * N] = ax;
@@ -433,6 +435,18 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 	__shared__ double m_s[NN];
 	__shared__ unsigned long long int id_s[NN];
 
+	double xi0 = x_d[idx];
+	double yi0 = y_d[idx];
+	double zi0 = z_d[idx];
+	double vxi0 = vx_d[idx];
+	double vyi0 = vy_d[idx];
+	double vzi0 = vz_d[idx];
+
+	double mi = m_d[idx];
+	double A1i = A1_d[idx];
+	double A2i = A2_d[idx];
+	double A3i = A3_d[idx];
+	unsigned long long int idi = id_d[idx];
 
 	for(int S = 0; S < RKFn; ++S){
 
@@ -444,7 +458,7 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 				z_s[threadIdx.x] = zTable_d[ii];
 				m_s[threadIdx.x] = m_d[itx];
 				id_s[threadIdx.x] = id_d[itx];
-	//if(itx == 1 && sid < 10) printf("%lld %d %.20g\n", sid, S, x_s[itx]);
+//if(sid < 10) printf("%d %lld %d %.20g\n", itx, sid, S, x_s[itx]);
 		}
 		__syncthreads();
 
@@ -453,17 +467,12 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 
 			// ***********************
 			// update
-			double xi = x_d[idx];
-			double yi = y_d[idx];
-			double zi = z_d[idx];
-			double vxi = vx_d[idx];
-			double vyi = vy_d[idx];
-			double vzi = vz_d[idx];
-			double mi = m_d[idx];
-			double A1i = A1_d[idx];
-			double A2i = A2_d[idx];
-			double A3i = A3_d[idx];
-			unsigned long long int idi = id_d[idx];
+			double xi = xi0;
+			double yi = yi0;
+			double zi = zi0;
+			double vxi = vxi0;
+			double vyi = vyi0;
+			double vzi = vzi0;
 
 			for(int s = 0; s < S; ++s){
 				double aa = a_c[S * RKFn + s];
@@ -473,7 +482,11 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 				vxi += dt * aa * kvx_d[idx + s * N];
 				vyi += dt * aa * kvy_d[idx + s * N];
 				vzi += dt * aa * kvz_d[idx + s * N];
+//printf("x %d %d %.20g %.20g\n", S, s, aa, xi);
 			}
+
+
+
 			// end update
 			// *****************************
 
@@ -498,12 +511,12 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 					if(idi != id_s[j]){
 						accP_device(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
 //if(sid > 399000) printf("%lld %d %d %.20g\n", sid, S, j, x_s[j]);
-	///*if(idi == 72057594037948950)*/ printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 					}
 				}
 				accS_device(m_s[0] + mi, xi, yi, zi, ax, ay, az);
 
-	//printf("N0 %d %.20g %.20g %.20g\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//printf("N0 %d %.20g %.20g %.20g\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 				for(int j = Nperturbers-1; j >= 1; --j){
 					if(idi != id_s[j]){
 						accP2_device(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
@@ -523,7 +536,8 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 			}
 
 			if(useJ2 == 1){
-				J2(m_d, x_d, y_d, z_d, ax, ay, az, idx);
+				J2(m_s[3], x_s[3], y_s[3], z_s[3], xi, yi, zi, ax, ay, az);
+				//J2(m_d, x_d, y_d, z_d, ax, ay, az, idx);
 			}
 
 			kvx_d[idx + S * N] = ax;
@@ -642,7 +656,7 @@ int main(int argc, char*argv[]){
 	int useNonGrav = 1;	//1
 
 	int useFIFO = 2;	//use 0 or 2
-	int useGPU = 0;		// 0 or 1
+	int useGPU = 1;		// 0 or 1
 
 	FILE *binfile;
 	if(useFIFO == 2){	
@@ -709,8 +723,11 @@ int main(int argc, char*argv[]){
 		//dt = dti * dayUnit;
 		//NTP = 1;
 
-		outInterval = 100.0;
+		outInterval = 1.0;
 		//outInterval = 1e4;
+		outStart = 2450800.5;
+
+
 		outI = (outInterval + 0.5 * dts) / dts;
 
 		if(fabs(outStart - time0) > fabs(outInterval)){
@@ -720,7 +737,6 @@ int main(int argc, char*argv[]){
 
 printf("outStart: %.20g, time0: %.20g, dts: %g, outI: %d,  outInterval: %lld\n", outStart, time0, dts, outI, outInterval);
 
-		//outStart = 2450800.5;
 	}
 
 	for(int i = 1; i < argc; i += 2){
@@ -1119,7 +1135,7 @@ time1 = 2461000.5;
 	
 
 	//copy the data to the device
-	if(useGPU == 1){
+	if(useGPU > 0){
 		cudaMemcpy(m_d, m_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(id_d, id_h, NN * sizeof(unsigned long long int), cudaMemcpyHostToDevice);
 		cudaMemcpy(x_d, x_h, NN * sizeof(double), cudaMemcpyHostToDevice);
@@ -1176,13 +1192,13 @@ time1 = 2461000.5;
 
 
 	//interpolation table
-	const int NTable1 = 700; //400000;
+	const int NTable1 = 1;//700; //400000;
 	double *xTable_d;
 	double *yTable_d;
 	double *zTable_d;
 
 
-	if(useGPU == 1){
+	if(useGPU > 0){
 		cudaMalloc((void **) &xt_d, NN * sizeof(double));
 		cudaMalloc((void **) &yt_d, NN * sizeof(double));
 		cudaMalloc((void **) &zt_d, NN * sizeof(double));
@@ -1241,7 +1257,7 @@ time1 = 2461000.5;
 		return 0;
 	}
 
-	if(useGPU == 1){
+	if(useGPU > 0){
 		cudaMemcpyToSymbol(a_c, a_h, RKFn * RKFn * sizeof(double), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(b_c, b_h, RKFn * sizeof(double), 0, cudaMemcpyHostToDevice);
 		cudaMemcpyToSymbol(bb_c, bb_h, RKFn * sizeof(double), 0, cudaMemcpyHostToDevice);
@@ -1270,7 +1286,7 @@ time1 = 2461000.5;
 	//###########################################
 
 	if(DoPreIntegration == 1){
-		if(useGPU == 1){
+		if(useGPU > 0){
 			//copy perturbers data to CPU, because its not yet here
 			cudaMemcpy(timep_h, timep_d, Nperturbers * NTable * sizeof(double), cudaMemcpyDeviceToHost);
 			cudaMemcpy(xp_h, xp_d, Nperturbers * NTable * sizeof(double), cudaMemcpyDeviceToHost);
@@ -1362,7 +1378,7 @@ printf("C %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dti,
 		dti = dtiOld;
 		dt = dti * dayUnit;
 		time = outStart;
-		if(useGPU == 1){
+		if(useGPU > 0){
 			cudaMemcpy(x_d, x_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 			cudaMemcpy(y_d, y_h, NN * sizeof(double), cudaMemcpyHostToDevice);
 			cudaMemcpy(z_d, z_h, NN * sizeof(double), cudaMemcpyHostToDevice);
@@ -1395,26 +1411,16 @@ printf("C %d %lld %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], time, dti,
 	int ci = 0;
 
 
-	//for(long long int t = 1; t <= Nsteps; ++t){
-	for(long long int t = 1; t < 5000; ++t){
+	for(long long int t = 1; t <= Nsteps; ++t){
+	//for(long long int t = 1; t < 5000; ++t){
 	//for(long long int t = 1; t < 10; ++t){
 
 //cudaDeviceSynchronize();
 //printf("%lld %d | %d %d\n", t, 0, NTP, Nperturbers);	
 
-		if(useGPU == 0){
-			if(dtiOld <= 2.0 * dts){
-printf("refine time steps %g %g %g\n", dtiMin, dti, dts);
-				//refine interpolation points
-				dts *= 0.1;
-				outI *= 10;
-				cOut *= 10;
-			}
-
-		}
 
 /*
-		if(useGPU == 1 && (cTable >= NTable1 || dtiOld <= 2.0 * dts)){
+		if(useGPU > 1 && (cTable >= NTable1 || dtiOld <= 2.0 * dts)){
 printf("\n\nCompute interpolation table %d %d %g %g\n", cTable, NTable1, dti, dts);
 // / *
 			if(dtiOld <= 2.0 * dts){
@@ -1444,7 +1450,7 @@ printf("dtb %.20g %d %g %d\n", dti, dtt, dts, cOut);
 * /
 			//Precalculate interpolation points on dts time steps for NTable1 steps and store them in global memory
 
-			//interpolateTable_kernel < Ninterpolate > <<< dim3(Nperturbers, NTable1, RKFn), dim3(Ninterpolate) >>> (Nperturbers, NTable1, RKFn, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, dts, xTable_d, yTable_d, zTable_d);
+			//interpolateTable_kernel < Ninterpolate > <<< dim3(Nperturbers, RKFn, NTable1), dim3(Ninterpolate) >>> (Nperturbers, NTable1, RKFn, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, dts, xTable_d, yTable_d, zTable_d);
 			interpolate2bTable_kernel < Ninterpolate > <<< dim3((NTable1 + 255) / 256, Nperturbers, RKFn), dim3(256) >>> (Nperturbers, NTable1, RKFn, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, dts, xTable_d, yTable_d, zTable_d);
 
 			cTable = 0;//ci;
@@ -1485,19 +1491,24 @@ printf("cTable %lld %g %d\n", t, dti, cTable);
 		// -----------------------------------
 		}
 		else{
-				
-			for(int S = 0; S < RKFn; ++S){
+			if(useGPU == 1){				
+				interpolateTable_kernel < Ninterpolate > <<< dim3(Nperturbers, RKFn, 1), dim3(Ninterpolate) >>> (Nperturbers, NTable1, RKFn, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, dti, xTable_d, yTable_d, zTable_d);
+				stageStep1_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, 0/*cTable*/, RKFn, Nperturbers, NTable1, N, useHelio, useGR, useJ2, useNonGrav);
+/*
+				for(int S = 0; S < RKFn; ++S){
 //cudaDeviceSynchronize();
 //printf("%lld %d\n", t, S);	
-				//interpolate_kernel < Ninterpolate > <<< dim3(Nperturbers, NTP,1), Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dti, xt_d, yt_d, zt_d);
-				interpolate2b_kernel < Ninterpolate > <<< NTP, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dti, xt_d, yt_d, zt_d);
-				stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, cTable, S, RKFn, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
+					interpolate_kernel < Ninterpolate > <<< Nperturbers, Ninterpolate >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dti, xt_d, yt_d, zt_d);
+					//interpolate2b_kernel < Ninterpolate > <<< 1, Nperturbers >>> (Nperturbers, xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time + c_h[S] * dti, xt_d, yt_d, zt_d);
+					stageStep_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xt_d, yt_d, zt_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, cTable, S, RKFn, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
 //printf("%d %.20g %.20g\n", S, c_h[S], time + c_h[S] * dti);
+				}
+*/
 			}
-			
-			//use interpolation table
-			//stageStep1_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, cTable, RKFn, Nperturbers, NTable1, N, useHelio, useGR, useJ2, useNonGrav);
-
+			if(useGPU == 2){				
+				//use interpolation table
+				stageStep1_kernel < Nperturbers > <<< (NN + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, dt, cTable, RKFn, Nperturbers, NTable1, N, useHelio, useGR, useJ2, useNonGrav);
+			}
 
 			int nct = 512;
 			int ncb = min((N + nct - 1) / nct, 1024);
@@ -1507,10 +1518,10 @@ printf("cTable %lld %g %d\n", t, dti, cTable);
 			cudaMemcpy(snew_h, snew_d, sizeof(double), cudaMemcpyDeviceToHost);
 			cudaDeviceSynchronize();
 			snew = snew_h[0];
-printf("snew %g\n", snew_h[0]);
 		}
+printf("snew %g %g\n", snew, dti);
 
-//if(useGPU == 1){
+//if(useGPU > 0){
 //cudaMemcpy(x_h, x_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
 //cudaMemcpy(y_h, y_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
 //cudaMemcpy(z_h, z_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
@@ -1554,7 +1565,7 @@ printf(" ---- repeat step %d %d %.20g ----\n", cOut, outI, time);
 		}
 
 		dti *= snew;
-		if(useGPU == 0 && dtiOld >= 65.0 * dts && cOut % 10 == 0 && snew >= 1.0){
+		if(useGPU < 2 && dtiOld >= 65.0 * dts && cOut % 10 == 0 && snew >= 1.0){
 			//synchronize with coarser time steps
 			dts *= 10;
 			outI /= 10;
@@ -1567,6 +1578,7 @@ printf("increase time step C %g %g\n", dti, dts);
 		int dtt = dti / dts;
 printf("dta %.20g %d %g %d\n", dti, dtt, dts, cOut);
 		dti = dtt * dts;
+		if(dti < dts) dti = dts;
 
 
 printf("dtb %.20g %d %g %d\n", dti, dtt, dts, cOut);
@@ -1585,7 +1597,7 @@ printf("   correct %.20g %.20g %.20g %.20g %d %d\n", time, time + dti, dti, dtiO
 printf("dtc %.20g %g\n", dti, dts);
 		}
 		else{
-			if(useGPU == 0 && dti >= 65.0 * dts){
+			if(useGPU < 2 && dti >= 65.0 * dts){
 				//synchronize with coarser time steps
 printf("increase time step A %g %g\n", dti, dts);
 				dti = (((cOut + ci) / 10) * 10 - cOut) * dts;
@@ -1594,6 +1606,13 @@ printf("increase time step A %g %g\n", dti, dts);
 				//outI /= 10;
 				//cOut /= 10;
 printf("increase time step B %g %g\n", dti, dts);
+			}
+			if(useGPU < 2 && dti <= 2.0 * dts){
+printf("refine time steps %g %g %g\n", dtiMin, dti, dts);
+				//refine interpolation points
+				dts *= 0.1;
+				outI *= 10;
+				cOut *= 10;
 			}
 		}
 

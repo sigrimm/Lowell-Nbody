@@ -2,7 +2,7 @@ void output(double *dtmin_h, double *x_d, double *y_d, double *z_d, double *vx_d
 
 	printf("Output %.20g %lld\n", time, t);
 
-	if(useGPU == 1){
+	if(useGPU > 0){
 		cudaMemcpy(x_h, x_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
 		cudaMemcpy(y_h, y_d, NN * sizeof(double), cudaMemcpyDeviceToHost);
 		cudaMemcpy(z_h, z_d, NN * sizeof(double), cudaMemcpyDeviceToHost);

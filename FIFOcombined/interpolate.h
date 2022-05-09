@@ -12,10 +12,11 @@ __host__ void interpolate(int Ninterpolate, int Nperturbers, double *xp, double 
 	it -= (Ninterpolate / 2);
 
 	for(int i = 0; i < Ninterpolate; ++i){
-		Px[0][i] = xp[Nperturbers * (i + it) + p];
-		Py[0][i] = yp[Nperturbers * (i + it) + p];
-		Pz[0][i] = zp[Nperturbers * (i + it) + p];
-		tn[i] = timep[Nperturbers * (i + it) + p];
+		int ii = Nperturbers * (i + it) + p;
+		Px[0][i] = xp[ii];
+		Py[0][i] = yp[ii];
+		Pz[0][i] = zp[ii];
+		tn[i] = timep[ii];
 
 //printf("interpolateP %d %d %d %.20g %.20g %.20g\n", p, i, p + Nperturbers * (i + it), time, tn[i], Px[0][i]);
 	}
@@ -23,9 +24,12 @@ __host__ void interpolate(int Ninterpolate, int Nperturbers, double *xp, double 
 	for(int j = 1; j < Ninterpolate; ++j){
 //printf("****\n");
 		for(int i = 0; i < Ninterpolate - j; ++i){
-			Px[j][i] = ((time - tn[i+j]) * Px[j-1][i] + (tn[i] - time) * Px[j-1][i+1]) / (tn[i] - tn[i+j]);
-			Py[j][i] = ((time - tn[i+j]) * Py[j-1][i] + (tn[i] - time) * Py[j-1][i+1]) / (tn[i] - tn[i+j]);
-			Pz[j][i] = ((time - tn[i+j]) * Pz[j-1][i] + (tn[i] - time) * Pz[j-1][i+1]) / (tn[i] - tn[i+j]);
+			double t1 = time - tn[i + j];
+			double t2 = tn[i] - time;
+			double t3 = 1.0 / (tn[i] - tn[i + j]);
+			Px[j][i] = (t1 * Px[j-1][i] + t2 * Px[j-1][i+1]) * t3;
+			Py[j][i] = (t1 * Py[j-1][i] + t2 * Py[j-1][i+1]) * t3;
+			Pz[j][i] = (t1 * Pz[j-1][i] + t2 * Pz[j-1][i+1]) * t3;
 //printf("%d %d %g %g %g %g %.20g\n", i, i+j, tn[i], tn[i+j], P[j-1][i], P[j-1][i+1], P[j][i]);
 
 		}
@@ -141,10 +145,11 @@ __global__ void interpolate_kernel(int Nperturbers, double *xp_d, double *yp_d, 
 //printf("interpolateA %d %.20g %.20g %d\n", pid, timep0, time, it);
 
 		if(idx < Ninterpolate){
-			Px_s[0][idx] = xp_d[Nperturbers * (idx + it) + pid];
-			Py_s[0][idx] = yp_d[Nperturbers * (idx + it) + pid];
-			Pz_s[0][idx] = zp_d[Nperturbers * (idx + it) + pid];
-			tn_s[idx] = timep_d[Nperturbers * (idx + it) + pid];
+			int ii = Nperturbers * (idx + it) + pid;
+			Px_s[0][idx] = xp_d[ii];
+			Py_s[0][idx] = yp_d[ii];
+			Pz_s[0][idx] = zp_d[ii];
+			tn_s[idx] = timep_d[ii];
 
 ///*if(pid == 1)*/ printf("interpolateP %d %d %.20g %.20g %.20g %.20g\n", pid, idx, timep0, time, tn_s[idx], Px_s[0][idx]);
 		}
@@ -153,9 +158,12 @@ __global__ void interpolate_kernel(int Nperturbers, double *xp_d, double *yp_d, 
 		for(int j = 1; j < Ninterpolate; ++j){
 ////if(pid == 1) printf("****\n");
 			if(idx < Ninterpolate - j){
-				Px_s[j][idx] = ((time - tn_s[idx + j]) * Px_s[j-1][idx] + (tn_s[idx] - time) * Px_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
-				Py_s[j][idx] = ((time - tn_s[idx + j]) * Py_s[j-1][idx] + (tn_s[idx] - time) * Py_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
-				Pz_s[j][idx] = ((time - tn_s[idx + j]) * Pz_s[j-1][idx] + (tn_s[idx] - time) * Pz_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
+				double t1 = time - tn_s[idx + j];
+				double t2 = tn_s[idx] - time;
+				double t3 = 1.0 / (tn_s[idx] - tn_s[idx + j]);
+				Px_s[j][idx] = (t1 * Px_s[j-1][idx] + t2 * Px_s[j-1][idx + 1]) * t3;
+				Py_s[j][idx] = (t1 * Py_s[j-1][idx] + t2 * Py_s[j-1][idx + 1]) * t3;
+				Pz_s[j][idx] = (t1 * Pz_s[j-1][idx] + t2 * Pz_s[j-1][idx + 1]) * t3;
 //if(pid == 1) printf("%d %d %.20g %.20g %g %g %.20g\n", idx, idx+j, tn_s[idx], tn_s[idx + j], Px_s[j-1][idx], Px_s[j-1][idx + 1], Px_s[j][idx]);
 			}
 			__syncthreads();
@@ -165,7 +173,7 @@ __global__ void interpolate_kernel(int Nperturbers, double *xp_d, double *yp_d, 
 			xt_d[pid] = Px_s[Ninterpolate-1][0];
 			yt_d[pid] = Py_s[Ninterpolate-1][0];
 			zt_d[pid] = Pz_s[Ninterpolate-1][0];
-//printf("interpolateB %.20g %d %.20g %.20g %.20g\n", time, pid, xt_d[pid], yt_d[pid], zt_d[pid]);
+printf("interpolateB %.20g %d %.20g %.20g %.20g\n", time, pid, xt_d[pid], yt_d[pid], zt_d[pid]);
 		}
 
 	}
@@ -177,10 +185,8 @@ template <int Ninterpolate>
 __global__ void interpolate2b_kernel(int Nperturbers, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double *xt_d, double *yt_d, double *zt_d){
 
 	//every perturber is a thread
-	//every particle is a block
 
 	int pid = threadIdx.x;	//perturber index, Nperturbers
-	int idx = blockIdx.x;
 
 	if(pid < Nperturbers){
 
@@ -215,7 +221,7 @@ __global__ void interpolate2b_kernel(int Nperturbers, double *xp_d, double *yp_d
 
 		}
 
-//if(pid == 1) printf("interpolateB %d %d %.20g %.20g %.20g %.20g\n", pid, idx, timep0, time, tn_s[idx], Px_s[0][idx]);
+//if(pid == 1) printf("interpolateB %d %.20g %.20g %.20g\n", pid, timep0, time, tn_s[0]);
 
 		//initialize with closest solution
 		//Assume that the closest solution is in the middle
@@ -273,11 +279,11 @@ __global__ void interpolate2b_kernel(int Nperturbers, double *xp_d, double *yp_d
 }
 
 template < int Ninterpolate >
-__global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double dts, double *xTable_d, double *yTable_d, double *zTable_d){
+__global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, double *xp_d, double *yp_d, double *zp_d, double *timep_d, double timep0, double dtimep, double time, double dtt, double *xTable_d, double *yTable_d, double *zTable_d){
 
 	int pid = blockIdx.x;	//perturber index, Nperturbers
-	int sid = blockIdx.y;	//parallel time step index
-	int S = blockIdx.z;	//Stage index
+	int sid = blockIdx.z;	//parallel time step index
+	int S = blockIdx.y;	//Stage index
 	int idx = threadIdx.x;	//Ninterpolate	, must be a tread index
 
 	if(pid < Nperturbers && sid < NTable){
@@ -287,7 +293,7 @@ __global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, d
 		__shared__ double Pz_s[Ninterpolate][Ninterpolate];
 		__shared__ double tn_s[Ninterpolate];
 
-		time += (sid + c_c[S]) * dts;
+		time += (sid + c_c[S]) * dtt;
 
 		int it = floor((time - timep0) / dtimep);
 		it -= (Ninterpolate / 2);
@@ -295,10 +301,11 @@ __global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, d
 //if(idx == 0 && pid == 0) printf("interpolateA %d %d %d %.20g %.20g %.20g %d\n", pid, sid, S, timep0, c_c[S], time, it);
 
 		if(idx < Ninterpolate){
-			Px_s[0][idx] = xp_d[Nperturbers * (idx + it) + pid];
-			Py_s[0][idx] = yp_d[Nperturbers * (idx + it) + pid];
-			Pz_s[0][idx] = zp_d[Nperturbers * (idx + it) + pid];
-			tn_s[idx] = timep_d[Nperturbers * (idx + it) + pid];
+			int ii = Nperturbers * (idx + it) + pid;
+			Px_s[0][idx] = xp_d[ii];
+			Py_s[0][idx] = yp_d[ii];
+			Pz_s[0][idx] = zp_d[ii];
+			tn_s[idx] = timep_d[ii];
 
 //if(pid == 1 && sid < 2 && S == 0)  printf("interpolateP %d %d %d %d %.20g %.20g %.20g %.20g\n", pid, sid, S, idx, timep0, time, tn_s[idx], Px_s[0][idx]);
 		}
@@ -307,9 +314,12 @@ __global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, d
 		for(int j = 1; j < Ninterpolate; ++j){
 //if(pid == 1 && sid < 2 && S == 0)  printf("****\n");
 			if(idx < Ninterpolate - j){
-				Px_s[j][idx] = ((time - tn_s[idx + j]) * Px_s[j-1][idx] + (tn_s[idx] - time) * Px_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
-				Py_s[j][idx] = ((time - tn_s[idx + j]) * Py_s[j-1][idx] + (tn_s[idx] - time) * Py_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
-				Pz_s[j][idx] = ((time - tn_s[idx + j]) * Pz_s[j-1][idx] + (tn_s[idx] - time) * Pz_s[j-1][idx + 1]) / (tn_s[idx] - tn_s[idx + j]);
+				double t1 = time - tn_s[idx + j];
+				double t2 = tn_s[idx] - time;
+				double t3 = 1.0 / (tn_s[idx] - tn_s[idx + j]);
+				Px_s[j][idx] = (t1 * Px_s[j-1][idx] + t2 * Px_s[j-1][idx + 1]) * t3;
+				Py_s[j][idx] = (t1 * Py_s[j-1][idx] + t2 * Py_s[j-1][idx + 1]) * t3;
+				Pz_s[j][idx] = (t1 * Pz_s[j-1][idx] + t2 * Pz_s[j-1][idx + 1]) * t3;
 
 //if(pid == 1 && sid < 2 && S == 0) printf("%d %d %d %.20g %.20g %.20g %g %g %.20g\n", sid, idx, idx+j, time, tn_s[idx], tn_s[idx + j], Px_s[j-1][idx], Px_s[j-1][idx + 1], Px_s[j][idx]);
 			}
@@ -317,10 +327,11 @@ __global__ void interpolateTable_kernel(int Nperturbers, int NTable, int RKFn, d
 		}
 
 		if(idx == 0){
-			xTable_d[pid * NTable * RKFn + sid * RKFn + S] = Px_s[Ninterpolate-1][0];
-			yTable_d[pid * NTable * RKFn + sid * RKFn + S] = Py_s[Ninterpolate-1][0];
-			zTable_d[pid * NTable * RKFn + sid * RKFn + S] = Pz_s[Ninterpolate-1][0];
-//if(pid == 1 && sid < 10) printf("interpolateB %.20g %d %d %d %.20g %.20g %.20g\n", time, sid, S, pid, xTable_d[pid * NTable * RKFn + sid * RKFn + S], yTable_d[pid * NTable * RKFn + sid * RKFn + S], zTable_d[pid * NTable * RKFn + sid * RKFn + S]);
+			int ii = pid * NTable * RKFn + sid * RKFn + S;
+			xTable_d[ii] = Px_s[Ninterpolate-1][0];
+			yTable_d[ii] = Py_s[Ninterpolate-1][0];
+			zTable_d[ii] = Pz_s[Ninterpolate-1][0];
+//printf("interpolateB %.20g %d %d %d %.20g %.20g %.20g\n", time, sid, S, pid, xTable_d[ii], yTable_d[ii], zTable_d[ii]);
 		}
 
 	}
@@ -356,7 +367,7 @@ __global__ void interpolate2bTable_kernel(int Nperturbers, int NTable, int RKFn,
 		int it = floor((time - timep0) / dtimep);
 		it -= (Ninterpolate / 2);
 
-if(sid == 5) printf("interpolateA %d %d %g %.20g %.20g %d\n", pid, S, c_c[S], timep0, time, it);
+//if(sid == 5) printf("interpolateA %d %d %g %.20g %.20g %d\n", pid, S, c_c[S], timep0, time, it);
 
 
 		for(int i = 0; i < Ninterpolate; ++i){
