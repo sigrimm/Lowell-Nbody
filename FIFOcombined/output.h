@@ -1,4 +1,4 @@
-void output(double2 *snew_h, double *dtmin_h, double *x_h, double *y_h, double *z_h, double *vx_h, double *vy_h, double *vz_h, double *m_h, unsigned long long int *id_h, long long int t, double time, int N, int Nperturbers, int useGPU, int useHelio, int outHelio, int outBinary, int S){
+void output(double2 *snew_h, double *dtmin_h, double *x_h, double *y_h, double *z_h, double *vx_h, double *vy_h, double *vz_h, double *xt_h, double *yt_h, double *zt_h, double *m_h, unsigned long long int *id_h, long long int t, double time, int N, int Nperturbers, int useGPU, int useHelio, int outHelio, int outBinary, int S){
 
 	printf("Output %d %.20g %lld\n", S, time, t);
 
@@ -54,11 +54,14 @@ void output(double2 *snew_h, double *dtmin_h, double *x_h, double *y_h, double *
 	}
 	
 	if(outBinary == 0){
+		//for(int i = 0; i < Nperturbers; ++i){
+		//	fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[i], m_h[i], xt_h[i], yt_h[i], zt_h[i], 0.0, 0.0, 0.0, 0.0);
+		//}
 		for(int i = Nperturbers; i < N; ++i){
 			//fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit, dtmin_h[i]);
-			if(snew_h[i].y >= 1.0){
+//			if(snew_h[i].y >= 1.0){
 				fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit, snew_h[i].y);
-			}
+//			}
 		}
 	}
 	else{
