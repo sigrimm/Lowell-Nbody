@@ -2,23 +2,7 @@
 // --------------------------------
 //heliocentric coordinates
 //sun part
-__host__ void accS(double *m, double *x, double *y, double *z, double &ax, double &ay, double &az, int i){
-
-	if(i > 0){
-		double rx = -x[i];
-		double ry = -y[i];
-		double rz = -z[i];
-		double rsq = rx * rx + ry * ry + rz * rz;
-		double r = sqrt(rsq);
-
-		double s = (m[0] + m[i]) / (r * rsq);
-
-		ax += s * rx;
-		ay += s * ry;
-		az += s * rz;
-	}
-}
-__device__ void accS_device(double mu, double xi, double yi, double zi, double &ax, double &ay, double &az){
+__host__ __device__ void accS(double mu, double xi, double yi, double zi, double &ax, double &ay, double &az){
 
 	double rx = -xi;
 	double ry = -yi;
@@ -33,23 +17,7 @@ __device__ void accS_device(double mu, double xi, double yi, double zi, double &
 	az += s * rz;
 }
 //planet part
-__host__ void accP(double *m, double *x, double *y, double *z, double &ax, double &ay, double &az, int i, int j){
-
-	if(i != j){
-		double rx = x[j] - x[i];
-		double ry = y[j] - y[i];
-		double rz = z[j] - z[i];
-		double rsq = rx * rx + ry * ry + rz * rz;
-		double r = sqrt(rsq);
-
-		double s = m[j] / (r * rsq);
-
-		ax += s * rx;
-		ay += s * ry;
-		az += s * rz;
-	}
-}
-__device__ void accP_device(double mj, double xj, double yj, double zj, double xi, double yi, double zi, double &ax, double &ay, double &az){
+__host__ __device__ void accP(double mj, double xj, double yj, double zj, double xi, double yi, double zi, double &ax, double &ay, double &az){
 
 	double rx = xj - xi;
 	double ry = yj - yi;
@@ -64,24 +32,8 @@ __device__ void accP_device(double mj, double xj, double yj, double zj, double x
 	az += s * rz;
 }
 //planet part 2
-__host__ void accP2(double *m, double *x, double *y, double *z, double &ax, double &ay, double &az, int i, int j){
 
-	if(i != j){
-		double rx = -x[j];
-		double ry = -y[j];
-		double rz = -z[j];
-		double rsq = rx * rx + ry * ry + rz * rz;
-		double r = sqrt(rsq);
-
-		double s = m[j] / (r * rsq);
-	
-		ax += s * rx;
-		ay += s * ry;
-		az += s * rz;
-//printf("%d %d %g %g %g %g %g %g\n", i, j, rx, ry, rz, rsq, s, m[j]);
-	}
-}
-__device__ void accP2_device(double mj, double xj, double yj, double zj, double &ax, double &ay, double &az){
+__host__ __device__ void accP2(double mj, double xj, double yj, double zj, double &ax, double &ay, double &az){
 
 	double rx = -xj;
 	double ry = -yj;

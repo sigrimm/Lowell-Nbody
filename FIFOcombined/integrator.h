@@ -314,7 +314,7 @@ void computeError1(double2 *snew_h, double *kx_h, double *ky_h, double *kz_h, do
 
 
 //compute adaptive time step for all particles
-void computeError(double2 *snew_h, double *kx_h, double *ky_h, double *kz_h, double *kvx_h, double *kvy_h, double *kvz_h, double *b_h, double *bb_h, int RKFn, int Nperturbers, int N, double &snew, double dt, double dti, double dtiMin, double ee){
+void computeError(double2 *snew_h, double *dx_h, double *dy_h, double *dz_h, double *dvx_h, double *dvy_h, double *dvz_h, double *kx_h, double *ky_h, double *kz_h, double *kvx_h, double *kvy_h, double *kvz_h, double *b_h, double *bb_h, int RKFn, int Nperturbers, int N, double &snew, double dt, double dti, double dtiMin, double ee){
 
 
 	double sc = def_sc * RKFn;
@@ -322,6 +322,34 @@ void computeError(double2 *snew_h, double *kx_h, double *ky_h, double *kz_h, dou
 
 	//error estimation
 	for(int i = Nperturbers; i < N; ++i){
+		//update
+		double dx = 0.0;
+		double dy = 0.0;
+		double dz = 0.0;
+		double dvx = 0.0;
+		double dvy = 0.0;
+		double dvz = 0.0;
+
+		for(int S = 0; S < RKFn; ++S){
+			double dtb = dt * b_h[S];
+			dx += dtb * kx_h[i + S * N];
+			dy += dtb * ky_h[i + S * N];
+			dz += dtb * kz_h[i + S * N];
+
+			dvx += dtb * kvx_h[i + S * N];
+			dvy += dtb * kvy_h[i + S * N];
+			dvz += dtb * kvz_h[i + S * N];
+		}
+
+		dx_h[i] = dx;
+		dy_h[i] = dy;
+		dz_h[i] = dz;
+		dvx_h[i] = dvx;
+		dvy_h[i] = dvy;
+		dvz_h[i] = dvz;
+
+
+
 		double errorkx = 0.0;
 		double errorky = 0.0;
 		double errorkz = 0.0;
@@ -385,11 +413,9 @@ void computeError(double2 *snew_h, double *kx_h, double *ky_h, double *kz_h, dou
 }
 
 
-__global__ void computeError_d1_kernel(double2 *snew_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, int RKFn, int Nperturbers, int N, double dt, double ee){
+__global__ void computeError_d1_kernel(double2 *snew_d, int Nperturbers, int N){
 
 	int id = blockIdx.x * blockDim.x + threadIdx.x;
-
-	double sc = def_sc * RKFn;
 
 	double s = 1.0e6;	//large number
 
