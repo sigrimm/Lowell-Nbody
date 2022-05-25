@@ -2,6 +2,6 @@ TestSet/*_h.dat
 TestSet/*_d.dat
 TestSet/initial*.dat
 TestSet1850/*_h.dat
-TestSet1850/*_d.dat
+TestSet1850/*_b.dat
 combined/out*.dat
 combined/diff*.dat

@@ -1,4 +1,5 @@
-void output(double2 *snew_h, double *dtmin_h, double *x_h, double *y_h, double *z_h, double *vx_h, double *vy_h, double *vz_h, double *xTable_h, double *yTable_h, double *zTable_h, double *m_h, unsigned long long int *id_h, long long int t, double time, int N, int Nperturbers, int useGPU, int useHelio, int outHelio, int outBinary, int S){
+#include "Host.h"
+__host__ void Host::output(long long int t, double time, int S){
 
 	printf("Output %d %.20g %lld\n", S, time, t);
 

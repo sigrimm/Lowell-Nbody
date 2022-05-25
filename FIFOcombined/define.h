@@ -1,3 +1,14 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+
+#define Ninterpolate 16
+#define RKFn 13			//RKF78
+//#define RKFn 6			//RKF45
+//#define RKFn 7			//DP54
+
+#define Nperturbers 27
+
 #define dayUnit 0.01720209895
 //#define dayUnit 0.01720209894846
 //#define dayUnit 1.0
