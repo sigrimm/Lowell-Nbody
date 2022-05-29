@@ -20,6 +20,8 @@ public:
 	int useNonGrav;
 
 	int useGPU;
+	int useAdaptiveTimeSteps;
+	int useIndividualTimeSteps;
 
 	int useFIFO;
 	double InVersion;		//version of Input file format
@@ -51,7 +53,7 @@ public:
 	unsigned long long int outI;	
 
 	int N;				//Number of bodies
-
+	int NMax;			//Maximum number of bodies
 
 	//integration data
 	unsigned long long int *id_h, *id_d;
@@ -134,7 +136,9 @@ public:
 	double *a_h, *b_h, *bb_h, *c_h;
 	double ee;
 
-	int Sn[4];	
+	int nRuns;
+	int *runsN;
+	double *runsdt;
 
 	//Functions
 	__host__ Host();
@@ -167,7 +171,7 @@ public:
 	__host__ void update(int);
 	__host__ void stageStep2(int, double, double, double &);
 	__host__ void stageStep(double, double, double &);
-	__host__ void stageStep1(double, int, double &);
+	__host__ void stageStep1(double, int, int, double &);
 
 	__host__ void reduce(int);
 	__host__ void output(long long int, double, int);

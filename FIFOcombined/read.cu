@@ -127,32 +127,32 @@ __host__ int Host::readFile(FILE *infile){
 		return 0;
 	}
 */ 
-    return 1; 
+	return 1; 
 } 
 
 
 /*
 int readFIFO(double *x_h, double *y_h, double *z_h, double *vx_h, double *vy_h, double *vz_h, double *A1_h, double *A2_h, double *A3_h, unsigned long long int *id_h){
 
-                int fd = open(myfifo,O_RDONLY);
-                const int size = 7 * sizeof(double) + sizeof(int);
-                char buffer[size];
-		double time;
+	int fd = open(myfifo,O_RDONLY);
+	const int size = 7 * sizeof(double) + sizeof(int);
+	char buffer[size];
+	double time;
 
-                for(int i = Nperturbers; i < NN; ++i){
-                        read(fd, &buffer, size);
-                        time = *reinterpret_cast<double*>(&buffer);
-                        id_h[i] = *reinterpret_cast<int*>(&buffer[8]);
-                        x_h[i] = *reinterpret_cast<double*>(&buffer[8+4]);
-                        y_h[i] = *reinterpret_cast<double*>(&buffer[2*8+4]);
-                        z_h[i] = *reinterpret_cast<double*>(&buffer[3*8+4]);
-                        vx_h[i] = *reinterpret_cast<double*>(&buffer[4*8+4]);
-                        vy_h[i] = *reinterpret_cast<double*>(&buffer[5*8+4]);
-                        vz_h[i] = *reinterpret_cast<double*>(&buffer[6*8+4]);
-printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i]);
-                        ++N;
-                }
-                close(fd);
+	for(int i = Nperturbers; i < NN; ++i){
+		read(fd, &buffer, size);
+		time = *reinterpret_cast<double*>(&buffer);
+		id_h[i] = *reinterpret_cast<int*>(&buffer[8]);
+		x_h[i] = *reinterpret_cast<double*>(&buffer[8+4]);
+		y_h[i] = *reinterpret_cast<double*>(&buffer[2*8+4]);
+		z_h[i] = *reinterpret_cast<double*>(&buffer[3*8+4]);
+		vx_h[i] = *reinterpret_cast<double*>(&buffer[4*8+4]);
+		vy_h[i] = *reinterpret_cast<double*>(&buffer[5*8+4]);
+		vz_h[i] = *reinterpret_cast<double*>(&buffer[6*8+4]);
+		printf("er %d %d %d %.20g %.20g %.20g\n", i, id_h[i], N, x_h[i], y_h[i], z_h[i]);
+		++N;
+	}
+	close(fd);
 
 }
 */
@@ -175,7 +175,7 @@ __host__ int Host::readICSize(){
 	
 	int N = 0;
 
-	for(int i = 0; i < 1000000; ++i){
+	for(int i = 0; i < NMax; ++i){
 		int er = 0;
 		fscanf(infile, "%lf", &time0);
 		fscanf(infile, "%llu", &id);

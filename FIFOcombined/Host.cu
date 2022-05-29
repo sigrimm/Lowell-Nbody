@@ -12,6 +12,8 @@ __host__ Host::Host(){
 	useNonGrav = 1;
 
 	useGPU = 1;
+	useAdaptiveTimeSteps = 1;
+	useIndividualTimeSteps = 0;
 
 	useFIFO = 2;
 	InVersion= 0.0;
@@ -39,6 +41,15 @@ __host__ Host::Host(){
 	outI = 1llu;
 
 	N = Nperturbers;
+	NMax = 10000000;
+
+	nRuns = 3;
+	runsN = new int[nRuns + 1];
+	runsdt = new double[nRuns + 1];
+	for(int i = 0; i < nRuns + 1; ++i){
+		runsN[i] = Nperturbers;
+		runsdt[i] = dti;
+	}
 
 	outfilename = new char[160];
 	dtfilename = new char[160];
@@ -297,7 +308,7 @@ printf("%d %d %llu\n", i, k, id_h[k]);
 		}
 	}
 	N = k;
-	Sn[S + 1] = N;
+
 	if(useGPU > 0){
 		cudaMemcpy(m_d, m_h, N * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(id_d, id_h, N * sizeof(unsigned long long int), cudaMemcpyHostToDevice);
@@ -313,7 +324,7 @@ printf("%d %d %llu\n", i, k, id_h[k]);
 		cudaMemcpy(snew_d, snew_h, N * sizeof(double2), cudaMemcpyHostToDevice);
 	}
 	if(S == 0){
-		dti = 1.0;
+		dti = 0.1;
 		dts = 0.01;
 		dtiMin = 0.1;
 		dt = dti * dayUnit;
@@ -321,10 +332,12 @@ printf("%d %d %llu\n", i, k, id_h[k]);
 	}
 	if(S == 1){
 		dti = 0.01;
-		dts = 1.0e-5;
+		dts = 1.0e-3;
 		dtiMin = 1.0e-4;
 		dt = dti * dayUnit;
 		outI = (outInterval + 0.5 * dts) / dts;
 	}
+	runsN[S + 1] = N;
+	runsdt[S + 1] = dtiMin;
 
 }

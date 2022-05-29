@@ -275,6 +275,7 @@ __host__ void Host::copyConst(){
 	cudaMemcpyToSymbol(c_c, c_h, RKFn * sizeof(double), 0, cudaMemcpyHostToDevice);
 }
 
+//only 1 particle
 __host__ void Host::stageStep2(int i, double time, double dtiMin, double &snew){
 
 
@@ -335,7 +336,7 @@ __host__ void Host::stageStep2(int i, double time, double dtiMin, double &snew){
 			}
 			accS(m_h[0] + m_h[i], xt_h[i], yt_h[i], zt_h[i], ax, ay, az);
 	//if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
-//if(i == 27)	printf("N0 %d %.20g %.20g %.20g\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//printf("N0 %d %.20g %.20g %.20g\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 			for(int j = Nperturbers-1; j >= 1; --j){
 				if(id_h[i] != id_h[j]){
 					accP2(m_h[j], xt_h[j], yt_h[j], zt_h[j], ax, ay, az);
@@ -389,77 +390,80 @@ __host__ void Host::stageStep2(int i, double time, double dtiMin, double &snew){
 
 //if(i == 27) printf("dx %d %.20g %.20g %.20g %.20g %.20g %.20g\n", i, dx, dy, dz, dvx, dvy, dvz);
 
-	//compute error
-	double ym = fabs(x_h[i]);
-	ym = fmax(ym, fabs(y_h[i]));
-	ym = fmax(ym, fabs(z_h[i]));
-	ym = fmax(ym, fabs(vx_h[i]));
-	ym = fmax(ym, fabs(vy_h[i]));
-	ym = fmax(ym, fabs(vz_h[i]));
+	if(useAdaptiveTimeSteps == 1){
+		//compute error
+		double ym = fabs(x_h[i]);
+		ym = fmax(ym, fabs(y_h[i]));
+		ym = fmax(ym, fabs(z_h[i]));
+		ym = fmax(ym, fabs(vx_h[i]));
+		ym = fmax(ym, fabs(vy_h[i]));
+		ym = fmax(ym, fabs(vz_h[i]));
 
-	ym = fmax(ym, fabs(x_h[i] + dx));
-	ym = fmax(ym, fabs(y_h[i] + dy));
-	ym = fmax(ym, fabs(z_h[i] + dz));
-	ym = fmax(ym, fabs(vx_h[i] + dvx));
-	ym = fmax(ym, fabs(vy_h[i] + dvy));
-	ym = fmax(ym, fabs(vz_h[i] + dvz));
+		ym = fmax(ym, fabs(x_h[i] + dx));
+		ym = fmax(ym, fabs(y_h[i] + dy));
+		ym = fmax(ym, fabs(z_h[i] + dz));
+		ym = fmax(ym, fabs(vx_h[i] + dvx));
+		ym = fmax(ym, fabs(vy_h[i] + dvy));
+		ym = fmax(ym, fabs(vz_h[i] + dvz));
 
-	double isc = 1.0 / (def_atol + ym * def_rtol);
+		double isc = 1.0 / (def_atol + ym * def_rtol);
 
-	double s = 1.0e6;	//large number
-	snew = 1.0e6;		//large number
+		double s = 1.0e6;	//large number
+		snew = 1.0e6;		//large number
 
-	//error estimation
-	double errorkx = 0.0;
-	double errorky = 0.0;
-	double errorkz = 0.0;
-	double errorkvx = 0.0;
-	double errorkvy = 0.0;
-	double errorkvz = 0.0;
+		//error estimation
+		double errorkx = 0.0;
+		double errorky = 0.0;
+		double errorkz = 0.0;
+		double errorkvx = 0.0;
+		double errorkvy = 0.0;
+		double errorkvz = 0.0;
 
-	for(int S = 0; S < RKFn; ++S){
-		double f = (b_h[S] - bb_h[S]) * dt;
-		errorkx += f * kx[S];
-		errorky += f * ky[S];
-		errorkz += f * kz[S];
+		for(int S = 0; S < RKFn; ++S){
+			double f = (b_h[S] - bb_h[S]) * dt;
+			errorkx += f * kx[S];
+			errorky += f * ky[S];
+			errorkz += f * kz[S];
 
-		errorkvx += f * kvx[S];
-		errorkvy += f * kvy[S];
-		errorkvz += f * kvz[S];
+			errorkvx += f * kvx[S];
+			errorkvy += f * kvy[S];
+			errorkvz += f * kvz[S];
 //printf("error %d %d %g %g\n", i, S, errorkx, kx[S]);
-	}
+		}
 
-	double errork = 0.0;
-	errork += errorkx * errorkx * isc * isc;
-	errork += errorky * errorky * isc * isc;
-	errork += errorkz * errorkz * isc * isc;
-	errork += errorkvx * errorkvx * isc * isc;
-	errork += errorkvy * errorkvy * isc * isc;
-	errork += errorkvz * errorkvz * isc * isc;
+		double errork = 0.0;
+		errork += errorkx * errorkx * isc * isc;
+		errork += errorky * errorky * isc * isc;
+		errork += errorkz * errorkz * isc * isc;
+		errork += errorkvx * errorkvx * isc * isc;
+		errork += errorkvy * errorkvy * isc * isc;
+		errork += errorkvz * errorkvz * isc * isc;
 
-	errork = sqrt(errork / 6.0);	//6 is the number of dimensions
+		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
 
-	s = pow( 1.0  / errork, ee);
+		s = pow( 1.0  / errork, ee);
 //printf("error %d %g %g %g\n", i, errork, s, errorkx);
-	s = fmax(def_facmin, def_fac * s);
-	s = fmin(def_facmax, s);
+		s = fmax(def_facmin, def_fac * s);
+		s = fmin(def_facmax, s);
 
-	// ****************************
-	if(snew_h[i].y >= 1.0){
-		snew_h[i].x = s;
-	}
-	else{
-		snew_h[i].x = 1.5;
-	}
-	if(fabs(s * dti) < dtiMin){
-		snew_h[i].y = fmin(snew_h[i].y, s);
-	}
+		// ****************************
+		if(fabs(s * dti) < dtiMin){
+			snew_h[i].y = fmin(snew_h[i].y, s);
+		}
+		if(snew_h[i].y >= 1.0){
+			snew_h[i].x = s;
+		}
+		else{
+			snew_h[i].x = 1.5;
+		}
 
-	snew = fmin(snew, snew_h[i].x);
+		snew = fmin(snew, snew_h[i].x);
 //printf("snew %d %.20g %.20g %.20g %.20g %g\n", i, snew_h[i].y, snew_h[i].x, errork, snew, s);
+	}
 
 }
 
+//N particles
 __host__ void Host::stageStep(double time, double dtiMin, double &snew){
 
 
@@ -516,7 +520,7 @@ __host__ void Host::stageStep(double time, double dtiMin, double &snew){
 				}
 				accS(m_h[0] + m_h[i], xt_h[i], yt_h[i], zt_h[i], ax, ay, az);
 //if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
-//if(i == 27) printf("N0 %d %.20g %.20g %.20g\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//printf("N0 %d %.20g %.20g %.20g\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 				for(int j = Nperturbers-1; j >= 1; --j){
 					if(id_h[i] != id_h[j]){
 						accP2(m_h[j], xt_h[j], yt_h[j], zt_h[j], ax, ay, az);
@@ -574,79 +578,81 @@ __host__ void Host::stageStep(double time, double dtiMin, double &snew){
 
 //if(i == 27) printf("dx %d %.20g %.20g %.20g %.20g %.20g %.20g\n", i, dx, dy, dz, dvx, dvy, dvz);
 
-		//compute error
-		double ym = fabs(x_h[i]);
-		ym = fmax(ym, fabs(y_h[i]));
-		ym = fmax(ym, fabs(z_h[i]));
-		ym = fmax(ym, fabs(vx_h[i]));
-		ym = fmax(ym, fabs(vy_h[i]));
-		ym = fmax(ym, fabs(vz_h[i]));
+		if(useAdaptiveTimeSteps == 1){
 
-		ym = fmax(ym, fabs(x_h[i] + dx));
-		ym = fmax(ym, fabs(y_h[i] + dy));
-		ym = fmax(ym, fabs(z_h[i] + dz));
-		ym = fmax(ym, fabs(vx_h[i] + dvx));
-		ym = fmax(ym, fabs(vy_h[i] + dvy));
-		ym = fmax(ym, fabs(vz_h[i] + dvz));
+			//compute error
+			double ym = fabs(x_h[i]);
+			ym = fmax(ym, fabs(y_h[i]));
+			ym = fmax(ym, fabs(z_h[i]));
+			ym = fmax(ym, fabs(vx_h[i]));
+			ym = fmax(ym, fabs(vy_h[i]));
+			ym = fmax(ym, fabs(vz_h[i]));
 
-		double isc = 1.0 / (def_atol + ym * def_rtol);
+			ym = fmax(ym, fabs(x_h[i] + dx));
+			ym = fmax(ym, fabs(y_h[i] + dy));
+			ym = fmax(ym, fabs(z_h[i] + dz));
+			ym = fmax(ym, fabs(vx_h[i] + dvx));
+			ym = fmax(ym, fabs(vy_h[i] + dvy));
+			ym = fmax(ym, fabs(vz_h[i] + dvz));
 
-		double s = 1.0e6;	//large number
+			double isc = 1.0 / (def_atol + ym * def_rtol);
 
-		//error estimation
-		double errorkx = 0.0;
-		double errorky = 0.0;
-		double errorkz = 0.0;
-		double errorkvx = 0.0;
-		double errorkvy = 0.0;
-		double errorkvz = 0.0;
+			double s = 1.0e6;	//large number
 
-		for(int S = 0; S < RKFn; ++S){
-			double f = (b_h[S] - bb_h[S]) * dt;
-			errorkx += f * kx_h[i + S * N];
-			errorky += f * ky_h[i + S * N];
-			errorkz += f * kz_h[i + S * N];
+			//error estimation
+			double errorkx = 0.0;
+			double errorky = 0.0;
+			double errorkz = 0.0;
+			double errorkvx = 0.0;
+			double errorkvy = 0.0;
+			double errorkvz = 0.0;
 
-			errorkvx += f * kvx_h[i + S * N];
-			errorkvy += f * kvy_h[i + S * N];
-			errorkvz += f * kvz_h[i + S * N];
-	//printf("error %d %d %g %g\n", i, S, errorkx, kx[S]);
-		}
+			for(int S = 0; S < RKFn; ++S){
+				double f = (b_h[S] - bb_h[S]) * dt;
+				errorkx += f * kx_h[i + S * N];
+				errorky += f * ky_h[i + S * N];
+				errorkz += f * kz_h[i + S * N];
 
-		double errork = 0.0;
-		errork += errorkx * errorkx * isc * isc;
-		errork += errorky * errorky * isc * isc;
-		errork += errorkz * errorkz * isc * isc;
-		errork += errorkvx * errorkvx * isc * isc;
-		errork += errorkvy * errorkvy * isc * isc;
-		errork += errorkvz * errorkvz * isc * isc;
+				errorkvx += f * kvx_h[i + S * N];
+				errorkvy += f * kvy_h[i + S * N];
+				errorkvz += f * kvz_h[i + S * N];
+//printf("error %d %d %g %g\n", i, S, errorkx, kx[S]);
+			}
 
-		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
+			double errork = 0.0;
+			errork += errorkx * errorkx * isc * isc;
+			errork += errorky * errorky * isc * isc;
+			errork += errorkz * errorkz * isc * isc;
+			errork += errorkvx * errorkvx * isc * isc;
+			errork += errorkvy * errorkvy * isc * isc;
+			errork += errorkvz * errorkvz * isc * isc;
 
-		s = pow( 1.0  / errork, ee);
-	//printf("error %d %g %g %g\n", i, errork, s, errorkx);
-		s = fmax(def_facmin, def_fac * s);
-		s = fmin(def_facmax, s);
+			errork = sqrt(errork / 6.0);	//6 is the number of dimensions
 
-		// ****************************
-		if(snew_h[i].y >= 1.0){
-			snew_h[i].x = s;
-		}
-		else{
-			snew_h[i].x = 1.5;
-		}
-		if(fabs(s * dti) < dtiMin){
-			snew_h[i].y = fmin(snew_h[i].y, s);
-		}
+			s = pow( 1.0  / errork, ee);
+//printf("error %d %g %g %g\n", i, errork, s, errorkx);
+			s = fmax(def_facmin, def_fac * s);
+			s = fmin(def_facmax, s);
 
-		snew = fmin(snew, snew_h[i].x);
+			// ****************************
+			if(fabs(s * dti) < dtiMin){
+				snew_h[i].y = fmin(snew_h[i].y, s);
+			}
+			if(snew_h[i].y >= 1.0){
+				snew_h[i].x = s;
+			}
+			else{
+				snew_h[i].x = 1.5;
+			}
+
+			snew = fmin(snew, snew_h[i].x);
 //printf("snew %d %.20g %.20g %.20g %.20g %g\n", i, snew_h[i].y, snew_h[i].x, errork, snew, s);
+		}
 	}
-
 }
 
-
-__host__ void Host::stageStep1(double dtiMin, int iStart, double &snew){
+//N particles, using interpolation table
+__host__ void Host::stageStep1(double dtiMin, int iStart, int N, double &snew){
 
 
 	double xt[Nperturbers];
@@ -771,83 +777,84 @@ __host__ void Host::stageStep1(double dtiMin, int iStart, double &snew){
 		dvy_h[i] = dvy;
 		dvz_h[i] = dvz;
 
-			
-		//compute error
-		double ym = fabs(x_h[i]);
-		ym = fmax(ym, fabs(y_h[i]));
-		ym = fmax(ym, fabs(z_h[i]));
-		ym = fmax(ym, fabs(vx_h[i]));
-		ym = fmax(ym, fabs(vy_h[i]));
-		ym = fmax(ym, fabs(vz_h[i]));
+		if(useAdaptiveTimeSteps == 1){
+				
+			//compute error
+			double ym = fabs(x_h[i]);
+			ym = fmax(ym, fabs(y_h[i]));
+			ym = fmax(ym, fabs(z_h[i]));
+			ym = fmax(ym, fabs(vx_h[i]));
+			ym = fmax(ym, fabs(vy_h[i]));
+			ym = fmax(ym, fabs(vz_h[i]));
 
-		ym = fmax(ym, fabs(x_h[i] + dx));
-		ym = fmax(ym, fabs(y_h[i] + dy));
-		ym = fmax(ym, fabs(z_h[i] + dz));
-		ym = fmax(ym, fabs(vx_h[i] + dvx));
-		ym = fmax(ym, fabs(vy_h[i] + dvy));
-		ym = fmax(ym, fabs(vz_h[i] + dvz));
+			ym = fmax(ym, fabs(x_h[i] + dx));
+			ym = fmax(ym, fabs(y_h[i] + dy));
+			ym = fmax(ym, fabs(z_h[i] + dz));
+			ym = fmax(ym, fabs(vx_h[i] + dvx));
+			ym = fmax(ym, fabs(vy_h[i] + dvy));
+			ym = fmax(ym, fabs(vz_h[i] + dvz));
 
-		double isc = 1.0 / (def_atol + ym * def_rtol);
+			double isc = 1.0 / (def_atol + ym * def_rtol);
 
-		double s = 1.0e6;	//large number
+			double s = 1.0e6;	//large number
 
-		double errorkx = 0.0;
-		double errorky = 0.0;
-		double errorkz = 0.0;
-		double errorkvx = 0.0;
-		double errorkvy = 0.0;
-		double errorkvz = 0.0;
+			double errorkx = 0.0;
+			double errorky = 0.0;
+			double errorkz = 0.0;
+			double errorkvx = 0.0;
+			double errorkvy = 0.0;
+			double errorkvz = 0.0;
 
-		for(int S = 0; S < RKFn; ++S){
-			//this is y1i - y^1i
-			double f = (b_h[S] - bb_h[S]) * dt;
-			errorkx += f * kx[S];
-			errorky += f * ky[S];
-			errorkz += f * kz[S];
+			for(int S = 0; S < RKFn; ++S){
+				//this is y1i - y^1i
+				double f = (b_h[S] - bb_h[S]) * dt;
+				errorkx += f * kx[S];
+				errorky += f * ky[S];
+				errorkz += f * kz[S];
 
-			errorkvx += f * kvx[S];
-			errorkvy += f * kvy[S];
-			errorkvz += f * kvz[S];
+				errorkvx += f * kvx[S];
+				errorkvy += f * kvy[S];
+				errorkvz += f * kvz[S];
 //printf("error %d %d %g %g\n", i, S, errorkx, kx[S]);
 
-		}
+			}
 
-		double errork = 0.0;
-		errork += errorkx * errorkx * isc * isc;
-		errork += errorky * errorky * isc * isc;
-		errork += errorkz * errorkz * isc * isc;
-		errork += errorkvx * errorkvx * isc * isc;
-		errork += errorkvy * errorkvy * isc * isc;
-		errork += errorkvz * errorkvz * isc * isc;
+			double errork = 0.0;
+			errork += errorkx * errorkx * isc * isc;
+			errork += errorky * errorky * isc * isc;
+			errork += errorkz * errorkz * isc * isc;
+			errork += errorkvx * errorkvx * isc * isc;
+			errork += errorkvy * errorkvy * isc * isc;
+			errork += errorkvz * errorkvz * isc * isc;
 
-		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
+			errork = sqrt(errork / 6.0);	//6 is the number of dimensions
 
-		s = pow( 1.0  / errork, ee);
+			s = pow( 1.0  / errork, ee);
 //printf("error %d %g %g %g\n", i, errork, s, errorkx);
-		s = fmax(def_facmin, def_fac * s);
-		s = fmin(def_facmax, s);
+			s = fmax(def_facmin, def_fac * s);
+			s = fmin(def_facmax, s);
 
-		// ****************************
-		if(snew_h[i].y >= 1.0){
-			snew_h[i].x = s;
-		}
-		else{
-			snew_h[i].x = 1.5;
-		}
-		if(fabs(s * dti) < dtiMin){
-			snew_h[i].y = fmin(snew_h[i].y, s);
-		}
+			// ****************************
+			if(fabs(s * dti) < dtiMin){
+				snew_h[i].y = fmin(snew_h[i].y, s);
+			}
+			if(snew_h[i].y >= 1.0){
+				snew_h[i].x = s;
+			}
+			else{
+				snew_h[i].x = 1.5;
+			}
 
-		snew = fmin(snew, snew_h[i].x);
+			snew = fmin(snew, snew_h[i].x);
 //printf("snew %d %.20g %.20g %.20g %.20g %g\n", i, snew_h[i].y, snew_h[i].x, errork, snew, s);
-		// ****************************
-
+			// ****************************
+		}
 	}
 
 }
 
 
-__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double2 *snew_d, double dt, double dti, double dtiMin, int N, int useHelio, int useGR, int useJ2, int useNonGrav, double ee){
+__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double2 *snew_d, double dt, double dti, double dtiMin, int N, int useHelio, int useGR, int useJ2, int useNonGrav, int useAdaptiveTimeSteps, double ee){
 
 	int itx = threadIdx.x;
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -860,18 +867,33 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 	__shared__ double m_s[Nperturbers];
 	__shared__ unsigned long long int id_s[Nperturbers];
 
-	double xi0 = x_d[idx];
-	double yi0 = y_d[idx];
-	double zi0 = z_d[idx];
-	double vxi0 = vx_d[idx];
-	double vyi0 = vy_d[idx];
-	double vzi0 = vz_d[idx];
+	double xi0;
+	double yi0;
+	double zi0;
+	double vxi0;
+	double vyi0;
+	double vzi0;
 
-	double mi = m_d[idx];
-	double A1i = A1_d[idx];
-	double A2i = A2_d[idx];
-	double A3i = A3_d[idx];
-	unsigned long long int idi = id_d[idx];
+	double mi;
+	double A1i;
+	double A2i;
+	double A3i;
+	unsigned long long int idi;
+
+	if(idx < N){
+		xi0 = x_d[idx];
+		yi0 = y_d[idx];
+		zi0 = z_d[idx];
+		vxi0 = vx_d[idx];
+		vyi0 = vy_d[idx];
+		vzi0 = vz_d[idx];
+
+		mi = m_d[idx];
+		A1i = A1_d[idx];
+		A2i = A2_d[idx];
+		A3i = A3_d[idx];
+		idi = id_d[idx];
+	}
 
 	for(int S = 0; S < RKFn; ++S){
 
@@ -963,6 +985,7 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 			kvy_d[idx + S * N] = ay;
 			kvz_d[idx + S * N] = az;
 		}
+		__syncthreads();
 	}
 
 	if(idx >= Nperturbers && idx < N){
@@ -994,80 +1017,83 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 
 //if(idx == 27) printf("dx %d %.20g %.20g %.20g %.20g %.20g %.20g\n", idx, dx, dy, dz, dvx, dvy, dvz);
 
-		//compute error
-		double ym = fabs(xi0);
-		ym = fmax(ym, fabs(yi0));
-		ym = fmax(ym, fabs(zi0));
-		ym = fmax(ym, fabs(vxi0));
-		ym = fmax(ym, fabs(vyi0));
-		ym = fmax(ym, fabs(vzi0));
+		if(useAdaptiveTimeSteps == 1){
+			//compute error
+			double ym = fabs(xi0);
+			ym = fmax(ym, fabs(yi0));
+			ym = fmax(ym, fabs(zi0));
+			ym = fmax(ym, fabs(vxi0));
+			ym = fmax(ym, fabs(vyi0));
+			ym = fmax(ym, fabs(vzi0));
 
-		ym = fmax(ym, fabs(xi0 + dx));
-		ym = fmax(ym, fabs(yi0 + dy));
-		ym = fmax(ym, fabs(zi0 + dz));
-		ym = fmax(ym, fabs(vxi0 + dvx));
-		ym = fmax(ym, fabs(vyi0 + dvy));
-		ym = fmax(ym, fabs(vzi0 + dvz));
+			ym = fmax(ym, fabs(xi0 + dx));
+			ym = fmax(ym, fabs(yi0 + dy));
+			ym = fmax(ym, fabs(zi0 + dz));
+			ym = fmax(ym, fabs(vxi0 + dvx));
+			ym = fmax(ym, fabs(vyi0 + dvy));
+			ym = fmax(ym, fabs(vzi0 + dvz));
 
 
-		double isc = 1.0 / (def_atol + ym * def_rtol);
+			double isc = 1.0 / (def_atol + ym * def_rtol);
 
-		double s = 1.0e6;	//large number
+			double s = 1.0e6;	//large number
 
-		double errorkx = 0.0;
-		double errorky = 0.0;
-		double errorkz = 0.0;
-		double errorkvx = 0.0;
-		double errorkvy = 0.0;
-		double errorkvz = 0.0;
+			double errorkx = 0.0;
+			double errorky = 0.0;
+			double errorkz = 0.0;
+			double errorkvx = 0.0;
+			double errorkvy = 0.0;
+			double errorkvz = 0.0;
 
-		for(int S = 0; S < RKFn; ++S){
-			//this is y1i - y^1i
-			double f = (b_c[S] - bb_c[S]) * dt;
-			errorkx += f * kx_d[S * N + idx];
-			errorky += f * ky_d[S * N + idx];
-			errorkz += f * kz_d[S * N + idx];
+			for(int S = 0; S < RKFn; ++S){
+				//this is y1i - y^1i
+				double f = (b_c[S] - bb_c[S]) * dt;
+				errorkx += f * kx_d[S * N + idx];
+				errorky += f * ky_d[S * N + idx];
+				errorkz += f * kz_d[S * N + idx];
 
-			errorkvx += f * kvx_d[S * N + idx];
-			errorkvy += f * kvy_d[S * N + idx];
-			errorkvz += f * kvz_d[S * N + idx];
+				errorkvx += f * kvx_d[S * N + idx];
+				errorkvy += f * kvy_d[S * N + idx];
+				errorkvz += f * kvz_d[S * N + idx];
+			}
+
+			double errork = 0.0;
+			errork += errorkx * errorkx * isc * isc;
+			errork += errorky * errorky * isc * isc;
+			errork += errorkz * errorkz * isc * isc;
+			errork += errorkvx * errorkvx * isc * isc;
+			errork += errorkvy * errorkvy * isc * isc;
+			errork += errorkvz * errorkvz * isc * isc;
+
+			errork = sqrt(errork / 6.0);	//6 is the number of dimensions
+
+			s = pow( 1.0  / errork, ee);
+			s = fmax(def_facmin, def_fac * s);
+			s = fmin(def_facmax, s);
+
+			// ****************************
+			double2 snew2 = snew_d[idx];
+			if(fabs(s * dti) < dtiMin){
+				snew2.y = fmin(snew2.y, s);
+			}
+			if(snew2.y >= 1.0){
+				snew2.x = s;
+			}
+			else{
+				snew2.x = 1.5;
+			}
+			snew_d[idx] = snew2;
+	//printf("snew %d %.20g %.20g %.20g\n", idx, snew_d[idx].y, snew_d[idx].x, errork);
+			// ****************************
 		}
-
-		double errork = 0.0;
-		errork += errorkx * errorkx * isc * isc;
-		errork += errorky * errorky * isc * isc;
-		errork += errorkz * errorkz * isc * isc;
-		errork += errorkvx * errorkvx * isc * isc;
-		errork += errorkvy * errorkvy * isc * isc;
-		errork += errorkvz * errorkvz * isc * isc;
-
-		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
-
-		s = pow( 1.0  / errork, ee);
-		s = fmax(def_facmin, def_fac * s);
-		s = fmin(def_facmax, s);
-
-		// ****************************
-		if(snew_d[idx].y >= 1.0){
-			snew_d[idx].x = s;
-		}
-		else{
-			snew_d[idx].x = 1.5;
-		}
-		if(fabs(s * dti) < dtiMin){
-			snew_d[idx].y = fmin(snew_d[idx].y, s);
-		}
-//printf("snew %d %.20g %.20g %.20g\n", idx, snew_d[idx].y, snew_d[idx].x, errork);
-		// ****************************
 	}
-
 
 }
 
 
 //every particle runs on an own thread block
 //the force calculation is parallelized along the threads and reduced in registers
-__global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *A1_d, double *A2_d, double *A3_d, double2 *snew_d, double dt, double dti, double dtiMin, int N, int useHelio, int useGR, int useJ2, int useNonGrav, double ee){
+__global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *A1_d, double *A2_d, double *A3_d, double2 *snew_d, double dt, double dti, double dtiMin, int N, int useHelio, int useGR, int useJ2, int useNonGrav, int useAdaptiveTimeSteps, double ee){
 
 	int itx = threadIdx.x;
 	int idx = blockIdx.x + Nperturbers;
@@ -1111,7 +1137,7 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 		if(itx < Nperturbers){
 			m_s[itx] = m_d[itx];
 			id_s[itx] = id_d[itx];
-//printf("%d %d %.20g\n", itx, S, x_s[itx]);
+//if(idx == 27) printf("%d %.20g %.20g\n", itx, x_s[itx], m_s[itx]);
 		}
 
 		for(int S = 0; S < RKFn; ++S){
@@ -1176,11 +1202,11 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 				if(itx < Nperturbers){
 					if(idi != id_s[itx]){
 						accP(m_s[itx], x_s[itx], y_s[itx], z_s[itx], xi_s[0], yi_s[0], zi_s[0], ax, ay, az);
-	//printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//if(idx == 27) printf("Nij %d %d %.20g %.20g %.20g %g %g %g\n", idx, itx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, x_s[itx], xi_s[0], m_s[itx]);
 					}
 				}
 
-//if(idx == 27) printf("N0 %d %.20g %.20g %.20g\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//if(idx == 27) printf("N0 %d %d %.20g %.20g %.20g\n", idx, itx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
 				if(itx > 0 && itx < Nperturbers){
 					if(idi != id_s[itx]){
 						accP2(m_s[itx], x_s[itx], y_s[itx], z_s[itx], ax, ay, az);
@@ -1261,180 +1287,80 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 
 //if(idx == 27) printf("dx %d %.20g %.20g %.20g %.20g %.20g %.20g\n", idx, dx, dy, dz, dvx, dvy, dvz);
 
+			if(useAdaptiveTimeSteps == 1){
 
-			//compute error
+				//compute error
+				double ym = fabs(xi0);
+				ym = fmax(ym, fabs(yi0));
+				ym = fmax(ym, fabs(zi0));
+				ym = fmax(ym, fabs(vxi0));
+				ym = fmax(ym, fabs(vyi0));
+				ym = fmax(ym, fabs(vzi0));
 
-			double ym = fabs(xi0);
-			ym = fmax(ym, fabs(yi0));
-			ym = fmax(ym, fabs(zi0));
-			ym = fmax(ym, fabs(vxi0));
-			ym = fmax(ym, fabs(vyi0));
-			ym = fmax(ym, fabs(vzi0));
-
-			ym = fmax(ym, fabs(xi0 + dx));
-			ym = fmax(ym, fabs(yi0 + dy));
-			ym = fmax(ym, fabs(zi0 + dz));
-			ym = fmax(ym, fabs(vxi0 + dvx));
-			ym = fmax(ym, fabs(vyi0 + dvy));
-			ym = fmax(ym, fabs(vzi0 + dvz));
+				ym = fmax(ym, fabs(xi0 + dx));
+				ym = fmax(ym, fabs(yi0 + dy));
+				ym = fmax(ym, fabs(zi0 + dz));
+				ym = fmax(ym, fabs(vxi0 + dvx));
+				ym = fmax(ym, fabs(vyi0 + dvy));
+				ym = fmax(ym, fabs(vzi0 + dvz));
 
 
-			double isc = 1.0 / (def_atol + ym * def_rtol);
+				double isc = 1.0 / (def_atol + ym * def_rtol);
 
-			double s = 1.0e6;	//large number
+				double s = 1.0e6;	//large number
 
-			double errorkx = 0.0;
-			double errorky = 0.0;
-			double errorkz = 0.0;
-			double errorkvx = 0.0;
-			double errorkvy = 0.0;
-			double errorkvz = 0.0;
+				double errorkx = 0.0;
+				double errorky = 0.0;
+				double errorkz = 0.0;
+				double errorkvx = 0.0;
+				double errorkvy = 0.0;
+				double errorkvz = 0.0;
 
-			for(int S = 0; S < RKFn; ++S){
-				//this is y1i - y^1i
-				double f = (b_c[S] - bb_c[S]) * dt;
-				errorkx += f * kx_s[S];
-				errorky += f * ky_s[S];
-				errorkz += f * kz_s[S];
+				for(int S = 0; S < RKFn; ++S){
+					//this is y1i - y^1i
+					double f = (b_c[S] - bb_c[S]) * dt;
+					errorkx += f * kx_s[S];
+					errorky += f * ky_s[S];
+					errorkz += f * kz_s[S];
 
-				errorkvx += f * kvx_s[S];
-				errorkvy += f * kvy_s[S];
-				errorkvz += f * kvz_s[S];
-			}
-			
-			double errork = 0.0;
-			errork += errorkx * errorkx * isc * isc;
-			errork += errorky * errorky * isc * isc;
-			errork += errorkz * errorkz * isc * isc;
-			errork += errorkvx * errorkvx * isc * isc;
-			errork += errorkvy * errorkvy * isc * isc;
-			errork += errorkvz * errorkvz * isc * isc;
+					errorkvx += f * kvx_s[S];
+					errorkvy += f * kvy_s[S];
+					errorkvz += f * kvz_s[S];
+				}
+				
+				double errork = 0.0;
+				errork += errorkx * errorkx * isc * isc;
+				errork += errorky * errorky * isc * isc;
+				errork += errorkz * errorkz * isc * isc;
+				errork += errorkvx * errorkvx * isc * isc;
+				errork += errorkvy * errorkvy * isc * isc;
+				errork += errorkvz * errorkvz * isc * isc;
 
-			errork = sqrt(errork / 6.0);	//6 is the number of dimensions
+				errork = sqrt(errork / 6.0);	//6 is the number of dimensions
 
-			s = pow( 1.0  / errork, ee);
-			s = fmax(def_facmin, def_fac * s);
-			s = fmin(def_facmax, s);
+				s = pow( 1.0  / errork, ee);
+				s = fmax(def_facmin, def_fac * s);
+				s = fmin(def_facmax, s);
 
-			// ****************************
-			double2 snew2 = snew_d[idx];
-			if(snew2.y >= 1.0){
-				snew2.x = s;
-			}
-			else{
-				snew2.x = 1.5;
-			}
-			if(fabs(s * dti) < dtiMin){
-				snew2.y = fmin(snew2.y, s);
-			}
-			snew_d[idx] = snew2;
+				// ****************************
+				double2 snew2 = snew_d[idx];
+				if(fabs(s * dti) < dtiMin){
+					snew2.y = fmin(snew2.y, s);
+				}
+				if(snew2.y >= 1.0){
+					snew2.x = s;
+				}
+				else{
+					snew2.x = 1.5;
+				}
+				snew_d[idx] = snew2;
 //printf("snew %d %.20g %.20g %.20g\n", idx, snew_d[idx].y, snew_d[idx].x, errork);
-			// ****************************
-
+				// ****************************
+			}
 		}
 	}
 }
 
-void computeError(double2 *snew_h, double *x_h, double *y_h, double *z_h, double *vx_h, double *vy_h, double *vz_h,double *kx_h, double *ky_h, double *kz_h, double *kvx_h, double *kvy_h, double *kvz_h, double *dx_h, double *dy_h, double *dz_h, double *dvx_h, double *dvy_h, double *dvz_h, double *b_h, double *bb_h, int N, double &snew, double dt, double dti, double dtiMin, double ee){
-
-
-	snew = 1.0e6;	//large number
-	for(int i = Nperturbers; i < N; ++i){
-		//update
-		double dx = 0.0;
-		double dy = 0.0;
-		double dz = 0.0;
-		double dvx = 0.0;
-		double dvy = 0.0;
-		double dvz = 0.0;
-
-		for(int S = 0; S < RKFn; ++S){
-			double dtb = dt * b_h[S];
-			dx += dtb * kx_h[S * N + i];
-			dy += dtb * ky_h[S * N + i];
-			dz += dtb * kz_h[S * N + i];
-
-			dvx += dtb * kvx_h[S * N + i];
-			dvy += dtb * kvy_h[S * N + i];
-			dvz += dtb * kvz_h[S * N + i];
-		}
-
-		dx_h[i] = dx;
-		dy_h[i] = dy;
-		dz_h[i] = dz;
-		dvx_h[i] = dvx;
-		dvy_h[i] = dvy;
-		dvz_h[i] = dvz;
-
-		//compute error
-		double ym = fabs(x_h[i]);
-		ym = fmax(ym, fabs(y_h[i]));
-		ym = fmax(ym, fabs(z_h[i]));
-		ym = fmax(ym, fabs(vx_h[i]));
-		ym = fmax(ym, fabs(vy_h[i]));
-		ym = fmax(ym, fabs(vz_h[i]));
-
-		ym = fmax(ym, fabs(x_h[i] + dx));
-		ym = fmax(ym, fabs(y_h[i] + dy));
-		ym = fmax(ym, fabs(z_h[i] + dz));
-		ym = fmax(ym, fabs(vx_h[i] + dvx));
-		ym = fmax(ym, fabs(vy_h[i] + dvy));
-		ym = fmax(ym, fabs(vz_h[i] + dvz));
-
-		double isc = 1.0 / (def_atol + ym * def_rtol);
-
-		double s = 1.0e6;	//large number
-
-		//error estimation
-		double errorkx = 0.0;
-		double errorky = 0.0;
-		double errorkz = 0.0;
-		double errorkvx = 0.0;
-		double errorkvy = 0.0;
-		double errorkvz = 0.0;
-
-		for(int S = 0; S < RKFn; ++S){
-			double f = (b_h[S] - bb_h[S]) * dt;
-			errorkx += f * kx_h[S * N + i];
-			errorky += f * ky_h[S * N + i];
-			errorkz += f * kz_h[S * N + i];
-
-			errorkvx += f * kvx_h[S * N + i];
-			errorkvy += f * kvy_h[S * N + i];
-			errorkvz += f * kvz_h[S * N + i];
-	//printf("error %d %d %g %g\n", i, S, errorkx, kx_h[S * N + i]);
-		}
-
-		double errork = 0.0;
-		errork += errorkx * errorkx * isc * isc;
-		errork += errorky * errorky * isc * isc;
-		errork += errorkz * errorkz * isc * isc;
-		errork += errorkvx * errorkvx * isc * isc;
-		errork += errorkvy * errorkvy * isc * isc;
-		errork += errorkvz * errorkvz * isc * isc;
-
-		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
-
-		s = pow( 1.0  / errork, ee);
-	//printf("error %d %g %g %g\n", i, errork, s, errorkx);
-		s = fmax(def_facmin, def_fac * s);
-		s = fmin(def_facmax, s);
-
-		// ****************************
-		if(snew_h[i].y >= 1.0){
-			snew_h[i].x = s;
-		}
-		else{
-			snew_h[i].x = 1.5;
-		}
-		if(fabs(s * dti) < dtiMin){
-			snew_h[i].y = fmin(snew_h[i].y, s);
-		}
-
-		snew = fmin(snew, snew_h[i].x);
-//printf("snew %d %.20g %.20g %.20g %.20g %g\n", i, snew_h[i].y, snew_h[i].x, errork, snew, s);
-	}
-}
 
 __global__ void computeError_d1_kernel(double2 *snew_d, int N){
 
@@ -1637,8 +1563,13 @@ __host__ int Host::preIntegration(){
 //printf("A %d %lld %.20g %.20g %.20g %.20g\n", i, id_h[i], time, x_h[i], y_h[i], z_h[i]);
 
 			//interpolateTable(time);
-			//stageStep1(id_h, m_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, dx_h, dy_h, dz_h, dvx_h, dvy_h, dvz_h, xTable_h, yTable_h, zTable_h, A1_h, A2_h, A3_h, snew_h, a_h, b_h, bb_h, dt, dti, dtiMin, RKFn, Nperturbers, i + 1, i - Nperturbers, useHelio, useGR, useJ2, useNonGrav, ee, snew);
+			//stageStep1(dtiMin, i - Nperturbers, i + 1, snew);
+
 			stageStep2(i, time, dtiMin, snew);
+
+			if(useAdaptiveTimeSteps == 0){
+				snew = 1.0;
+			}
 
 			if(snew >= 1.0){
 				update(i);
@@ -1704,190 +1635,204 @@ __host__ int Host::preIntegration(){
 }
 
 __host__ void Host::IntegrationLoop(int S){
+	//save initial values for j loop (individual time steps)
+	double dti0 = dti;
+	double dts0 = dts;
+	long long int outI0 = outI;
 
-//for(int j = Nperturbers; j < N; ++j){
-	unsigned long long int cOut = 0llu;	//counter for output
-	int ci = 0;
-	time = outStart;
-	double dtiOld = dti;
+	int Nj = Nperturbers + 1;
+	if(useIndividualTimeSteps == 1){
+		Nj = N;
+		//dtiMin = 1.0e-5;
+	}
 
+	//the loop is used for individual time step integrations
+	for(int j = Nperturbers; j < Nj; ++j){
+		dti = dti0;
+		dts = dts0;
+		dt = dti * dayUnit;
+		outI = outI0;
 
-	for(long long int t = 1; t <= Nsteps; ++t){
-	//for(long long int t = 1; t < 5000; ++t){
-	//for(long long int t = 1; t < 10; ++t){
-		
-		//cudaDeviceSynchronize();
-		//printf("%lld %d | %d %d\n", t, 0, N, Nperturbers);	
-		
-		double snew = 1.0;
-		
-		if(useGPU == 0){
+		unsigned long long int cOut = 0llu;	//counter for output
+		int ci = 0;
+		time = outStart;
+		double dtiOld = dti;
 
-			//single particle
-			//stageStep2(j, time, dtiMin, snew);
+printf("J %d %g %g %g %llu\n", j, time, outStart, dti, outI);
 
-			//interpolateTable(time);	
-			//stageStep1(dtiMin, 0, snew);
+		for(long long int t = 1; t <= Nsteps; ++t){
+		//for(long long int t = 1; t < 5000; ++t){
+		//for(long long int t = 1; t < 10; ++t){
 			
-/*			
-			for(int S = 0; S < RKFn; ++S){
-				for(int p = 0; p < Nperturbers; ++p){
-					interpolate(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dti, xt_h, yt_h, zt_h, p);
-					//interpolate2(Ninterpolate, Nperturbers, xp_h, yp_h, zp_h, timep_h, timep0, dtimep, time + c_h[S] * dti, xt_h, yt_h, zt_h, p);
-				}
-				for(int i = Nperturbers; i < N; ++i){
-					update2(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, i, N, dt, S, RKFn, a_h);
-					stageStep(id_h, m_h, xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, A1_h, A2_h, A3_h, S, i, Nperturbers, N, useHelio, useGR, useJ2, useNonGrav);
-				}
-				
-			}
-			computeError(snew_h, x_h, y_h, z_h, vx_h, vy_h, vz_h, kx_h, ky_h, kz_h, kvx_h, kvy_h, kvz_h, dx_h, dy_h, dz_h, dvx_h, dvy_h, dvz_h, b_h, bb_h, N, snew, dt, dti, dtiMin, ee);
-*/			
-			stageStep(time, dtiMin, snew);
-			// -----------------------------------
-		}
-		else{
-			if(useGPU == 1){
-				interpolateTable_kernel <<< dim3(Nperturbers, RKFn, 1), dim3(Ninterpolate) >>> (xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, dti, xTable_d, yTable_d, zTable_d);
-				if(N > 300){
-					stageStep1_kernel <<< (N + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin, N, useHelio, useGR, useJ2, useNonGrav, ee);
+			//cudaDeviceSynchronize();
+			//printf("%lld %d | %d %d\n", t, 0, N, Nperturbers);	
+			
+			double snew = 1.0;
+			
+			if(useGPU == 0){
+
+				if(useIndividualTimeSteps == 1){
+					//single particle
+					stageStep2(j, time, dtiMin, snew);
 				}
 				else{
-					stageStep2_kernel <<< (N - Nperturbers), 32 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin, N, useHelio, useGR, useJ2, useNonGrav, ee);
-				}
+					//interpolateTable(time);	
+					//stageStep1(dtiMin, 0, N, snew);
 				
-			}
-			
-			int nct = 512;
-			int ncb = min((N + nct - 1) / nct, 1024);
-			int WarpSize = 32;
-			computeError_d1_kernel <<< ncb, nct, WarpSize * sizeof(double)  >>> (snew_d, N);
-			if(ncb > 1){
-				computeError_d2_kernel <<< 1, ((ncb + WarpSize - 1) / WarpSize) * WarpSize, WarpSize * sizeof(double)  >>> (snew_d, ncb);
-			}
-			cudaMemcpy(snew_h, snew_d, sizeof(double2), cudaMemcpyDeviceToHost);
-			cudaDeviceSynchronize();
-			snew = snew_h[0].x;
-		}
-		//if(useGPU > 0){
-		//cudaMemcpy(x_h, x_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-		//cudaMemcpy(y_h, y_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-		//cudaMemcpy(z_h, z_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-		//}
-		printf("%.20g %llu dt: %.20g %.g %g %d\n", time, cOut, dti, dts, snew, S);
-		fprintf(dtfile, "%.20g %llu dt: %.20g %.g %g %d\n", time, cOut, dti, dts, snew, S);
-		
-		
-		//snew = 1.0;
-		
-		if(snew >= 1.0){
-			printf("---- accept step %llu %llu %.20g %g----\n", cOut, outI, time + dti, dti);		
-			if(useGPU == 0){
-				//update(j);
-				for(int i = Nperturbers; i < N; ++i){
-					update(i);
+					stageStep(time, dtiMin, snew);
 				}
 			}
 			else{
-				update_kernel <<< (N + 127) / 128, 128 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, N);	
-			}
-			ci = (dti + 0.5 * dts) / dts;
-			cOut += ci;		
-			
-			time += dti;
-			
-			if(cOut >= outI){
-				//if(t % 10 == 0){
-				if(useGPU > 0){
-					cudaMemcpy(snew_h, snew_d, N * sizeof(double2), cudaMemcpyDeviceToHost);
-					cudaMemcpy(x_h, x_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-					cudaMemcpy(y_h, y_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-					cudaMemcpy(z_h, z_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-					cudaMemcpy(vx_h, vx_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-					cudaMemcpy(vy_h, vy_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-					cudaMemcpy(vz_h, vz_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+				if(useGPU == 1){
+					interpolateTable_kernel <<< dim3(Nperturbers, RKFn, 1), Ninterpolate >>> (xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, dti, xTable_d, yTable_d, zTable_d);
+				//	if(N > 300){
+						stageStep1_kernel <<< (N + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin, N, useHelio, useGR, useJ2, useNonGrav, useAdaptiveTimeSteps, ee);
+				//	}
+				//	else{
+				//		stageStep2_kernel <<< (N - Nperturbers), 32 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin, N, useHelio, useGR, useJ2, useNonGrav, useAdaptiveTimeSteps, ee);
+						//stageStep3_kernel < 2 > <<< ((N - Nperturbers) + 1) / 2, dim3(32, 2, 1) >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin, N, useHelio, useGR, useJ2, useNonGrav, useAdaptiveTimeSteps, ee);
+				//	}
+					
 				}
-				output(t, time, S);
-				dti = dtiOld;
-				dt = dti * dayUnit;
-				snew = 1.0;
-				cOut = 0;
-				outI = (outInterval + 0.5 * dts) / dts; //needed only at the first time
+
+				if(useAdaptiveTimeSteps == 1){			
+					int nct = 512;
+					int ncb = min((N + nct - 1) / nct, 1024);
+					int WarpSize = 32;
+					computeError_d1_kernel <<< ncb, nct, WarpSize * sizeof(double)  >>> (snew_d, N);
+					if(ncb > 1){
+						computeError_d2_kernel <<< 1, ((ncb + WarpSize - 1) / WarpSize) * WarpSize, WarpSize * sizeof(double)  >>> (snew_d, ncb);
+					}
+					cudaMemcpy(snew_h, snew_d, sizeof(double2), cudaMemcpyDeviceToHost);
+					cudaDeviceSynchronize();
+					snew = snew_h[0].x;
+				}
 			}
-		}
-		else{
-			printf(" ---- repeat step %llu %llu %.20g ----\n", cOut, outI, time);		
+			//Only used for testing
+			//if(useGPU > 0){
+				//cudaMemcpy(x_h, x_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+				//cudaMemcpy(y_h, y_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+				//cudaMemcpy(z_h, z_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+			//}
+			printf("%.20g %llu dt: %.20g %.g %g %d\n", time, cOut, dti, dts, snew, S);
+			fprintf(dtfile, "%.20g %llu dt: %.20g %.g %g %d\n", time, cOut, dti, dts, snew, S);
 			
-		}
-		
-		
-		dti *= snew;
-		
-		if(dtiOld >= 65.0 * dts && cOut % 10 == 0 && snew >= 1.0){
-			//synchronize with coarser time steps
-			dts *= 10;
-			outI /= 10;
-			cOut /= 10;
-			dti = 5.0 * dts;
-			printf("increase time step C %g %g\n", dti, dts);
-		}
-		
-		//round dti to dts intervals
-		int dtt = dti / dts;
+			if(useAdaptiveTimeSteps == 0){
+				snew = 1.0;
+			}
+			
+			if(snew >= 1.0){
+				printf("---- accept step %llu %llu %.20g %g----\n", cOut, outI, time + dti, dti);		
+				if(useGPU == 0){
+					if(useIndividualTimeSteps == 1){
+						update(j);
+					}
+					else{
+						for(int i = Nperturbers; i < N; ++i){
+							update(i);
+						}
+					}
+				}
+				else{
+					update_kernel <<< (N + 127) / 128, 128 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, N);	
+				}
+				ci = (dti + 0.5 * dts) / dts;
+				cOut += ci;		
+				
+				time += dti;
+				
+				if(cOut >= outI){
+					//if(t % 10 == 0){
+					if(useGPU > 0){
+						cudaMemcpy(snew_h, snew_d, N * sizeof(double2), cudaMemcpyDeviceToHost);
+						cudaMemcpy(x_h, x_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+						cudaMemcpy(y_h, y_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+						cudaMemcpy(z_h, z_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+						cudaMemcpy(vx_h, vx_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+						cudaMemcpy(vy_h, vy_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+						cudaMemcpy(vz_h, vz_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+					}
+					output(t, time, S);
+					dti = dtiOld;
+					dt = dti * dayUnit;
+					snew = 1.0;
+					cOut = 0;
+					outI = (outInterval + 0.5 * dts) / dts; //needed only at the first time
+				}
+			}
+			else{
+				printf(" ---- repeat step %llu %llu %.20g ----\n", cOut, outI, time);		
+				
+			}
+			
+			
+			dti *= snew;
+			
+			if(dtiOld >= 65.0 * dts && cOut % 10 == 0 && snew >= 1.0){
+				//synchronize with coarser time steps
+				dts *= 10;
+				outI /= 10;
+				cOut /= 10;
+				dti = 5.0 * dts;
+				printf("increase time step C %g %g\n", dti, dts);
+			}
+			
+			//round dti to dts intervals
+			int dtt = dti / dts;
 printf("dta %.20g %d %g %llu\n", dti, dtt, dts, cOut);
-		dti = dtt * dts;
-		if(dti < dts) dti = dts;
-		
-		
+			dti = dtt * dts;
+			if(dti < dts) dti = dts;
+			
+			
 printf("dtb %.20g %d %g %llu\n", dti, dtt, dts, cOut);
-		ci = (dti + 0.5 * dts) / dts;
-		
-		if(dti < dtiMin) dti = dtiMin;
-		
-		
-		dtiOld = dti;
-		
-		dt = dti * dayUnit;
-		//printf("%llu %llu %.20g, %.20g %.20g\n", cOut + ci, outI, time, time + dti, outStart);
-		
-		if(cOut + ci > outI && time + dti >= outStart){
-			dti = (outI - cOut) * dts;
+			ci = (dti + 0.5 * dts) / dts;
+			
+			if(dti < dtiMin) dti = dtiMin;
+			
+			
+			dtiOld = dti;
 			
 			dt = dti * dayUnit;
+			//printf("%llu %llu %.20g, %.20g %.20g\n", cOut + ci, outI, time, time + dti, outStart);
+			
+			if(cOut + ci > outI && time + dti >= outStart){
+				dti = (outI - cOut) * dts;
+				
+				dt = dti * dayUnit;
 printf("   correct %.20g %.20g %.20g %.20g %llu %llu\n", time, time + dti, dti, dtiOld, cOut, outI);
 printf("dtc %.20g %g\n", dti, dts);
-		}
-		
-		
-		else{
+			}
 			
-			if(dti >= 65.0 * dts){
-				//synchronize with coarser time steps
+			
+			else{
+				
+				if(dti >= 65.0 * dts){
+					//synchronize with coarser time steps
 printf("increase time step A %g %g\n", dti, dts);
-				dti = (((cOut + ci) / 10) * 10 - cOut) * dts;
-				dt = dti * dayUnit;
-				//dts *= 10;
-				//outI /= 10;
-				//cOut /= 10;
+					dti = (((cOut + ci) / 10) * 10 - cOut) * dts;
+					dt = dti * dayUnit;
+					//dts *= 10;
+					//outI /= 10;
+					//cOut /= 10;
 printf("increase time step B %g %g\n", dti, dts);
-			}
-			if(dti <= 2.0 * dts){
+				}
+				if(dti <= 2.0 * dts){
 printf("refine time steps %g %g\n", dti, dts);
-				//refine interpolation points
-				dts *= 0.1;
-				outI *= 10;
-				cOut *= 10;
+					//refine interpolation points
+					dts *= 0.1;
+					outI *= 10;
+					cOut *= 10;
+				}
 			}
-		}
-		
-		
-		//add condition for backward integration
-		if(time >= time1){
-			printf("Reached the end\n");
-			break;
-		}
-		
-	}	// end of time step loop
-//}
+			
+			
+			//add condition for backward integration
+			if(time >= time1){
+				printf("Reached the end\n");
+				break;
+			}
+			
+		}	// end of time step loop
+	}// end of j loop
 
 }

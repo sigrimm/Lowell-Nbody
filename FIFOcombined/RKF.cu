@@ -8,8 +8,8 @@
 #include "Host.h"
 
 #include "force.h"
+#include "test3.h"
 #include "integrator.h"
-
 
 
 int main(int argc, char*argv[]){
@@ -18,21 +18,25 @@ int main(int argc, char*argv[]){
 	Host H;
 
 	FILE *binfile;
+	char *binfilename;
+	binfilename = new char[160];
+;
 	if(H.useFIFO == 2){	
-		//binfile = fopen("210801_2342_genga_de440_perturbers.bin", "rb");
-		//binfile = fopen("210921_2148_genga_in_yarkovsky_elements.bin", "rb");
-		//binfile = fopen("211208_1916_genga_in_2021-12-08_specific_desig.bin", "rb");
-		//binfile = fopen("210801_2104_genga_in_GA.bin", "rb");
-		//binfile = fopen("210705_2315_genga_req.bin", "rb");
-		//binfile = fopen("220301_2048_genga_in_new_last_14_days.bin", "rb");
-		//binfile = fopen("220524_2256_genga_in_query_genga_input_40k.bin", "rb");
-		binfile = fopen("220524_2258_genga_in_query_genga_input_10k.bin", "rb");
-
-		if(binfile == NULL){
-			printf("Error, input file not found.\n");
-			return 0;
+		//sprintf(binfilename, "210921_2148_genga_in_yarkovsky_elements.bin");
+		//sprintf(binfilename, "211208_1916_genga_in_2021-12-08_specific_desig.bin");
+		//sprintf(binfilename, "210801_2104_genga_in_GA.bin");
+		//sprintf(binfilename, "220301_2048_genga_in_new_last_14_days.bin");
+		//sprintf(binfilename, "220524_2256_genga_in_query_genga_input_40k.bin");
+		sprintf(binfilename, "220524_2258_genga_in_query_genga_input_10k.bin");
+	}
+	
+	//read console arguments for the binary file name
+	//other arguments are checked later to overwright the head data	
+	for(int i = 1; i < argc; i += 2){
+		if(strcmp(argv[i], "-in") == 0){
+			sprintf(binfilename, "%s", argv[i + 1]);
 		}
-	}	
+	}
 
 	double timing[6];
 	for(int i = 0; i < 6; ++i){
@@ -87,6 +91,13 @@ int main(int argc, char*argv[]){
 	
 
 	if(H.useFIFO == 2){
+		binfile = fopen(binfilename, "rb");
+
+		if(binfile == NULL){
+			printf("Error, input file not found.\n");
+			return 0;
+		}
+
 		int NTP = 0;
 		printf("read file\n");
 
@@ -121,33 +132,65 @@ H.time1 = 2461000.5;
 	H.dtiMin = 2.0;
 	//H.outInterval = 10.0;
 	//H.outStart = 2450800.5;
-	H.outI = (H.outInterval + 0.5 * H.dts) / H.dts;
-
-	//	if(fabs(outStart - time0) > fabs(outInterval)){
-	//		outI = (outStart - time0 + 0.5 * dts) / dts;
-	//	}
-
-	printf("outStart: %.20g, time0: %.20g, time1: %.20g, dts: %g, outI: %llu,  outInterval: %lld\n", H.outStart, H.time0, H.time1, H.dts, H.outI, H.outInterval);
-
 
 
 	for(int i = 1; i < argc; i += 2){
-
 		if(strcmp(argv[i], "-Nsteps") == 0){
 			H.Nsteps = atoll(argv[i + 1]);
 		}
 		else if(strcmp(argv[i], "-outInterval") == 0){
 			H.outInterval = atoll(argv[i + 1]);
 		}
+		else if(strcmp(argv[i], "-outStart") == 0){
+			H.outStart = atof(argv[i + 1]);
+		}
 		else if(strcmp(argv[i], "-dt") == 0){
 			H.dti = atof(argv[i + 1]);
+		}
+		else if(strcmp(argv[i], "-dtMin") == 0){
+			H.dtiMin = atof(argv[i + 1]);
 		}
 		else if(strcmp(argv[i], "-endTime") == 0){
 			H.time1 = atof(argv[i + 1]);
 		}
+		else if(strcmp(argv[i], "-useGPU") == 0){
+			H.useGPU = atoi(argv[i + 1]);
+		}
+		else if(strcmp(argv[i], "-useAdaptive") == 0){
+			H.useAdaptiveTimeSteps = atoi(argv[i + 1]);
+		}
+		else if(strcmp(argv[i], "-useIndividual") == 0){
+			H.useIndividualTimeSteps = atoi(argv[i + 1]);
+		}
+		else if(strcmp(argv[i], "-NMax") == 0){
+			H.NMax = atoi(argv[i + 1]);
+		}
+		else if(strcmp(argv[i], "-in") == 0){
+			//this is already done
+		}
+		else{
+			printf("Error, console argument not valid.\n");
+			return 0;
+		}
 	}
 	H.dt = H.dti * dayUnit;
-	printf("Nperturbers: %d N:%d\n", Nperturbers, H.N);
+	H.outI = (H.outInterval + 0.5 * H.dts) / H.dts;
+
+	if(H.N - Nperturbers > H.NMax){
+		printf("Number of bodies larger than Nmax\n");
+		H.N = Nperturbers + H.NMax;
+	}
+
+
+	//	if(fabs(outStart - time0) > fabs(outInterval)){
+	//		outI = (outStart - time0 + 0.5 * dts) / dts;
+	//	}
+
+	printf("binfile name %s\n", binfilename);
+
+	printf("outStart: %.20g, time0: %.20g, time1: %.20g, dts: %g, outI: %llu,  outInterval: %lld\n", H.outStart, H.time0, H.time1, H.dts, H.outI, H.outInterval);
+
+	printf("Nperturbers: %d N: %d\n", Nperturbers, H.N);
 
 
 	// **************************************************
@@ -222,6 +265,14 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	// **************************************************
 
 	// **************************************************
+	// Read perturbers masses from perturbers.h file
+	// **************************************************
+
+	H.perturbersMass();
+	H.perturbersIDs();
+//m[Nperturbers] = 1.e-11; //ca mass of Flora
+
+	// **************************************************
 	//copy the data to the device
 	if(H.useGPU > 0){
 		H.copy1();
@@ -261,22 +312,15 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 		return 0;
 	}
 
-        cudaEventRecord(tt2);
-        cudaEventSynchronize(tt2);
-        cudaEventElapsedTime(&milliseconds, tt1, tt2);
+	cudaEventRecord(tt2);
+	cudaEventSynchronize(tt2);
+	cudaEventElapsedTime(&milliseconds, tt1, tt2);
 	printf("Time for ic and allocation, %g seconds\n", milliseconds * 0.001);
-        timing[0] += milliseconds * 0.001;
+	timing[0] += milliseconds * 0.001;
 
 
 	cudaEventRecord(tt1);
 
-	// **************************************************
-	// Read perturbers masses from perturbers.h file
-	// **************************************************
-
-	H.perturbersMass();
-	H.perturbersIDs();
-//m[Nperturbers] = 1.e-11; //ca mass of Flora
 
 	// **************************************************
 
@@ -302,7 +346,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	
 	cudaEventElapsedTime(&milliseconds, tt1, tt2);
 	printf("Time for perturbers table, %g seconds\n", milliseconds * 0.001);
-        timing[1] += milliseconds * 0.001;
+	timing[1] += milliseconds * 0.001;
 
 	cudaEventRecord(tt1);
 
@@ -339,7 +383,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	
 	cudaEventElapsedTime(&milliseconds, tt1, tt2);
 	printf("Time for pre-integration, %g seconds\n", milliseconds * 0.001);
-        timing[2] += milliseconds * 0.001;
+	timing[2] += milliseconds * 0.001;
 
 	cudaEventRecord(tt1);
 
@@ -360,8 +404,9 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	// Start time step loop
 	//###########################################
 
-	H.Sn[0] = H.N;
-for(int S = 0; S < 3; ++S){
+	H.runsN[0] = H.N;
+	H.runsdt[0] = H.dtiMin;
+for(int S = 0; S < H.nRuns; ++S){
 
 	//###########################################
 	//Time step loop
@@ -374,7 +419,7 @@ for(int S = 0; S < 3; ++S){
 	cudaEventSynchronize(tt2);
 	
 	cudaEventElapsedTime(&milliseconds, tt1, tt2);
-        timing[3 + S] += milliseconds * 0.001;
+	timing[3 + S] += milliseconds * 0.001;
 
 	printf("Time for integration %d, %g seconds\n", S + 1, timing[3 + S]);
 
@@ -386,6 +431,11 @@ for(int S = 0; S < 3; ++S){
 
 	//reduce arrays for repeated integration with a smaller time step
 	H.reduce(S);
+
+	if(H.N == Nperturbers){
+		break;
+	}
+
 }
 	fclose(H.dtfile);
 	
@@ -397,9 +447,16 @@ for(int S = 0; S < 3; ++S){
 	printf("Time for integration 3, %g seconds\n", timing[5]);
 
 	for(int i = 0; i < 4; ++i){
-		printf("N %d %d\n", i, H.Sn[i]-Nperturbers);
+		printf("N %d %d %g\n", i, H.runsN[i] - Nperturbers, H.runsdt[i]);
 	}	
 
+	FILE *timefile;
+	timefile = fopen("Timing.dat", "a");
+	for(int i = 0; i < 4; ++i){
+		fprintf(timefile, "%d %d %g %g\n", i, H.runsN[i] - Nperturbers, H.runsdt[i], timing[3 + i]);
+	}
+	fclose(timefile);
+	
 
 }
 	
