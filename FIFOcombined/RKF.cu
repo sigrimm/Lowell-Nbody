@@ -26,8 +26,8 @@ int main(int argc, char*argv[]){
 		//sprintf(binfilename, "211208_1916_genga_in_2021-12-08_specific_desig.bin");
 		//sprintf(binfilename, "210801_2104_genga_in_GA.bin");
 		//sprintf(binfilename, "220301_2048_genga_in_new_last_14_days.bin");
-		//sprintf(binfilename, "220524_2256_genga_in_query_genga_input_40k.bin");
-		sprintf(binfilename, "220524_2258_genga_in_query_genga_input_10k.bin");
+		sprintf(binfilename, "220524_2256_genga_in_query_genga_input_40k.bin");
+		//sprintf(binfilename, "220524_2258_genga_in_query_genga_input_10k.bin");
 	}
 	
 	//read console arguments for the binary file name
@@ -127,7 +127,7 @@ H.time1 = 2461000.5;
 	//H.time1 = 2451000.5;
 
 	//move this to parameter file
-	H.dti = 5.0;
+	H.dti = 2.0;
 	H.dts = 0.1;
 	H.dtiMin = 2.0;
 	//H.outInterval = 10.0;
@@ -176,15 +176,11 @@ H.time1 = 2461000.5;
 	H.dt = H.dti * dayUnit;
 	H.outI = (H.outInterval + 0.5 * H.dts) / H.dts;
 
+
 	if(H.N - Nperturbers > H.NMax){
 		printf("Number of bodies larger than Nmax\n");
 		H.N = Nperturbers + H.NMax;
 	}
-
-
-	//	if(fabs(outStart - time0) > fabs(outInterval)){
-	//		outI = (outStart - time0 + 0.5 * dts) / dts;
-	//	}
 
 	printf("binfile name %s\n", binfilename);
 
@@ -221,13 +217,13 @@ H.time1 = 2461000.5;
 		printf("read file OK\n");
 		fclose(binfile);
 
-		/*					
+		/*						
 		// -----------------------------------
 		// Use this to extract a single object
 		int ii = 29;//166;//29; //84;
 		//int ii = 83;//166;//29; //84;
-		H.N = H.Nperturbers + 1;
-		int n = H.Nperturbers;
+		H.N = Nperturbers + 1;
+		int n = Nperturbers;
 
 		H.id_h[n] = H.id_h[ii];
 		H.x_h[n] = H.x_h[ii];
@@ -258,7 +254,6 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 
 
 	}
-
 
 	//convert velocities and nonGrav terms
 	H.convertV();
@@ -372,6 +367,9 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 		H.dt = H.dti * dayUnit;
 		H.time = H.outStart;
 	}
+	else{
+		H.time = H.time0;
+	}
 
 	//###########################################
 	// End pre-integration
@@ -406,7 +404,17 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 
 	H.runsN[0] = H.N;
 	H.runsdt[0] = H.dtiMin;
+
+	double time00 = H.time;
+	
+	
 for(int S = 0; S < H.nRuns; ++S){
+	H.time = time00;
+	H.outI = (H.outInterval + 0.5 * H.dts) / H.dts;
+
+	if(H.outStart > H.time){
+		H.outI = (H.outStart - H.time + 0.5 * H.dts) / H.dts;
+	}
 
 	//###########################################
 	//Time step loop
@@ -452,7 +460,8 @@ for(int S = 0; S < H.nRuns; ++S){
 
 	FILE *timefile;
 	timefile = fopen("Timing.dat", "a");
-	for(int i = 0; i < 4; ++i){
+	//for(int i = 0; i < 4; ++i){
+	for(int i = 0; i < 1; ++i){
 		fprintf(timefile, "%d %d %g %g\n", i, H.runsN[i] - Nperturbers, H.runsdt[i], timing[3 + i]);
 	}
 	fclose(timefile);

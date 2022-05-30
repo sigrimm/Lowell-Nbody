@@ -12,7 +12,7 @@ __host__ Host::Host(){
 	useNonGrav = 1;
 
 	useGPU = 1;
-	useAdaptiveTimeSteps = 1;
+	useAdaptiveTimeSteps = 0;
 	useIndividualTimeSteps = 0;
 
 	useFIFO = 2;
@@ -22,7 +22,7 @@ __host__ Host::Host(){
 	useHelio = 1;
 	outHelio = 1;
 
-	outBinary = 1;
+	outBinary = 0;
 
 	Nsteps = 1e9;
 	outInterval = 1;
@@ -43,7 +43,8 @@ __host__ Host::Host(){
 	N = Nperturbers;
 	NMax = 10000000;
 
-	nRuns = 3;
+	nRuns = 1;
+	//nRuns = 3;
 	runsN = new int[nRuns + 1];
 	runsdt = new double[nRuns + 1];
 	for(int i = 0; i < nRuns + 1; ++i){
@@ -328,14 +329,12 @@ printf("%d %d %llu\n", i, k, id_h[k]);
 		dts = 0.01;
 		dtiMin = 0.1;
 		dt = dti * dayUnit;
-		outI = (outInterval + 0.5 * dts) / dts;
 	}
 	if(S == 1){
 		dti = 0.01;
 		dts = 1.0e-3;
 		dtiMin = 1.0e-4;
 		dt = dti * dayUnit;
-		outI = (outInterval + 0.5 * dts) / dts;
 	}
 	runsN[S + 1] = N;
 	runsdt[S + 1] = dtiMin;

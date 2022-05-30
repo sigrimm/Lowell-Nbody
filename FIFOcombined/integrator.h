@@ -1639,6 +1639,7 @@ __host__ void Host::IntegrationLoop(int S){
 	double dti0 = dti;
 	double dts0 = dts;
 	long long int outI0 = outI;
+	double time00 = time;
 
 	int Nj = Nperturbers + 1;
 	if(useIndividualTimeSteps == 1){
@@ -1652,13 +1653,13 @@ __host__ void Host::IntegrationLoop(int S){
 		dts = dts0;
 		dt = dti * dayUnit;
 		outI = outI0;
+		time = time00;
 
 		unsigned long long int cOut = 0llu;	//counter for output
 		int ci = 0;
-		time = outStart;
 		double dtiOld = dti;
 
-printf("J %d %g %g %g %llu\n", j, time, outStart, dti, outI);
+printf("J %d %.20g %.20g %g %g %llu\n", j, time, outStart, dti, dts, outI);
 
 		for(long long int t = 1; t <= Nsteps; ++t){
 		//for(long long int t = 1; t < 5000; ++t){
@@ -1685,13 +1686,13 @@ printf("J %d %g %g %g %llu\n", j, time, outStart, dti, outI);
 			else{
 				if(useGPU == 1){
 					interpolateTable_kernel <<< dim3(Nperturbers, RKFn, 1), Ninterpolate >>> (xp_d, yp_d, zp_d, timep_d, timep0, dtimep, time, dti, xTable_d, yTable_d, zTable_d);
-				//	if(N > 300){
+					if(N > 300){
 						stageStep1_kernel <<< (N + 127) / 128, 128 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin, N, useHelio, useGR, useJ2, useNonGrav, useAdaptiveTimeSteps, ee);
-				//	}
-				//	else{
-				//		stageStep2_kernel <<< (N - Nperturbers), 32 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin, N, useHelio, useGR, useJ2, useNonGrav, useAdaptiveTimeSteps, ee);
+					}
+					else{
+						stageStep2_kernel <<< (N - Nperturbers), 32 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin, N, useHelio, useGR, useJ2, useNonGrav, useAdaptiveTimeSteps, ee);
 						//stageStep3_kernel < 2 > <<< ((N - Nperturbers) + 1) / 2, dim3(32, 2, 1) >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin, N, useHelio, useGR, useJ2, useNonGrav, useAdaptiveTimeSteps, ee);
-				//	}
+					}
 					
 				}
 
@@ -1722,7 +1723,8 @@ printf("J %d %g %g %g %llu\n", j, time, outStart, dti, outI);
 			}
 			
 			if(snew >= 1.0){
-				printf("---- accept step %llu %llu %.20g %g----\n", cOut, outI, time + dti, dti);		
+				ci = (dti + 0.5 * dts) / dts;
+				printf("---- accept step %llu %llu %llu %.20g %.20g %g----\n", cOut, cOut + ci, outI, time, time + dti, dti);		
 				if(useGPU == 0){
 					if(useIndividualTimeSteps == 1){
 						update(j);
@@ -1736,12 +1738,11 @@ printf("J %d %g %g %g %llu\n", j, time, outStart, dti, outI);
 				else{
 					update_kernel <<< (N + 127) / 128, 128 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, N);	
 				}
-				ci = (dti + 0.5 * dts) / dts;
 				cOut += ci;		
 				
 				time += dti;
 				
-				if(cOut >= outI){
+				if(cOut >= outI && time >= outStart){
 					//if(t % 10 == 0){
 					if(useGPU > 0){
 						cudaMemcpy(snew_h, snew_d, N * sizeof(double2), cudaMemcpyDeviceToHost);

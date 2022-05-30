@@ -97,26 +97,27 @@ __host__ int Host::readFile(FILE *infile){
 		}
 	}
 
-/*
-	//read trailer
-	double temp;
-	long long int header;
-	er = fread(&header, sizeof(unsigned long long int), 1, infile);
-	printf("header %lld %d\n", header, er);
-	if(header != 130 || er <= 0.0){
-		printf("Error in reading file trailer\n");
-		return 0;
-	}
-	for(int i = 0; i < 9; ++i){
-		er = fread(&temp, sizeof(double), 1, infile);
-		printf(" %g %d\n", temp, er);
-		if(temp != 0.0 || er <= 0.0){
+
+	if(NMax >= N){
+		//read trailer
+		double temp;
+		long long int header;
+		er = fread(&header, sizeof(unsigned long long int), 1, infile);
+		printf("trailer %lld %d\n", header, er);
+		if(header != 130 || er <= 0.0){
 			printf("Error in reading file trailer\n");
 			return 0;
 		}
+		for(int i = 0; i < 9; ++i){
+			er = fread(&temp, sizeof(double), 1, infile);
+			printf(" %g %d\n", temp, er);
+			if(temp != 0.0 || er <= 0.0){
+				printf("Error in reading file trailer\n");
+				return 0;
+			}
+		}
 	}
-
-
+/*
 	//check for new header
 
 	er = fread(&header, sizeof(unsigned long long int), 1, infile);
@@ -128,6 +129,7 @@ __host__ int Host::readFile(FILE *infile){
 	}
 */ 
 	return 1; 
+
 } 
 
 
