@@ -12,7 +12,7 @@ __host__ Host::Host(){
 	useNonGrav = 1;
 
 	useGPU = 1;
-	useAdaptiveTimeSteps = 0;
+	useAdaptiveTimeSteps = 1;
 	useIndividualTimeSteps = 0;
 
 	useFIFO = 2;
@@ -43,8 +43,8 @@ __host__ Host::Host(){
 	N = Nperturbers;
 	NMax = 10000000;
 
-	nRuns = 1;
-	//nRuns = 3;
+	//nRuns = 1;
+	nRuns = 3;
 	runsN = new int[nRuns + 1];
 	runsdt = new double[nRuns + 1];
 	for(int i = 0; i < nRuns + 1; ++i){
@@ -282,6 +282,9 @@ __host__ void Host::Initialize3(){
 __host__ void Host::reduce(int S){
 	//reduce arrays for repeated integration with a smaller time step
 	int k = Nperturbers;
+	if(useGPU > 0){
+		cudaMemcpy(snew_h, snew_d, N * sizeof(double2), cudaMemcpyDeviceToHost);
+	}
 	for(int i = Nperturbers; i < N; ++i){
 		if(snew_h[i].y < 1.0){
 			m_h[k] = m_h[i];
@@ -333,7 +336,7 @@ printf("%d %d %llu\n", i, k, id_h[k]);
 	if(S == 1){
 		dti = 0.01;
 		dts = 1.0e-3;
-		dtiMin = 1.0e-4;
+		dtiMin = 1.0e-5;
 		dt = dti * dayUnit;
 	}
 	runsN[S + 1] = N;

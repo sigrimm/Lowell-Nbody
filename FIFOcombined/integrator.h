@@ -1659,7 +1659,7 @@ __host__ void Host::IntegrationLoop(int S){
 		int ci = 0;
 		double dtiOld = dti;
 
-printf("J %d %.20g %.20g %g %g %llu\n", j, time, outStart, dti, dts, outI);
+printf("J %d %.20g %.20g %.20g %.20g %g %g %llu\n", j, time, outStart, time0, time1, dti, dts, outI);
 
 		for(long long int t = 1; t <= Nsteps; ++t){
 		//for(long long int t = 1; t < 5000; ++t){
@@ -1723,7 +1723,7 @@ printf("J %d %.20g %.20g %g %g %llu\n", j, time, outStart, dti, dts, outI);
 			}
 			
 			if(snew >= 1.0){
-				ci = (dti + 0.5 * dts) / dts;
+				ci = (fabs(dti) + 0.5 * dts) / dts;
 				printf("---- accept step %llu %llu %llu %.20g %.20g %g----\n", cOut, cOut + ci, outI, time, time + dti, dti);		
 				if(useGPU == 0){
 					if(useIndividualTimeSteps == 1){
@@ -1742,7 +1742,7 @@ printf("J %d %.20g %.20g %g %g %llu\n", j, time, outStart, dti, dts, outI);
 				
 				time += dti;
 				
-				if(cOut >= outI && time >= outStart){
+				if(cOut >= outI && ((dt > 0 && time >= outStart) || (dt < 0 && time <= outStart))){
 					//if(t % 10 == 0){
 					if(useGPU > 0){
 						cudaMemcpy(snew_h, snew_d, N * sizeof(double2), cudaMemcpyDeviceToHost);
@@ -1769,26 +1769,28 @@ printf("J %d %.20g %.20g %g %g %llu\n", j, time, outStart, dti, dts, outI);
 			
 			dti *= snew;
 			
-			if(dtiOld >= 65.0 * dts && cOut % 10 == 0 && snew >= 1.0){
+			if(fabs(dtiOld) >= 65.0 * fabs(dts) && cOut % 10 == 0 && snew >= 1.0){
 				//synchronize with coarser time steps
 				dts *= 10;
 				outI /= 10;
 				cOut /= 10;
 				dti = 5.0 * dts;
-				printf("increase time step C %g %g\n", dti, dts);
+				if(dt < 0) dti = - dti;
+printf("increase time step C %g %g\n", dti, dts);
 			}
 			
 			//round dti to dts intervals
 			int dtt = dti / dts;
 printf("dta %.20g %d %g %llu\n", dti, dtt, dts, cOut);
 			dti = dtt * dts;
-			if(dti < dts) dti = dts;
+			//if(dti < dts) dti = dts;
 			
 			
 printf("dtb %.20g %d %g %llu\n", dti, dtt, dts, cOut);
-			ci = (dti + 0.5 * dts) / dts;
+			ci = (fabs(dti) + 0.5 * dts) / dts;
 			
-			if(dti < dtiMin) dti = dtiMin;
+			if(dti > 0 && dti < dtiMin) dti = dtiMin;
+			if(dti < 0 && -dti < dtiMin) dti = -dtiMin;
 			
 			
 			dtiOld = dti;
@@ -1796,8 +1798,9 @@ printf("dtb %.20g %d %g %llu\n", dti, dtt, dts, cOut);
 			dt = dti * dayUnit;
 			//printf("%llu %llu %.20g, %.20g %.20g\n", cOut + ci, outI, time, time + dti, outStart);
 			
-			if(cOut + ci > outI && time + dti >= outStart){
+			if(cOut + ci > outI && ((dt > 0 && time + dti >= outStart) || (dt < 0 && time + dti <= outStart))){
 				dti = (outI - cOut) * dts;
+				if(dt < 0) dti = -dti;
 				
 				dt = dti * dayUnit;
 printf("   correct %.20g %.20g %.20g %.20g %llu %llu\n", time, time + dti, dti, dtiOld, cOut, outI);
@@ -1807,17 +1810,18 @@ printf("dtc %.20g %g\n", dti, dts);
 			
 			else{
 				
-				if(dti >= 65.0 * dts){
+				if(fabs(dti) >= 65.0 * dts){
 					//synchronize with coarser time steps
 printf("increase time step A %g %g\n", dti, dts);
 					dti = (((cOut + ci) / 10) * 10 - cOut) * dts;
+					if(dt < 0) dti = -dti;
 					dt = dti * dayUnit;
 					//dts *= 10;
 					//outI /= 10;
 					//cOut /= 10;
 printf("increase time step B %g %g\n", dti, dts);
 				}
-				if(dti <= 2.0 * dts){
+				if(fabs(dti) <= 2.0 * dts){
 printf("refine time steps %g %g\n", dti, dts);
 					//refine interpolation points
 					dts *= 0.1;
@@ -1828,7 +1832,7 @@ printf("refine time steps %g %g\n", dti, dts);
 			
 			
 			//add condition for backward integration
-			if(time >= time1){
+			if((dt > 0 && time >= time1) || (dt < 0 && time <= time1)){
 				printf("Reached the end\n");
 				break;
 			}

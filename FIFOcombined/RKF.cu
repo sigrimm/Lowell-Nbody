@@ -26,8 +26,8 @@ int main(int argc, char*argv[]){
 		//sprintf(binfilename, "211208_1916_genga_in_2021-12-08_specific_desig.bin");
 		//sprintf(binfilename, "210801_2104_genga_in_GA.bin");
 		//sprintf(binfilename, "220301_2048_genga_in_new_last_14_days.bin");
-		sprintf(binfilename, "220524_2256_genga_in_query_genga_input_40k.bin");
-		//sprintf(binfilename, "220524_2258_genga_in_query_genga_input_10k.bin");
+		//sprintf(binfilename, "220524_2256_genga_in_query_genga_input_40k.bin");
+		sprintf(binfilename, "220524_2258_genga_in_query_genga_input_10k.bin");
 	}
 	
 	//read console arguments for the binary file name
@@ -405,15 +405,30 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	H.runsN[0] = H.N;
 	H.runsdt[0] = H.dtiMin;
 
-	double time00 = H.time;
-	
+	double timeb = H.time;
+	double time0b = H.time0;
+	double time1b = H.time1;
+	double outStartb = H.outStart;
+
 	
 for(int S = 0; S < H.nRuns; ++S){
-	H.time = time00;
+	H.time = timeb;
+	H.time0 = time0b;
+/*
+	//for backward integration
+	H.dti = -H.dti;
+	H.dt = -H.dt;
+
+	H.time1 = outStartb;
+	H.outStart = time1b;
+*/
 	H.outI = (H.outInterval + 0.5 * H.dts) / H.dts;
 
-	if(H.outStart > H.time){
+	if(H.dt > 0 && H.outStart > H.time){
 		H.outI = (H.outStart - H.time + 0.5 * H.dts) / H.dts;
+	}
+	if(H.dt < 0 && H.outStart < H.time){
+		H.outI = (H.time - H.outStart + 0.5 * H.dts) / H.dts;
 	}
 
 	//###########################################
