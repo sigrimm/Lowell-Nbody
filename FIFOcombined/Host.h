@@ -83,13 +83,25 @@ public:
 	double *yp_h, *yp_d;
 	double *zp_h, *zp_d;
 
-	//Backup for repeated integrations
+	//Backup for forward/backward integration
 	double *x0_h;
 	double *y0_h;
 	double *z0_h;
 	double *vx0_h;
 	double *vy0_h;
 	double *vz0_h;
+
+	double *xb_h;
+	double *yb_h;
+	double *zb_h;
+	double *vxb_h;
+	double *vyb_h;
+	double *vzb_h;
+	double *A1b_h;
+	double *A2b_h;
+	double *A3b_h;
+	double *mb_h;
+	unsigned long long int *idb_h;
 
 
 	//Files
@@ -148,9 +160,10 @@ public:
 	__host__ int readIC();
 	__host__ void Alloc1();
 	__host__ void Alloc2();
-	__host__ void Initialize1();
-	__host__ void Initialize2();
-	__host__ void Initialize3();
+	__host__ void initialize1();
+	__host__ void initialize2();
+	__host__ void initialize3();
+	__host__ void restore3();
 	__host__ void perturbersMass();
 	__host__ void perturbersIDs();
 	__host__ void convertV();

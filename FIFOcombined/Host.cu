@@ -97,6 +97,18 @@ __host__ void Host::Alloc1(){
 	vy0_h = (double*)malloc(N * sizeof(double));
 	vz0_h = (double*)malloc(N * sizeof(double));
 
+	xb_h = (double*)malloc(N * sizeof(double));
+	yb_h = (double*)malloc(N * sizeof(double));
+	zb_h = (double*)malloc(N * sizeof(double));
+	vxb_h = (double*)malloc(N * sizeof(double));
+	vyb_h = (double*)malloc(N * sizeof(double));
+	vzb_h = (double*)malloc(N * sizeof(double));
+	A1b_h = (double*)malloc(N * sizeof(double));
+	A2b_h = (double*)malloc(N * sizeof(double));
+	A3b_h = (double*)malloc(N * sizeof(double));
+	mb_h = (double*)malloc(N * sizeof(double));
+	idb_h = (unsigned long long int*)malloc(N * sizeof(unsigned long long int));
+
 	dx_h = (double*)malloc(N * sizeof(double));
 	dy_h = (double*)malloc(N * sizeof(double));
 	dz_h = (double*)malloc(N * sizeof(double));
@@ -147,7 +159,7 @@ __host__ void Host::Alloc1(){
 
 }
 
-__host__ void Host::Initialize1(){
+__host__ void Host::initialize1(){
 	for(int i = 0; i < N; ++i){
 		A1_h[i] = 0.0;
 		A2_h[i] = 0.0;
@@ -237,7 +249,7 @@ __host__ void Host::Alloc2(){
 	c_h = (double*)malloc(RKFn * sizeof(double));
 
 }
-__host__ void Host::Initialize2(){
+__host__ void Host::initialize2(){
 	for(int i = 0; i < N; ++i){
 		dtmin_h[i] = 1.0e6;
 		snew_h[i].x = 1.5;
@@ -256,7 +268,7 @@ __host__ void Host::Initialize2(){
 }
 
 
-__host__ void Host::Initialize3(){
+__host__ void Host::initialize3(){
 	for(int i = 0; i < N; ++i){
 		dtmin_h[i] = 1.0e6;
 		snew_h[i].x = 1.5;
@@ -274,8 +286,64 @@ __host__ void Host::Initialize3(){
 		vx0_h[i] = vx_h[i];
 		vy0_h[i] = vy_h[i];
 		vz0_h[i] = vz_h[i];
-	}
 
+		xb_h[i] = x_h[i];
+		yb_h[i] = y_h[i];
+		zb_h[i] = z_h[i];
+		vxb_h[i] = vx_h[i];
+		vyb_h[i] = vy_h[i];
+		vzb_h[i] = vz_h[i];
+		A1b_h[i] = A1_h[i];
+		A2b_h[i] = A2_h[i];
+		A3b_h[i] = A3_h[i];
+		mb_h[i] = m_h[i];
+		idb_h[i] = id_h[i];
+//if(id_h[i] == 72057594038045489) printf("S %d %llu %.20g %.20g %.20g %.20g\n", i, id_h[i], m_h[i], x0_h[i], A1_h[i], snew_h[i].y);
+	}
+}
+__host__ void Host::restore3(){
+
+	//save coordinates for repeated integrations
+	for(int i = 0; i < N; ++i){
+		dtmin_h[i] = 1.0e6;
+		snew_h[i].x = 1.5;
+		snew_h[i].y = 1.5;
+
+		x_h[i] = xb_h[i];
+		y_h[i] = yb_h[i];
+		z_h[i] = zb_h[i];
+		vx_h[i] = vxb_h[i];
+		vy_h[i] = vyb_h[i];
+		vz_h[i] = vzb_h[i];
+		A1_h[i] = A1b_h[i];
+		A2_h[i] = A2b_h[i];
+		A3_h[i] = A3b_h[i];
+		m_h[i] = mb_h[i];
+		id_h[i] = idb_h[i];
+
+		x0_h[i] = x_h[i];
+		y0_h[i] = y_h[i];
+		z0_h[i] = z_h[i];
+		vx0_h[i] = vx_h[i];
+		vy0_h[i] = vy_h[i];
+		vz0_h[i] = vz_h[i];
+
+//if(id_h[i] == 72057594038045489) printf("R %d %llu %.20g %.20g %.20g %.20g\n", i, id_h[i], m_h[i], x0_h[i], A1_h[i], snew_h[i].y);
+	}
+	if(useGPU > 0){
+		cudaMemcpy(m_d, m_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(id_d, id_h, N * sizeof(unsigned long long int), cudaMemcpyHostToDevice);
+		cudaMemcpy(x_d, x_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(y_d, y_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(z_d, z_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(vx_d, vx_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(vy_d, vy_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(vz_d, vz_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(A1_d, A1_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(A2_d, A2_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(A3_d, A3_h, N * sizeof(double), cudaMemcpyHostToDevice);
+		cudaMemcpy(snew_d, snew_h, N * sizeof(double2), cudaMemcpyHostToDevice);
+	}
 }
 
 
@@ -286,6 +354,7 @@ __host__ void Host::reduce(int S){
 		cudaMemcpy(snew_h, snew_d, N * sizeof(double2), cudaMemcpyDeviceToHost);
 	}
 	for(int i = Nperturbers; i < N; ++i){
+//if(id_h[i] == 72057594038045489) printf("T %llu %.20g %.20g %.20g %.20g\n", id_h[i], m_h[i], x0_h[i], A1_h[i], snew_h[i].y);
 		if(snew_h[i].y < 1.0){
 			m_h[k] = m_h[i];
 			id_h[k] = id_h[i];
@@ -308,6 +377,7 @@ __host__ void Host::reduce(int S){
 			snew_h[k].x = 1.5;
 			snew_h[k].y = 1.5;
 printf("%d %d %llu\n", i, k, id_h[k]);
+//if(id_h[i] == 72057594038045489) printf("T %llu %.20g %.20g %.20g %.20g\n", id_h[k], m_h[k], x0_h[k], A1_h[k], snew_h[k].y);
 			++k; 
 		}
 	}
@@ -327,18 +397,7 @@ printf("%d %d %llu\n", i, k, id_h[k]);
 		cudaMemcpy(A3_d, A3_h, N * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(snew_d, snew_h, N * sizeof(double2), cudaMemcpyHostToDevice);
 	}
-	if(S == 0){
-		dti = 0.1;
-		dts = 0.01;
-		dtiMin = 0.1;
-		dt = dti * dayUnit;
-	}
-	if(S == 1){
-		dti = 0.01;
-		dts = 1.0e-3;
-		dtiMin = 1.0e-5;
-		dt = dti * dayUnit;
-	}
+
 	runsN[S + 1] = N;
 	runsdt[S + 1] = dtiMin;
 

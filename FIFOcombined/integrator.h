@@ -1743,7 +1743,7 @@ printf("J %d %.20g %.20g %.20g %.20g %g %g %llu\n", j, time, outStart, time0, ti
 				time += dti;
 				
 				if(cOut >= outI && ((dt > 0 && time >= outStart) || (dt < 0 && time <= outStart))){
-					//if(t % 10 == 0){
+				//if(t % 10 == 0){
 					if(useGPU > 0){
 						cudaMemcpy(snew_h, snew_d, N * sizeof(double2), cudaMemcpyDeviceToHost);
 						cudaMemcpy(x_h, x_d, N * sizeof(double), cudaMemcpyDeviceToHost);
@@ -1752,13 +1752,21 @@ printf("J %d %.20g %.20g %.20g %.20g %g %g %llu\n", j, time, outStart, time0, ti
 						cudaMemcpy(vx_h, vx_d, N * sizeof(double), cudaMemcpyDeviceToHost);
 						cudaMemcpy(vy_h, vy_d, N * sizeof(double), cudaMemcpyDeviceToHost);
 						cudaMemcpy(vz_h, vz_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+
+						cudaMemcpy(xTable_h, xTable_d, Nperturbers * RKFn * sizeof(double), cudaMemcpyDeviceToHost);
+						cudaMemcpy(yTable_h, yTable_d, Nperturbers * RKFn * sizeof(double), cudaMemcpyDeviceToHost);
+						cudaMemcpy(zTable_h, zTable_d, Nperturbers * RKFn * sizeof(double), cudaMemcpyDeviceToHost);
+
+
 					}
 					output(t, time, S);
+
 					dti = dtiOld;
 					dt = dti * dayUnit;
 					snew = 1.0;
 					cOut = 0;
 					outI = (outInterval + 0.5 * dts) / dts; //needed only at the first time
+
 				}
 			}
 			else{
@@ -1798,7 +1806,7 @@ printf("dtb %.20g %d %g %llu\n", dti, dtt, dts, cOut);
 			dt = dti * dayUnit;
 			//printf("%llu %llu %.20g, %.20g %.20g\n", cOut + ci, outI, time, time + dti, outStart);
 			
-			if(cOut + ci > outI && ((dt > 0 && time + dti >= outStart) || (dt < 0 && time + dti <= outStart))){
+/*			if(cOut + ci > outI && ((dt > 0 && time + dti >= outStart) || (dt < 0 && time + dti <= outStart))){
 				dti = (outI - cOut) * dts;
 				if(dt < 0) dti = -dti;
 				
@@ -1809,7 +1817,7 @@ printf("dtc %.20g %g\n", dti, dts);
 			
 			
 			else{
-				
+*/{				
 				if(fabs(dti) >= 65.0 * dts){
 					//synchronize with coarser time steps
 printf("increase time step A %g %g\n", dti, dts);

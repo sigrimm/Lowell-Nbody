@@ -184,7 +184,7 @@ H.time1 = 2461000.5;
 
 	printf("binfile name %s\n", binfilename);
 
-	printf("outStart: %.20g, time0: %.20g, time1: %.20g, dts: %g, outI: %llu,  outInterval: %lld\n", H.outStart, H.time0, H.time1, H.dts, H.outI, H.outInterval);
+	printf("outStart: %.20g, time0: %.20g, time1: %.20g, dti: %g, dts: %g, outI: %llu,  outInterval: %lld\n", H.outStart, H.time0, H.time1, H.dti, H.dts, H.outI, H.outInterval);
 
 	printf("Nperturbers: %d N: %d\n", Nperturbers, H.N);
 
@@ -203,7 +203,7 @@ H.time1 = 2461000.5;
 
 	// **************************************************
 
-	H.Initialize1();
+	H.initialize1();
 
 
 	// **************************************************
@@ -278,7 +278,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	// Allocate and set parameters for the Runge-Kutta-Fehlberg integrator
 	// *******************************************************************
 	H.Alloc2();
-	H.Initialize2();
+	H.initialize2();
 
 
 	if(RKFn == 6){
@@ -394,7 +394,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 
 
 	//save coordinates for repeated integrations
-	H.Initialize3();
+	H.initialize3();
 
 	printf("dti %g\n", H.dti);
 
@@ -409,56 +409,86 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	double time0b = H.time0;
 	double time1b = H.time1;
 	double outStartb = H.outStart;
+	int N0 = H.N;
 
-	
-for(int S = 0; S < H.nRuns; ++S){
-	H.time = timeb;
-	H.time0 = time0b;
-/*
-	//for backward integration
-	H.dti = -H.dti;
-	H.dt = -H.dt;
 
-	H.time1 = outStartb;
-	H.outStart = time1b;
-*/
-	H.outI = (H.outInterval + 0.5 * H.dts) / H.dts;
+//loop for forward backward integration
+for(int b = 0; b < 2; ++b){	
 
-	if(H.dt > 0 && H.outStart > H.time){
-		H.outI = (H.outStart - H.time + 0.5 * H.dts) / H.dts;
-	}
-	if(H.dt < 0 && H.outStart < H.time){
-		H.outI = (H.time - H.outStart + 0.5 * H.dts) / H.dts;
+	if(b == 1){
+		//backward integration
+		H.N = N0;
+		H.restore3();
+		H.time1 = outStartb;
+		H.outStart = time1b;
 	}
 
-	//###########################################
-	//Time step loop
-	//###########################################
-	H.IntegrationLoop(S);
+	// loop for different time step ranges
+	for(int S = 0; S < H.nRuns; ++S){
 
-	cudaDeviceSynchronize();
+		if(S == 0){
+			H.dti = 2.0;
+			H.dts = 0.1;
+			H.dtiMin = 2.0;
+		}
+		if(S == 1){
+			H.dti = 0.1;
+			H.dts = 0.01;
+			H.dtiMin = 0.1;
+		}
+		if(S == 2){
+			H.dti = 0.01;
+			H.dts = 1.0e-3;
+			//H.dtiMin = 0.1;
+			H.dtiMin = 1.0e-6;
+		}
+		if(b == 1){
+			//backward integration
+			H.dti = -H.dti;
+		}
 
-	cudaEventRecord(tt2);
-	cudaEventSynchronize(tt2);
-	
-	cudaEventElapsedTime(&milliseconds, tt1, tt2);
-	timing[3 + S] += milliseconds * 0.001;
 
-	printf("Time for integration %d, %g seconds\n", S + 1, timing[3 + S]);
+		H.time = timeb;
+		H.time0 = time0b;
+		H.outI = (H.outInterval + 0.5 * H.dts) / H.dts;
 
-	cudaEventRecord(tt1);
+		if(H.dt > 0 && H.outStart > H.time){
+			H.outI = (H.outStart - H.time + 0.5 * H.dts) / H.dts;
+		}
+		if(H.dt < 0 && H.outStart < H.time){
+			H.outI = (H.time - H.outStart + 0.5 * H.dts) / H.dts;
+		}
 
-	//###########################################
-	// End time step loop
-	//###########################################
+		//###########################################
+		//Time step loop
+		//###########################################
+		H.IntegrationLoop(S);
 
-	//reduce arrays for repeated integration with a smaller time step
-	H.reduce(S);
+		cudaDeviceSynchronize();
 
-	if(H.N == Nperturbers){
-		break;
+		cudaEventRecord(tt2);
+		cudaEventSynchronize(tt2);
+		
+		cudaEventElapsedTime(&milliseconds, tt1, tt2);
+		timing[3 + S] += milliseconds * 0.001;
+
+		printf("Time for integration %d, %g seconds\n", S + 1, timing[3 + S]);
+		printf("With %d bodies\n", H.N);
+
+		cudaEventRecord(tt1);
+
+		//###########################################
+		// End time step loop
+		//###########################################
+
+		//reduce arrays for repeated integration with a smaller time step
+		H.reduce(S);
+
+		if(H.N == Nperturbers){
+			break;
+		}
+
 	}
-
 }
 	fclose(H.dtfile);
 	

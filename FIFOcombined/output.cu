@@ -55,9 +55,10 @@ __host__ void Host::output(long long int t, double time, int S){
 	}
 	
 	if(outBinary == 0){
-		//for(int i = 0; i < Nperturbers; ++i){
-		//	fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[i], m_h[i], xt_h[i], yt_h[i], zt_h[i], 0.0, 0.0, 0.0, 0.0);
-		//}
+		for(int p = 0; p < Nperturbers; ++p){
+			int ii = p * RKFn + 12;	
+			fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[p], m_h[p], xTable_h[ii], yTable_h[ii], zTable_h[ii], 0.0, 0.0, 0.0, 0.0);
+		}
 		for(int i = Nperturbers; i < N; ++i){
 			//fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit, dtmin_h[i]);
 //			if(snew_h[i].y >= 1.0){
