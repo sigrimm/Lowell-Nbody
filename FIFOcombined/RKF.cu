@@ -9,6 +9,7 @@
 
 #include "force.h"
 #include "test3.h"
+#include "Scan.h"
 #include "integrator.h"
 
 
@@ -16,6 +17,12 @@ int main(int argc, char*argv[]){
 
 
 	Host H;
+
+	int er = H.readparam(argc, argv);
+	if(er <= 0){
+		printf("Error in reading param.dat file\n");
+		return 0;
+	}
 
 	FILE *binfile;
 	char *binfilename;
@@ -44,7 +51,6 @@ int main(int argc, char*argv[]){
 	}
 	float milliseconds = 0.0f;
 	cudaError_t error;
-	int er;
 
 	cudaEvent_t tt1;		//start time for timing
 	cudaEvent_t tt2;		//end time for timing
@@ -128,8 +134,7 @@ H.time1 = 2461000.5;
 
 	//move this to parameter file
 	H.dti = 2.0;
-	H.dts = 0.1;
-	H.dtiMin = 2.0;
+
 	//H.outInterval = 10.0;
 	//H.outStart = 2450800.5;
 
@@ -148,7 +153,7 @@ H.time1 = 2461000.5;
 			H.dti = atof(argv[i + 1]);
 		}
 		else if(strcmp(argv[i], "-dtMin") == 0){
-			H.dtiMin = atof(argv[i + 1]);
+			H.dtiMin[0] = atof(argv[i + 1]);
 		}
 		else if(strcmp(argv[i], "-endTime") == 0){
 			H.time1 = atof(argv[i + 1]);
@@ -174,7 +179,6 @@ H.time1 = 2461000.5;
 		}
 	}
 	H.dt = H.dti * dayUnit;
-	H.outI = (H.outInterval + 0.5 * H.dts) / H.dts;
 
 
 	if(H.N - Nperturbers > H.NMax){
@@ -184,7 +188,7 @@ H.time1 = 2461000.5;
 
 	printf("binfile name %s\n", binfilename);
 
-	printf("outStart: %.20g, time0: %.20g, time1: %.20g, dti: %g, dts: %g, outI: %llu,  outInterval: %lld\n", H.outStart, H.time0, H.time1, H.dti, H.dts, H.outI, H.outInterval);
+	printf("outStart: %.20g, time0: %.20g, time1: %.20g, outInterval: %lld\n", H.outStart, H.time0, H.time1, H.outInterval);
 
 	printf("Nperturbers: %d N: %d\n", Nperturbers, H.N);
 
@@ -403,7 +407,6 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	//###########################################
 
 	H.runsN[0] = H.N;
-	H.runsdt[0] = H.dtiMin;
 
 	double timeb = H.time;
 	double time0b = H.time0;
@@ -425,23 +428,19 @@ for(int b = 0; b < 2; ++b){
 
 	// loop for different time step ranges
 	for(int S = 0; S < H.nRuns; ++S){
+	//for(int S = 0; S < 1; ++S){
 
-		if(S == 0){
-			H.dti = 2.0;
-			H.dts = 0.1;
-			H.dtiMin = 2.0;
+		H.dti = H.runsdt[S];
+
+		//set dts, round dti down to power of 10
+		{
+			double l = log10(H.dti);
+			double f = floor(l);
+			double s = pow(10.0, f);
+			H.dts = s * 0.1;
+printf("%g %g %g %g %g | %g %g\n", H.dti, l, f, s, H.dts, H.dti, H.dtiMin[S]);
 		}
-		if(S == 1){
-			H.dti = 0.1;
-			H.dts = 0.01;
-			H.dtiMin = 0.1;
-		}
-		if(S == 2){
-			H.dti = 0.01;
-			H.dts = 1.0e-3;
-			//H.dtiMin = 0.1;
-			H.dtiMin = 1.0e-6;
-		}
+
 		if(b == 1){
 			//backward integration
 			H.dti = -H.dti;
@@ -458,6 +457,9 @@ for(int b = 0; b < 2; ++b){
 		if(H.dt < 0 && H.outStart < H.time){
 			H.outI = (H.time - H.outStart + 0.5 * H.dts) / H.dts;
 		}
+
+		H.setSnew();
+
 
 		//###########################################
 		//Time step loop
@@ -482,7 +484,12 @@ for(int b = 0; b < 2; ++b){
 		//###########################################
 
 		//reduce arrays for repeated integration with a smaller time step
-		H.reduce(S);
+		if(H.useGPU > 0){
+			H.reduceCall(S);
+		}
+		else{
+			H.reduce(S);
+		}
 
 		if(H.N == Nperturbers){
 			break;
@@ -500,14 +507,14 @@ for(int b = 0; b < 2; ++b){
 	printf("Time for integration 3, %g seconds\n", timing[5]);
 
 	for(int i = 0; i < 4; ++i){
-		printf("N %d %d %g\n", i, H.runsN[i] - Nperturbers, H.runsdt[i]);
+		printf("N %d %d %g\n", i, H.runsN[i] - Nperturbers, H.dtiMin[i]);
 	}	
 
 	FILE *timefile;
 	timefile = fopen("Timing.dat", "a");
 	//for(int i = 0; i < 4; ++i){
 	for(int i = 0; i < 1; ++i){
-		fprintf(timefile, "%d %d %g %g\n", i, H.runsN[i] - Nperturbers, H.runsdt[i], timing[3 + i]);
+		fprintf(timefile, "%d %d %g %g\n", i, H.runsN[i] - Nperturbers, H.dtiMin[i], timing[3 + i]);
 	}
 	fclose(timefile);
 	

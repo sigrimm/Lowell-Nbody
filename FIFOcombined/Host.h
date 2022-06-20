@@ -7,6 +7,7 @@
 class Host{
 
 public:
+	int WarpSize = 32;
 
 	const int dtimep = 1.0;		//interval between stored time steps
 	const int NTable = 65000;	//length of perturbers table, number of days
@@ -47,7 +48,7 @@ public:
 
 	double dti;			//time step size in days
 	double dt;			//time step size in code units
-	double dtiMin;			//Minimal time step size
+	double *dtiMin;			//Minimal time step size
 
 	double dts;			//interval of interpolated points
 	unsigned long long int outI;	
@@ -57,6 +58,7 @@ public:
 
 	//integration data
 	unsigned long long int *id_h, *id_d;
+	unsigned int *index_h, *index_d;
 	double *m_h, *m_d;
 	double *x_h, *x_d;
 	double *y_h, *y_d;
@@ -84,12 +86,18 @@ public:
 	double *zp_h, *zp_d;
 
 	//Backup for forward/backward integration
-	double *x0_h;
-	double *y0_h;
-	double *z0_h;
-	double *vx0_h;
-	double *vy0_h;
-	double *vz0_h;
+	double *x0_h, *x0_d;
+	double *y0_h, *y0_d;
+	double *z0_h, *z0_d;
+	double *vx0_h, *vx0_d;
+	double *vy0_h, *vy0_d;
+	double *vz0_h, *vz0_d;
+	double *A10_h, *A10_d;
+	double *A20_h, *A20_d;
+	double *A30_h, *A30_d;
+	double *m0_h, *m0_d;
+	unsigned long long int *id0_h, *id0_d;
+	unsigned int *index0_h, *index0_d;
 
 	double *xb_h;
 	double *yb_h;
@@ -138,6 +146,8 @@ public:
 	double2 *snew_h, *snew_d;
 	double *dtmin_h;
 
+	int2 *scan_d;
+	int *N_d;
 
 	//interpolation table
 	double *xTable_h, *xTable_d;
@@ -154,6 +164,8 @@ public:
 
 	//Functions
 	__host__ Host();
+	__host__ int readparam(int, char*argv[]);
+
 	__host__ int readHeader(FILE*, int &);
 	__host__ int readFile(FILE *);
 	__host__ int readICSize();
@@ -164,6 +176,7 @@ public:
 	__host__ void initialize2();
 	__host__ void initialize3();
 	__host__ void restore3();
+	__host__ void setSnew();
 	__host__ void perturbersMass();
 	__host__ void perturbersIDs();
 	__host__ void convertV();
@@ -186,6 +199,7 @@ public:
 	__host__ void stageStep(double, double, double &);
 	__host__ void stageStep1(double, int, int, double &);
 
+	__host__ void reduceCall(int);	
 	__host__ void reduce(int);
 	__host__ void output(long long int, double, int);
 
