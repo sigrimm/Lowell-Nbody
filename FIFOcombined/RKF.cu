@@ -394,7 +394,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	// First output
 	//###########################################
 
-	H.output(0, H.time, 0);
+	H.output(0, H.time);
 
 
 	//save coordinates for repeated integrations
@@ -409,94 +409,152 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	H.runsN[0] = H.N;
 
 	double timeb = H.time;
-	double time0b = H.time0;
 	double time1b = H.time1;
 	double outStartb = H.outStart;
 	int N0 = H.N;
 
 
-//loop for forward backward integration
-for(int b = 0; b < 2; ++b){	
+	//###########################################
+	//loop for forward backward integration
+	//###########################################
+	for(int b = 0; b < 2; ++b){	
 
-	if(b == 1){
-		//backward integration
-		H.N = N0;
-		H.restore3();
-		H.time1 = outStartb;
-		H.outStart = time1b;
-	}
+		int DT0 = 2;
+		int DT = DT0;
+		unsigned long long int outI = H.outInterval;
+		unsigned long long int cOut = 0llu;
 
-	// loop for different time step ranges
-	for(int S = 0; S < H.nRuns; ++S){
-	//for(int S = 0; S < 1; ++S){
-
-		H.dti = H.runsdt[S];
-
-		//set dts, round dti down to power of 10
-		{
-			double l = log10(H.dti);
-			double f = floor(l);
-			double s = pow(10.0, f);
-			H.dts = s * 0.1;
-printf("%g %g %g %g %g | %g %g\n", H.dti, l, f, s, H.dts, H.dti, H.dtiMin[S]);
-		}
 
 		if(b == 1){
 			//backward integration
-			H.dti = -H.dti;
+			H.restore3();
+			H.time1 = outStartb;
+			H.outStart = time1b;
+			DT0 = -DT0;
+			DT = -DT;
+		}
+
+		H.time0 = timeb;
+
+
+		if(DT > 0 && H.outStart > H.time){
+			outI = H.outStart - H.time;
+		}
+		if(DT < 0 && H.outStart < H.time){
+			outI = H.time - H.outStart;
 		}
 
 
-		H.time = timeb;
-		H.time0 = time0b;
-		H.outI = (H.outInterval + 0.5 * H.dts) / H.dts;
-
-		if(H.dt > 0 && H.outStart > H.time){
-			H.outI = (H.outStart - H.time + 0.5 * H.dts) / H.dts;
-		}
-		if(H.dt < 0 && H.outStart < H.time){
-			H.outI = (H.time - H.outStart + 0.5 * H.dts) / H.dts;
-		}
-
-		H.setSnew();
+		for(int tt = 0; tt < 100000; ++tt){
 
 
-		//###########################################
-		//Time step loop
-		//###########################################
-		H.IntegrationLoop(S);
+			if(cOut + fabs(DT) > outI && ((H.dt > 0 && H.time0 + H.dti >= H.outStart) || (H.dt < 0 && H.time + H.dti <= H.outStart))){
+				DT = (outI - cOut);
+				if(b == 1) DT = -DT;
 
-		cudaDeviceSynchronize();
+printf("   correctT %.20g %.20g %d %llu %llu\n", H.time0, H.time0 + DT, DT, cOut, outI);
+			}
 
-		cudaEventRecord(tt2);
-		cudaEventSynchronize(tt2);
-		
-		cudaEventElapsedTime(&milliseconds, tt1, tt2);
-		timing[3 + S] += milliseconds * 0.001;
 
-		printf("Time for integration %d, %g seconds\n", S + 1, timing[3 + S]);
-		printf("With %d bodies\n", H.N);
+printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
+			// loop for different time step ranges
+			H.N = N0;
+			H.save1();
+			double time1 = H.time0 + DT;
 
-		cudaEventRecord(tt1);
+			for(int S = 0; S < H.nRuns; ++S){
+			//for(int S = 0; S < 1; ++S){
 
-		//###########################################
-		// End time step loop
-		//###########################################
+				H.dti = fabs(H.runsdt[S]);
+				if(fabs(H.dti) > fabs(DT)) H.dti = fabs(DT);
 
-		//reduce arrays for repeated integration with a smaller time step
-		if(H.useGPU > 0){
-			H.reduceCall(S);
-		}
-		else{
-			H.reduce(S);
-		}
+				//set dts, round dti down to power of 10
+				{
+					double l = log10(H.dti);
+					double f = floor(l);
+					double s = pow(10.0, f);
+					H.dts = s * 0.1;
+	//printf("%g %g %g %g %g | %g %g\n", H.dti, l, f, s, H.dts, H.dti, H.dtiMin[S]);
+				}
+				unsigned long long int Nci = (fabs(DT) + 0.5 * H.dts) / H.dts;
 
-		if(H.N == Nperturbers){
-			break;
-		}
+				if(b == 1){
+					//backward integration
+					H.dti = -H.dti;
+				}
 
-	}
-}
+
+				H.time = H.time0;
+
+				H.setSnew();
+
+
+				//###########################################
+				//Time step loop
+				//###########################################
+				H.IntegrationLoop(S, Nci, time1);
+
+				cudaDeviceSynchronize();
+
+				cudaEventRecord(tt2);
+				cudaEventSynchronize(tt2);
+				
+				cudaEventElapsedTime(&milliseconds, tt1, tt2);
+				timing[3 + S] += milliseconds * 0.001;
+
+				printf("Time for integration %d, %g seconds\n", S + 1, timing[3 + S]);
+				printf("With %d bodies\n", H.N);
+
+				cudaEventRecord(tt1);
+
+				//###########################################
+				// End time step loop
+				//###########################################
+
+				H.save();
+
+				//reduce arrays for repeated integration with a smaller time step
+				if(H.useGPU > 0){
+					H.reduceCall(S);
+				}
+				else{
+					H.reduce(S);
+				}
+
+				if(H.N == Nperturbers){
+					break;
+				}
+
+			} //end of S loop
+			H.N = N0;
+			H.time0 = H.time;
+			cOut += fabs(DT);
+
+
+
+			if(cOut >= outI && ((DT > 0 && H.time >= H.outStart) || (DT < 0 && H.time <= H.outStart))){
+			//if(t % 10 == 0){
+
+				H.output(tt, H.time);
+
+				DT = DT0;
+				cOut = 0llu;
+				outI = H.outInterval; //needed only at the first time
+
+			}
+
+
+			if((DT > 0 && H.time >= H.time1) || (DT < 0 && H.time <= H.time1)){
+				printf("Reached the end\n");
+				break;
+			}
+
+
+		} // end of tt loop
+
+
+	} // end of b loop
+
 	fclose(H.dtfile);
 	
 	printf("Time for ic and allocation, %g seconds\n", timing[0]);

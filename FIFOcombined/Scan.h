@@ -205,10 +205,10 @@ __global__ void Scan32d3_kernel(double2 *snew_d, int2 *scan_d, double *x_d, doub
 			A3_d[k] = A30_d[ii];
 			m_d[k] = m0_d[ii];
 			id_d[k] = id0_d[ii];
-			index_d[k] = index0_d[ii];
+			index_d[k] = ii;
 
-//if(id == 1874) printf("Scan3b %d %d %d\n", id, k, ii);
-//printf("Scan3b %d %d %u %llu %.20g %.20g\n", id, k, ii, id_d[k], x_d[k], A1_d[k]);
+//printf("Scan3b %d %d %d %llu\n", id, k, ii, id0_d[ii]);
+printf("Scan3b %d %d %u %llu %.20g %.20g\n", id, k, ii, id0_d[ii], x0_d[ii], A10_d[ii]);
 		}
 
 		if(id == N - 1){

@@ -51,7 +51,6 @@ public:
 	double *dtiMin;			//Minimal time step size
 
 	double dts;			//interval of interpolated points
-	unsigned long long int outI;	
 
 	int N;				//Number of bodies
 	int NMax;			//Maximum number of bodies
@@ -177,6 +176,8 @@ public:
 	__host__ void initialize3();
 	__host__ void restore3();
 	__host__ void setSnew();
+	__host__ void save();
+	__host__ void save1();
 	__host__ void perturbersMass();
 	__host__ void perturbersIDs();
 	__host__ void convertV();
@@ -190,7 +191,7 @@ public:
 	__host__ void setRKF45();
 
 	__host__ int preIntegration();
-	__host__ void IntegrationLoop(int);
+	__host__ void IntegrationLoop(int, unsigned long long int, double);
 	__host__ void interpolate(double, int);
 	__host__ void interpolate2(double, int);
 	__host__ void interpolateTable(double);
@@ -201,7 +202,7 @@ public:
 
 	__host__ void reduceCall(int);	
 	__host__ void reduce(int);
-	__host__ void output(long long int, double, int);
+	__host__ void output(long long int, double);
 
 //privat:
 

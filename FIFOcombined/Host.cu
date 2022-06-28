@@ -37,7 +37,6 @@ __host__ Host::Host(){
 	dt = dti * dayUnit;
 
 	dts = 0.01;
-	outI = 1llu;
 
 	N = Nperturbers;
 	NMax = 10000000;
@@ -403,51 +402,23 @@ __host__ void Host::restore3(){
 	for(int i = 0; i < N; ++i){
 		dtmin_h[i] = 1.0e6;
 
-		x_h[i] = xb_h[i];
-		y_h[i] = yb_h[i];
-		z_h[i] = zb_h[i];
-		vx_h[i] = vxb_h[i];
-		vy_h[i] = vyb_h[i];
-		vz_h[i] = vzb_h[i];
-		A1_h[i] = A1b_h[i];
-		A2_h[i] = A2b_h[i];
-		A3_h[i] = A3b_h[i];
-		m_h[i] = mb_h[i];
-		id_h[i] = idb_h[i];
-		index_h[i] = i;
-
-		x0_h[i] = x_h[i];
-		y0_h[i] = y_h[i];
-		z0_h[i] = z_h[i];
-		vx0_h[i] = vx_h[i];
-		vy0_h[i] = vy_h[i];
-		vz0_h[i] = vz_h[i];
-		A10_h[i] = A1_h[i];
-		A20_h[i] = A2_h[i];
-		A30_h[i] = A3_h[i];
-		m0_h[i] = m_h[i];
-		id0_h[i] = id_h[i];
-		index0_h[i] = i;
+		x0_h[i] = xb_h[i];
+		y0_h[i] = yb_h[i];
+		z0_h[i] = zb_h[i];
+		vx0_h[i] = vxb_h[i];
+		vy0_h[i] = vyb_h[i];
+		vz0_h[i] = vzb_h[i];
+		A10_h[i] = A1b_h[i];
+		A20_h[i] = A2b_h[i];
+		A30_h[i] = A3b_h[i];
+		m0_h[i] = mb_h[i];
+		id0_h[i] = idb_h[i];
 
 //if(id_h[i] == 72057594038045489) printf("R %d %llu %.20g %.20g %.20g %.20g\n", i, id_h[i], m_h[i], x0_h[i], A1_h[i], snew_h[i].y);
 	}
 	if(useGPU > 0){
-		cudaMemcpy(m_d, m_h, N * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(id_d, id_h, N * sizeof(unsigned long long int), cudaMemcpyHostToDevice);
-		cudaMemcpy(index_d, index_h, N * sizeof(unsigned int), cudaMemcpyHostToDevice);
-		cudaMemcpy(x_d, x_h, N * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(y_d, y_h, N * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(z_d, z_h, N * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(vx_d, vx_h, N * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(vy_d, vy_h, N * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(vz_d, vz_h, N * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(A1_d, A1_h, N * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(A2_d, A2_h, N * sizeof(double), cudaMemcpyHostToDevice);
-		cudaMemcpy(A3_d, A3_h, N * sizeof(double), cudaMemcpyHostToDevice);
-
 		cudaMemcpy(m0_d, m0_h, N * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(id0_d, id0_h, N * sizeof(unsigned long long int), cudaMemcpyHostToDevice);
-		cudaMemcpy(index0_d, index0_h, N * sizeof(unsigned int), cudaMemcpyHostToDevice);
 		cudaMemcpy(x0_d, x0_h, N * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(y0_d, y0_h, N * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(z0_d, z0_h, N * sizeof(double), cudaMemcpyHostToDevice);
@@ -505,7 +476,7 @@ __host__ void Host::reduce(int S){
 			A3_h[k] = A30_h[ii];
 			m_h[k] = m0_h[ii];
 			id_h[k] = id0_h[ii];
-			index_h[k] = index0_h[ii];
+			index_h[k] = ii;
 
 //printf("%d %d %u %llu\n", i, k, ii, id_h[k]);
 printf("%d %d %u %llu %.20g %.20g\n", i, k, ii, id_h[k], x_h[k], A1_h[k]);
@@ -516,3 +487,95 @@ printf("%d %d %u %llu %.20g %.20g\n", i, k, ii, id_h[k], x_h[k], A1_h[k]);
 
 	runsN[S + 1] = N;
 }
+
+
+__global__ void save_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *A1_d, double *A2_d, double *A3_d, double *m_d, unsigned long long int *id_d, unsigned int *index_d, double *x0_d, double *y0_d, double *z0_d, double *vx0_d, double *vy0_d, double *vz0_d, double *A10_d, double *A20_d, double *A30_d, double *m0_d, unsigned long long int *id0_d, double2 *snew_d, int N){
+	int id = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if(id < N){
+		if(snew_d[id].y >= 1.0){
+			int ii = index_d[id];
+			x0_d[ii] = x_d[id];
+			y0_d[ii] = y_d[id];
+			z0_d[ii] = z_d[id];
+			vx0_d[ii] = vx_d[id];
+			vy0_d[ii] = vy_d[id];
+			vz0_d[ii] = vz_d[id];
+			A10_d[ii] = A1_d[id];
+			A20_d[ii] = A2_d[id];
+			A30_d[ii] = A3_d[id];
+			m0_d[ii] = m_d[id];
+			id0_d[ii] = id_d[id];
+//if(id < 40) printf("save %d %d %.20g %.20g\n", id, ii, snew_d[id].y, x_d[id]);
+		}
+	}
+}
+
+__host__ void Host::save(){
+	if(useGPU == 0){
+		for(int i = 0; i < N; ++i){
+			if(snew_h[i].y >= 1.0){
+				int ii = index_h[i];
+				x0_h[ii] = x_h[i];
+				y0_h[ii] = y_h[i];
+				z0_h[ii] = z_h[i];
+				vx0_h[ii] = vx_h[i];
+				vy0_h[ii] = vy_h[i];
+				vz0_h[ii] = vz_h[i];
+				A10_h[ii] = A1_h[i];
+				A20_h[ii] = A2_h[i];
+				A30_h[ii] = A3_h[i];
+				m0_h[ii] = m_h[i];
+				id0_h[ii] = id_h[i];
+//if(i < 40) printf("save %d %d %.20g %.20g %llu\n", i, ii, snew_h[i].y, x_h[i], id_h[i]);
+			}
+		}
+	}
+	else{
+		save_kernel <<< (N + 255) / 256, 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, m_d, id_d, index_d, x0_d, y0_d, z0_d, vx0_d, vy0_d, vz0_d, A10_d, A20_d, A30_d, m0_d, id0_d, snew_d, N);
+	}
+}
+
+__global__ void save1_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *A1_d, double *A2_d, double *A3_d, double *m_d, unsigned long long int *id_d, unsigned int *index_d, double *x0_d, double *y0_d, double *z0_d, double *vx0_d, double *vy0_d, double *vz0_d, double *A10_d, double *A20_d, double *A30_d, double *m0_d, unsigned long long int *id0_d, int N){
+	int id = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if(id < N){
+		x_d[id] = x0_d[id];
+		y_d[id] = y0_d[id];
+		z_d[id] = z0_d[id];
+		vx_d[id] = vx0_d[id];
+		vy_d[id] = vy0_d[id];
+		vz_d[id] = vz0_d[id];
+		A1_d[id] = A10_d[id];
+		A2_d[id] = A20_d[id];
+		A3_d[id] = A30_d[id];
+		m_d[id] = m0_d[id];
+		id_d[id] = id0_d[id];
+		index_d[id] = id;
+	}
+}
+
+__host__ void Host::save1(){
+
+	if(useGPU == 0){
+		for(int i = 0; i < N; ++i){
+			x_h[i] = x0_h[i];
+			y_h[i] = y0_h[i];
+			z_h[i] = z0_h[i];
+			vx_h[i] = vx0_h[i];
+			vy_h[i] = vy0_h[i];
+			vz_h[i] = vz0_h[i];
+			A1_h[i] = A10_h[i];
+			A2_h[i] = A20_h[i];
+			A3_h[i] = A30_h[i];
+			m_h[i] = m0_h[i];
+			id_h[i] = id0_h[i];
+			index_h[i] = i;
+		}
+	}
+	else{
+		save1_kernel <<< (N + 255) / 256, 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, m_d, id_d, index_d, x0_d, y0_d, z0_d, vx0_d, vy0_d, vz0_d, A10_d, A20_d, A30_d, m0_d, id0_d, N);
+	}
+}
+
+

@@ -1,7 +1,7 @@
 #include "Host.h"
-__host__ void Host::output(long long int t, double time, int S){
+__host__ void Host::output(long long int t, double time){
 
-	printf("Output %d %.20g %lld\n", S, time, t);
+	printf("Output %.20g %lld\n", time, t);
 
 
 	FILE *outfile;
@@ -9,18 +9,18 @@ __host__ void Host::output(long long int t, double time, int S){
 	
 	if(outHelio == 1){
 		if(outBinary == 0){	
-			sprintf(outfilename, "Outhelio_%d_%.12lld.dat", S, t);
+			sprintf(outfilename, "Outhelio_%.12lld.dat", t);
 		}
 		else{
-			sprintf(outfilename, "Outhelio_%d.bin", S);
+			sprintf(outfilename, "Outhelio.bin");
 		}
 	}
 	else{
 		if(outBinary == 0){
-			sprintf(outfilename, "Outbary_%d_%.12lld.dat", S, t);
+			sprintf(outfilename, "Outbary_%.12lld.dat", t);
 		}
 		else{
-			sprintf(outfilename, "Outbary_%d.bin", S);
+			sprintf(outfilename, "Outbary.bin");
 		}
 	}
 	if(outBinary == 0){
@@ -34,6 +34,23 @@ __host__ void Host::output(long long int t, double time, int S){
 			outfile = fopen(outfilename, "ab");
 		}
 	}
+
+
+	if(useGPU > 0 && t > 0){
+		cudaMemcpy(snew_h, snew_d, N * sizeof(double2), cudaMemcpyDeviceToHost);
+		cudaMemcpy(x0_h, x0_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(y0_h, y0_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(z0_h, z0_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(vx0_h, vx0_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(vy0_h, vy0_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(vz0_h, vz0_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+
+		cudaMemcpy(xTable_h, xTable_d, Nperturbers * RKFn * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(yTable_h, yTable_d, Nperturbers * RKFn * sizeof(double), cudaMemcpyDeviceToHost);
+		cudaMemcpy(zTable_h, zTable_d, Nperturbers * RKFn * sizeof(double), cudaMemcpyDeviceToHost);
+	}
+
+
 
 //	printf("%s\n", outfilename);
 
@@ -55,15 +72,17 @@ __host__ void Host::output(long long int t, double time, int S){
 	}
 	
 	if(outBinary == 0){
-		for(int p = 0; p < Nperturbers; ++p){
-			int ii = p * RKFn + 12;	
-			fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[p], m_h[p], xTable_h[ii], yTable_h[ii], zTable_h[ii], 0.0, 0.0, 0.0, 0.0);
-		}
+		//for(int p = 0; p < Nperturbers; ++p){
+		//	int ii = p * RKFn + 12;	
+		//	fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[p], m_h[p], xTable_h[ii], yTable_h[ii], zTable_h[ii], 0.0, 0.0, 0.0, 0.0);
+		//}
 		for(int i = Nperturbers; i < N; ++i){
-			//fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit, dtmin_h[i]);
-//			if(snew_h[i].y >= 1.0){
-				fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit, snew_h[i].y);
-//			}
+
+			fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id0_h[i], m0_h[i], comx + x0_h[i], comy + y0_h[i], comz + z0_h[i], (vcomx + vx0_h[i]) * dayUnit, (vcomy + vy0_h[i]) * dayUnit, (vcomz + vz0_h[i]) * dayUnit, dtmin_h[i]);
+
+			//if(snew_h[i].y >= 1.0){
+			//	fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[i], m_h[i], comx + x_h[i], comy + y_h[i], comz + z_h[i], (vcomx + vx_h[i]) * dayUnit, (vcomy + vy_h[i]) * dayUnit, (vcomz + vz_h[i]) * dayUnit, snew_h[i].y);
+			//}
 		}
 	}
 	else{
