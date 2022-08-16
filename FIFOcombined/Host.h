@@ -112,6 +112,8 @@ public:
 
 
 	//Files
+	FILE *infile;
+	char *infilename;  
 	FILE *outfile;
 	char *outfilename;  
 	FILE *dtfile;
@@ -143,7 +145,7 @@ public:
 	double *kvz_h, *kvz_d;
 
 	double2 *snew_h, *snew_d;
-	double *dtmin_h;
+	double *dtmin_h, *dtmin_d;
 
 	int2 *scan_d;
 	int *N_d;
@@ -176,7 +178,7 @@ public:
 	__host__ void initialize3();
 	__host__ void restore3();
 	__host__ void setSnew();
-	__host__ void save();
+	__host__ void save(double);
 	__host__ void save1();
 	__host__ void perturbersMass();
 	__host__ void perturbersIDs();
@@ -191,7 +193,7 @@ public:
 	__host__ void setRKF45();
 
 	__host__ int preIntegration();
-	__host__ void IntegrationLoop(int, unsigned long long int, double);
+	__host__ void IntegrationLoop(int, unsigned long long int, double, double&);
 	__host__ void interpolate(double, int);
 	__host__ void interpolate2(double, int);
 	__host__ void interpolateTable(double);
@@ -202,7 +204,7 @@ public:
 
 	__host__ void reduceCall(int);	
 	__host__ void reduce(int);
-	__host__ void output(long long int, double);
+	__host__ void output(unsigned long long int, double);
 
 //privat:
 

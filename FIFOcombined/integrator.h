@@ -1638,7 +1638,7 @@ __host__ int Host::preIntegration(){
 	return 1;
 }
 
-__host__ void Host::IntegrationLoop(int S, unsigned long long int Nci0, double time1){
+__host__ void Host::IntegrationLoop(int S, unsigned long long int Nci0, double time1, double &dtmin){
 	//save initial values for j loop (individual time steps)
 	double dti0 = dti;
 	double dts0 = dts;
@@ -1695,7 +1695,6 @@ printf("J %d time: %.20g, %.20g %.20g %.20g dti: %g, dts: %g, Nci: %llu\n", j, t
 					}
 					else{
 						stageStep2_kernel <<< (N - Nperturbers), 32 >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin[S], N, useHelio, useGR, useJ2, useNonGrav, useAdaptiveTimeSteps, ee);
-						//stageStep3_kernel < 2 > <<< ((N - Nperturbers) + 1) / 2, dim3(32, 2, 1) >>> (id_d, m_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, xTable_d, yTable_d, zTable_d, A1_d, A2_d, A3_d, snew_d, dt, dti, dtiMin[S], N, useHelio, useGR, useJ2, useNonGrav, useAdaptiveTimeSteps, ee);
 					}
 					
 				}
@@ -1764,6 +1763,7 @@ printf("J %d time: %.20g, %.20g %.20g %.20g dti: %g, dts: %g, Nci: %llu\n", j, t
 				runsdt[S] = dtiOld;
 				break;
 			}
+			dtmin = fmin(dtmin, fabs(dti));
 			
 			dti *= snew;
 			

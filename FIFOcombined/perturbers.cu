@@ -44,7 +44,7 @@ __host__ void Host::perturbersMass(){
 	double pmass[] = {
 		//This values come from the Larry Wasserman aiset.f
 		//From DE-440
-		//The arder must agree with the perturbers coordinate file
+		//The order must agree with the perturbers coordinate file
 		1.000000000000000e0,      	// Sun        10
 		6.02365794492933620e+06,	// Mercury    1
 		4.08523718656268204e+05,	// Venus      2

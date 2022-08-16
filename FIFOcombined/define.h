@@ -24,6 +24,9 @@
 #define def_facmax 1.5 
 #define def_facmin 0.8
 
+
+#define def_OldShuffle 0                //set this to 1 when an old cuda version is used which doesn't have shfl_sync operations
+
 //constant memory
 __constant__ double a_c[20 * 20];       //20 is considered here to be large enough (>RKFn)
 __constant__ double b_c[20];

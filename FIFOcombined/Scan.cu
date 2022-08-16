@@ -1,3 +1,5 @@
+#include "Host.h"
+
 //**************************************
 //This kernel performs a scan operation, used for  stream compactions
 //
@@ -208,12 +210,12 @@ __global__ void Scan32d3_kernel(double2 *snew_d, int2 *scan_d, double *x_d, doub
 			index_d[k] = ii;
 
 //printf("Scan3b %d %d %d %llu\n", id, k, ii, id0_d[ii]);
-printf("Scan3b %d %d %u %llu %.20g %.20g\n", id, k, ii, id0_d[ii], x0_d[ii], A10_d[ii]);
+//printf("Scan3b %d %d %u %llu %.20g %.20g\n", id, k, ii, id0_d[ii], x0_d[ii], A10_d[ii]);
 		}
 
 		if(id == N - 1){
 			N_d[0] = t + Nperturbers;
-printf("Scan3 F %d %d\n",  t, t + Nperturbers);
+//printf("Scan3 F %d %d\n",  t, t + Nperturbers);
 		}
 	}
 }

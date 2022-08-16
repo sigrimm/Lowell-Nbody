@@ -8,8 +8,6 @@
 #include "Host.h"
 
 #include "force.h"
-#include "test3.h"
-#include "Scan.h"
 #include "integrator.h"
 
 
@@ -24,24 +22,20 @@ int main(int argc, char*argv[]){
 		return 0;
 	}
 
-	FILE *binfile;
-	char *binfilename;
-	binfilename = new char[160];
-;
 	if(H.useFIFO == 2){	
-		//sprintf(binfilename, "210921_2148_genga_in_yarkovsky_elements.bin");
-		//sprintf(binfilename, "211208_1916_genga_in_2021-12-08_specific_desig.bin");
-		//sprintf(binfilename, "210801_2104_genga_in_GA.bin");
-		//sprintf(binfilename, "220301_2048_genga_in_new_last_14_days.bin");
-		//sprintf(binfilename, "220524_2256_genga_in_query_genga_input_40k.bin");
-		sprintf(binfilename, "220524_2258_genga_in_query_genga_input_10k.bin");
+		//sprintf(H.infilename, "210921_2148_genga_in_yarkovsky_elements.bin");
+		//sprintf(H.infilename, "211208_1916_genga_in_2021-12-08_specific_desig.bin");
+		//sprintf(H.infilename, "210801_2104_genga_in_GA.bin");
+		//sprintf(H.infilename, "220301_2048_genga_in_new_last_14_days.bin");
+		//sprintf(H.infilename, "220524_2256_genga_in_query_genga_input_40k.bin");
+		//sprintf(H.infilename, "220524_2258_genga_in_query_genga_input_10k.bin");
 	}
 	
 	//read console arguments for the binary file name
 	//other arguments are checked later to overwright the head data	
 	for(int i = 1; i < argc; i += 2){
 		if(strcmp(argv[i], "-in") == 0){
-			sprintf(binfilename, "%s", argv[i + 1]);
+			sprintf(H.infilename, "%s", argv[i + 1]);
 		}
 	}
 
@@ -97,9 +91,9 @@ int main(int argc, char*argv[]){
 	
 
 	if(H.useFIFO == 2){
-		binfile = fopen(binfilename, "rb");
+		H.infile = fopen(H.infilename, "rb");
 
-		if(binfile == NULL){
+		if(H.infile == NULL){
 			printf("Error, input file not found.\n");
 			return 0;
 		}
@@ -107,7 +101,7 @@ int main(int argc, char*argv[]){
 		int NTP = 0;
 		printf("read file\n");
 
-		er = H.readHeader(binfile, NTP);
+		er = H.readHeader(H.infile, NTP);
 		if(er == 0){
 			return 0;
 		}
@@ -128,6 +122,13 @@ H.time1 = 2461000.5;
 //H.time1 = H.time0 + H.dt * H.Nsteps;
 
 	}
+
+	if(H.N >= 1024 * 1024){
+		printf("Error, N is too large for scan kernels\n");
+		return 0;
+	}
+
+
 	H.time = H.time0;
 	// **************************************************
 	//H.time1 = 2451000.5;
@@ -161,6 +162,12 @@ H.time1 = 2461000.5;
 		else if(strcmp(argv[i], "-useGPU") == 0){
 			H.useGPU = atoi(argv[i + 1]);
 		}
+		else if(strcmp(argv[i], "-useFIFO") == 0){
+			H.useFIFO = atoi(argv[i + 1]);
+		}
+		else if(strcmp(argv[i], "-outBinary") == 0){
+			H.outBinary = atoi(argv[i + 1]);
+		}
 		else if(strcmp(argv[i], "-useAdaptive") == 0){
 			H.useAdaptiveTimeSteps = atoi(argv[i + 1]);
 		}
@@ -186,7 +193,7 @@ H.time1 = 2461000.5;
 		H.N = Nperturbers + H.NMax;
 	}
 
-	printf("binfile name %s\n", binfilename);
+	printf("infile name %s\n", H.infilename);
 
 	printf("outStart: %.20g, time0: %.20g, time1: %.20g, outInterval: %lld\n", H.outStart, H.time0, H.time1, H.outInterval);
 
@@ -216,10 +223,10 @@ H.time1 = 2461000.5;
 
 	printf("Read initial conditions\n");
 	if(H.useFIFO == 2){	
-		//read test particles
-		er = H.readFile(binfile);
+		//read particles
+		er = H.readFile(H.infile);
 		printf("read file OK\n");
-		fclose(binfile);
+		fclose(H.infile);
 
 		/*						
 		// -----------------------------------
@@ -350,8 +357,6 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	cudaEventRecord(tt1);
 
 
-	
-
 
 	H.dtfile = fopen(H.dtfilename, "w");
 
@@ -390,21 +395,17 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	cudaEventRecord(tt1);
 
 
+	//save coordinates for repeated integrations
+	H.initialize3();
+
+	unsigned long long int outCount = 0;
 	//###########################################
 	// First output
 	//###########################################
 
-	H.output(0, H.time);
+	H.output(outCount, H.time);
+	++outCount;
 
-
-	//save coordinates for repeated integrations
-	H.initialize3();
-
-	printf("dti %g\n", H.dti);
-
-	//###########################################
-	// Start time step loop
-	//###########################################
 
 	H.runsN[0] = H.N;
 
@@ -445,6 +446,9 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 		}
 
 
+		//###########################################
+		// Start time step loop
+		//###########################################
 		for(int tt = 0; tt < 100000; ++tt){
 
 
@@ -462,10 +466,15 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 			H.save1();
 			double time1 = H.time0 + DT;
 
+			//###########################################
+			// Loop over different time step levels
+			//###########################################
 			for(int S = 0; S < H.nRuns; ++S){
 			//for(int S = 0; S < 1; ++S){
 
 				H.dti = fabs(H.runsdt[S]);
+				double dtmin = H.dti;
+
 				if(fabs(H.dti) > fabs(DT)) H.dti = fabs(DT);
 
 				//set dts, round dti down to power of 10
@@ -474,7 +483,7 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 					double f = floor(l);
 					double s = pow(10.0, f);
 					H.dts = s * 0.1;
-	//printf("%g %g %g %g %g | %g %g\n", H.dti, l, f, s, H.dts, H.dti, H.dtiMin[S]);
+//printf("%g %g %g %g %g | %g %g\n", H.dti, l, f, s, H.dts, H.dti, H.dtiMin[S]);
 				}
 				unsigned long long int Nci = (fabs(DT) + 0.5 * H.dts) / H.dts;
 
@@ -490,9 +499,9 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 
 
 				//###########################################
-				//Time step loop
+				//Time step 
 				//###########################################
-				H.IntegrationLoop(S, Nci, time1);
+				H.IntegrationLoop(S, Nci, time1, dtmin);
 
 				cudaDeviceSynchronize();
 
@@ -508,10 +517,10 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 				cudaEventRecord(tt1);
 
 				//###########################################
-				// End time step loop
+				// End time step
 				//###########################################
 
-				H.save();
+				H.save(dtmin);
 
 				//reduce arrays for repeated integration with a smaller time step
 				if(H.useGPU > 0){
@@ -535,7 +544,12 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 			if(cOut >= outI && ((DT > 0 && H.time >= H.outStart) || (DT < 0 && H.time <= H.outStart))){
 			//if(t % 10 == 0){
 
-				H.output(tt, H.time);
+				H.output(outCount, H.time);
+				++outCount;
+				if(outCount >= 1e12){
+					printf("Error, too many output files, %llu \n", outCount);
+					return 0;
+				}
 
 				DT = DT0;
 				cOut = 0llu;
@@ -551,6 +565,9 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 
 
 		} // end of tt loop
+		//###########################################
+		// End time step loop
+		//###########################################
 
 
 	} // end of b loop
@@ -576,6 +593,7 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 	}
 	fclose(timefile);
 	
+	return 0;
 
 }
 	

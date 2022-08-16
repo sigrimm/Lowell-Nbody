@@ -22,11 +22,10 @@ __host__ Host::Host(){
 	useHelio = 1;
 	outHelio = 1;
 
-	outBinary = 0;
+	outBinary = 1;
 
 	Nsteps = 1e9;
 	outInterval = 1;
-
 
 	time0 = 0.0;
 	time1 = 0.0;
@@ -51,6 +50,7 @@ __host__ Host::Host(){
 		dtiMin[i] = 0.01;
 	}
 
+	infilename = new char[160];
 	outfilename = new char[160];
 	dtfilename = new char[160];
 	sprintf(dtfilename, "timesteps.dat");
@@ -99,6 +99,14 @@ __host__ int Host::readparam(int argc, char*argv[]){
 			}
 			fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "Initial condition file =") == 0){
+			er = fscanf (paramfile, "%s", infilename);
+			if(er <= 0){
+				printf("Error: Initial condition file is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
 		else if(strcmp(sp, "dt =") == 0){
 			for(int t = 0; t < nRuns; ++t){
 				er = fscanf (paramfile, "%lf", &runsdt[t]);
@@ -118,6 +126,34 @@ __host__ int Host::readparam(int argc, char*argv[]){
 				}
 			}
 			fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "useGPU =") == 0){
+			er = fscanf (paramfile, "%d", &useGPU);
+			if(er <= 0){
+				printf("Error: useGPU is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "useFIFO =") == 0){
+			er = fscanf (paramfile, "%d", &useFIFO);
+			if(er <= 0){
+				printf("Error: useFIFO is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "outBinary =") == 0){
+			er = fscanf (paramfile, "%d", &outBinary);
+			if(er <= 0){
+				printf("Error: outBinary is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
+		else{
+			printf("Error: param.dat file is not valid!\n");
+			return 0;
 		}
 	}
 
@@ -320,6 +356,7 @@ __host__ void Host::Alloc2(){
 		cudaMalloc((void **) &kvz_d, N * RKFn * sizeof(double));
 
 		cudaMalloc((void **) &snew_d, N * sizeof(double2));
+		cudaMalloc((void **) &dtmin_d, N * sizeof(double));
 		cudaMalloc((void **) &scan_d, N * sizeof(int2));
 		cudaMalloc((void **) &N_d, sizeof(int));
 
@@ -336,7 +373,10 @@ __host__ void Host::Alloc2(){
 }
 __host__ void Host::initialize2(){
 	for(int i = 0; i < N; ++i){
-		dtmin_h[i] = 1.0e6;
+		dtmin_h[i] = fabs(runsdt[0]);
+	}
+	if(useGPU > 0){
+		cudaMemcpy(dtmin_d, dtmin_h, N * sizeof(double), cudaMemcpyHostToDevice);
 	}
 
 	for(int i = 0; i < RKFn; ++i){
@@ -351,9 +391,6 @@ __host__ void Host::initialize2(){
 
 
 __host__ void Host::initialize3(){
-	for(int i = 0; i < N; ++i){
-		dtmin_h[i] = 1.0e6;
-	}
 
 	//save coordinates for backward integrations
 	for(int i = 0; i < N; ++i){
@@ -381,6 +418,8 @@ __host__ void Host::initialize3(){
 		mb_h[i] = m_h[i];
 		idb_h[i] = id_h[i];
 //if(id_h[i] == 72057594038045489) printf("S %d %llu %.20g %.20g %.20g %.20g\n", i, id_h[i], m_h[i], x0_h[i], A1_h[i], snew_h[i].y);
+
+		dtmin_h[i] = fabs(runsdt[0]);
 	}
 	if(useGPU > 0){
 		cudaMemcpy(m0_d, m0_h, N * sizeof(double), cudaMemcpyHostToDevice);
@@ -394,14 +433,14 @@ __host__ void Host::initialize3(){
 		cudaMemcpy(A10_d, A10_h, N * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(A20_d, A20_h, N * sizeof(double), cudaMemcpyHostToDevice);
 		cudaMemcpy(A30_d, A30_h, N * sizeof(double), cudaMemcpyHostToDevice);
+
+		cudaMemcpy(dtmin_d, dtmin_h, N * sizeof(double), cudaMemcpyHostToDevice);
 	}
 }
 __host__ void Host::restore3(){
 
 	//restore coordinates for backward integrations
 	for(int i = 0; i < N; ++i){
-		dtmin_h[i] = 1.0e6;
-
 		x0_h[i] = xb_h[i];
 		y0_h[i] = yb_h[i];
 		z0_h[i] = zb_h[i];
@@ -478,8 +517,7 @@ __host__ void Host::reduce(int S){
 			id_h[k] = id0_h[ii];
 			index_h[k] = ii;
 
-//printf("%d %d %u %llu\n", i, k, ii, id_h[k]);
-printf("%d %d %u %llu %.20g %.20g\n", i, k, ii, id_h[k], x_h[k], A1_h[k]);
+//printf("%d %d %u %llu %.20g %.20g\n", i, k, ii, id_h[k], x_h[k], A1_h[k]);
 			++k; 
 		}
 	}
@@ -489,7 +527,7 @@ printf("%d %d %u %llu %.20g %.20g\n", i, k, ii, id_h[k], x_h[k], A1_h[k]);
 }
 
 
-__global__ void save_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *A1_d, double *A2_d, double *A3_d, double *m_d, unsigned long long int *id_d, unsigned int *index_d, double *x0_d, double *y0_d, double *z0_d, double *vx0_d, double *vy0_d, double *vz0_d, double *A10_d, double *A20_d, double *A30_d, double *m0_d, unsigned long long int *id0_d, double2 *snew_d, int N){
+__global__ void save_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *A1_d, double *A2_d, double *A3_d, double *m_d, unsigned long long int *id_d, unsigned int *index_d, double *x0_d, double *y0_d, double *z0_d, double *vx0_d, double *vy0_d, double *vz0_d, double *A10_d, double *A20_d, double *A30_d, double *m0_d, unsigned long long int *id0_d, double2 *snew_d, double *dtmin_d, double dtmin, int N){
 	int id = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if(id < N){
@@ -506,12 +544,14 @@ __global__ void save_kernel(double *x_d, double *y_d, double *z_d, double *vx_d,
 			A30_d[ii] = A3_d[id];
 			m0_d[ii] = m_d[id];
 			id0_d[ii] = id_d[id];
+
+			dtmin_d[ii] = fmin(dtmin_d[ii], dtmin);
 //if(id < 40) printf("save %d %d %.20g %.20g\n", id, ii, snew_d[id].y, x_d[id]);
 		}
 	}
 }
 
-__host__ void Host::save(){
+__host__ void Host::save(double dtmin){
 	if(useGPU == 0){
 		for(int i = 0; i < N; ++i){
 			if(snew_h[i].y >= 1.0){
@@ -527,12 +567,14 @@ __host__ void Host::save(){
 				A30_h[ii] = A3_h[i];
 				m0_h[ii] = m_h[i];
 				id0_h[ii] = id_h[i];
+
+				dtmin_h[ii] = fmin(dtmin_h[ii], dtmin);
 //if(i < 40) printf("save %d %d %.20g %.20g %llu\n", i, ii, snew_h[i].y, x_h[i], id_h[i]);
 			}
 		}
 	}
 	else{
-		save_kernel <<< (N + 255) / 256, 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, m_d, id_d, index_d, x0_d, y0_d, z0_d, vx0_d, vy0_d, vz0_d, A10_d, A20_d, A30_d, m0_d, id0_d, snew_d, N);
+		save_kernel <<< (N + 255) / 256, 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, m_d, id_d, index_d, x0_d, y0_d, z0_d, vx0_d, vy0_d, vz0_d, A10_d, A20_d, A30_d, m0_d, id0_d, snew_d, dtmin_d, dtmin, N);
 	}
 }
 
