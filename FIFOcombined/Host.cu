@@ -4,6 +4,7 @@
 __host__ Host::Host(){
 
 	timep0 = 0.0;
+	timep1 = 0.0;
 
 	comet = 0;
 
@@ -54,18 +55,6 @@ __host__ Host::Host(){
 	outfilename = new char[160];
 	dtfilename = new char[160];
 	sprintf(dtfilename, "timesteps.dat");
-
-	//Erase Outbinary file
-	if(outBinary == 1){
-		if(outHelio == 1){
-			sprintf(outfilename, "Outhelio.bin");
-		}
-		else{
-			sprintf(outfilename, "Outbary.bin");
-		}
-		outfile = fopen(outfilename, "wb");
-		fclose(outfile);
-	}
 
 }
 
@@ -151,14 +140,35 @@ __host__ int Host::readparam(int argc, char*argv[]){
 			}
 			fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "Output Interval =") == 0){
+			er = fscanf (paramfile, "%lld", &outInterval);
+			if(er <= 0){
+				printf("Error: Output Interval is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "Start Time =") == 0){
+			er = fscanf (paramfile, "%lf", &outStart);
+			if(er <= 0){
+				printf("Error: Start Time is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "End Time =") == 0){
+			er = fscanf (paramfile, "%lf", &time1);
+			if(er <= 0){
+				printf("Error: End Time is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
 		else{
 			printf("Error: param.dat file is not valid!\n");
 			return 0;
 		}
 	}
-
-
-
 
 	fclose(paramfile);
 	return 1;

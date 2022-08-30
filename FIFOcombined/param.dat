@@ -5,3 +5,6 @@ dtMin = 2.0 0.1 0.0000001
 useGPU = 1
 useFIFO = 2
 outBinary = 1
+Output Interval = 100
+Start Time = 2459800.5
+End Time = 2461000.5

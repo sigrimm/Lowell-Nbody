@@ -89,8 +89,9 @@ __host__ int Host::readFile(FILE *infile){
 		unsigned long long int j = __builtin_bswap64 (id_h[i]);
 		//j is the correct index
 
-		if(i < 10 + Nperturbers || i > N - 10) printf("%d %llu %llu | %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], j, jd_init_h[i], x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+		//if(i < 10 + Nperturbers || i > N - 10) printf("%d %llu %llu | %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], j, jd_init_h[i], x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 		id_h[i] = j;
+		if(j == 72057594038644513) printf("%d %llu %llu | %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, id_h[i], j, jd_init_h[i], x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 
 		if(A1_h[i] != 0.0 || A2_h[i] != 0.0 || A3_h[i] != 0.0){
 			printf("A %d %g %g %g\n", i, A1_h[i], A2_h[i], A3_h[i]);
@@ -163,12 +164,10 @@ int readFIFO(double *x_h, double *y_h, double *z_h, double *vx_h, double *vy_h, 
 //Read the size of the initial conditions file
 __host__ int Host::readICSize(){
 	FILE *infile;
-	char infilename[160];
 
-	sprintf(infilename, "initial.dat");
 	infile = fopen(infilename, "r");
 	if(infile == NULL){
-		printf("Error, initial.dat file not found.\n");
+		printf("Error, initial conditions file not found %s\n", infilename);
 		return 0;
 	}
 	double x, y, z, vx, vy, vz;
@@ -190,6 +189,7 @@ __host__ int Host::readICSize(){
 		er = fscanf(infile, "%lf", &A1);
 		er = fscanf(infile, "%lf", &A2);
 		er = fscanf(infile, "%lf", &A3);
+//printf("read %d %g\n", er, A3);
 		//fscanf(infile, "%lf", &ALN);
 		//fscanf(infile, "%lf", &NK);
 		//fscanf(infile, "%lf", &NM);
@@ -205,9 +205,7 @@ __host__ int Host::readICSize(){
 //Read the initial conditions file
 __host__ int Host::readIC(){
 	FILE *infile;
-	char infilename[160];
 
-	sprintf(infilename, "initial.dat");
 	infile = fopen(infilename, "r");
 	for(int i = Nperturbers; i < N; ++i){
 		int er = 0;
@@ -228,7 +226,7 @@ __host__ int Host::readIC(){
 		//fscanf(infile, "%lf", &Nn[i]);
 		//er = fscanf(infile, "%lf", &R0[i]);
 		if(er < 0){
-			printf("Error, reading initial.dat file failed.\n");
+			printf("Error, reading initial conditions file failed.\n");
 			return 0;
 		}
 printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);

@@ -10,8 +10,9 @@ public:
 	int WarpSize = 32;
 
 	const int dtimep = 1.0;		//interval between stored time steps
-	const int NTable = 65000;	//length of perturbers table, number of days
+	const int NTable = 100000;	//length of perturbers table, number of days
 	double timep0;			//start time from perturbers file
+	double timep1;			//start time from perturbers file
 
 
 	int comet;			//flag for asteroids of comets

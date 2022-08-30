@@ -21,6 +21,20 @@ int main(int argc, char*argv[]){
 		printf("Error in reading param.dat file\n");
 		return 0;
 	}
+	printf("Reading param.dat file OK\n");
+
+	//Erase Outbinary file
+	if(H.outBinary == 1){
+		if(H.outHelio == 1){
+			sprintf(H.outfilename, "Outhelio.bin");
+		}
+		else{
+			sprintf(H.outfilename, "Outbary.bin");
+		}
+		H.outfile = fopen(H.outfilename, "wb");
+		fclose(H.outfile);
+	}
+
 
 	if(H.useFIFO == 2){	
 		//sprintf(H.infilename, "210921_2148_genga_in_yarkovsky_elements.bin");
@@ -94,7 +108,7 @@ int main(int argc, char*argv[]){
 		H.infile = fopen(H.infilename, "rb");
 
 		if(H.infile == NULL){
-			printf("Error, input file not found.\n");
+			printf("Error, input file not found %s\n", H.infilename);
 			return 0;
 		}
 
@@ -114,13 +128,10 @@ int main(int argc, char*argv[]){
 	if(H.useFIFO == 0){
 		int n = H.readICSize();
 		if(n == 0){
+			printf("Error, reading initial conditions file failed\n");
 			return 0;
 		}
 		H.N += n;
-		H.outStart = H.time0;
-H.time1 = 2461000.5;
-//H.time1 = H.time0 + H.dt * H.Nsteps;
-
 	}
 
 	if(H.N >= 1024 * 1024){
@@ -131,15 +142,16 @@ H.time1 = 2461000.5;
 
 	H.time = H.time0;
 	// **************************************************
-	//H.time1 = 2451000.5;
+//H.time1 = 2451000.5;
+H.outInterval = 10.0;
+//H.outStart = 2450800.5;
 
 	//move this to parameter file
 	H.dti = 2.0;
 
-	//H.outInterval = 10.0;
-	//H.outStart = 2450800.5;
 
 
+	//read console arguments
 	for(int i = 1; i < argc; i += 2){
 		if(strcmp(argv[i], "-Nsteps") == 0){
 			H.Nsteps = atoll(argv[i + 1]);
@@ -418,6 +430,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	//###########################################
 	//loop for forward backward integration
 	//###########################################
+	//for(int b = 0; b < 1; ++b){	
 	for(int b = 0; b < 2; ++b){	
 
 		int DT0 = 2;
@@ -425,11 +438,17 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 		unsigned long long int outI = H.outInterval;
 		unsigned long long int cOut = 0llu;
 
+		if(b == 0 && H.time1 <= H.time0){
+			//skip forward integration
+			continue;
+		}
+
 
 		if(b == 1){
 			//backward integration
 			H.restore3();
 			H.time1 = outStartb;
+			H.time = timeb;
 			H.outStart = time1b;
 			DT0 = -DT0;
 			DT = -DT;
@@ -443,6 +462,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 		}
 		if(DT < 0 && H.outStart < H.time){
 			outI = H.time - H.outStart;
+printf("outI %.20g %.20g\n", H.time, H.outStart);
 		}
 
 
@@ -538,7 +558,6 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 			H.N = N0;
 			H.time0 = H.time;
 			cOut += fabs(DT);
-
 
 
 			if(cOut >= outI && ((DT > 0 && H.time >= H.outStart) || (DT < 0 && H.time <= H.outStart))){

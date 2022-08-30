@@ -1778,7 +1778,8 @@ printf("increase time step C %g %g\n", dti, dts);
 			}
 			
 			//round dti to dts intervals
-			int dtt = dti / dts;
+			int dtt = (fabs(dti) + (0.5 * dts)) / dts;
+			if(dti < 0.0) dtt = -dtt;
 printf("dta %.20g %d %g %llu\n", dti, dtt, dts, nci);
 			dti = dtt * dts;
 			
