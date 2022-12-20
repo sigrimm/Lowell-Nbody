@@ -5,25 +5,25 @@
 
 __host__ void Host::setRKF45(){
 
-	a_h[1 * 6 + 0] = 1.0/4.0;       //21
+	a_h[1 * 6 + 0] = 1.0/4.0;	//21
 
-	a_h[2 * 6 + 0] = 3.0/32.0;      //31
-	a_h[2 * 6 + 1] = 9.0/32.0;      //32
+	a_h[2 * 6 + 0] = 3.0/32.0;	//31
+	a_h[2 * 6 + 1] = 9.0/32.0;	//32
 
-	a_h[3 * 6 + 0] = 1932.0/2197.0; //41
+	a_h[3 * 6 + 0] = 1932.0/2197.0;	//41
 	a_h[3 * 6 + 1] = -7200.0/2197.0;//42
-	a_h[3 * 6 + 2] = 7296.0/2197.0; //43
+	a_h[3 * 6 + 2] = 7296.0/2197.0;	//43
 
-	a_h[4 * 6 + 0] = 439.0/216.0;   //51
-	a_h[4 * 6 + 1] = -8.0;          //52
-	a_h[4 * 6 + 2] = 3680.0/513.0;  //53
-	a_h[4 * 6 + 3] = -845.0/4104.0; //54
+	a_h[4 * 6 + 0] = 439.0/216.0;	//51
+	a_h[4 * 6 + 1] = -8.0;		//52
+	a_h[4 * 6 + 2] = 3680.0/513.0;	//53
+	a_h[4 * 6 + 3] = -845.0/4104.0;	//54
 
-	a_h[5 * 6 + 0] = -8.0/27.0;     //61
-	a_h[5 * 6 + 1] = 2.0;           //62
-	a_h[5 * 6 + 2] = -3544/2565.0;  //63
-	a_h[5 * 6 + 3] = 1859.0/4104.0; //64
-	a_h[5 * 6 + 4] = -11.0/40.0;    //65
+	a_h[5 * 6 + 0] = -8.0/27.0;	//61
+	a_h[5 * 6 + 1] = 2.0;		//62
+	a_h[5 * 6 + 2] = -3544/2565.0;	//63
+	a_h[5 * 6 + 3] = 1859.0/4104.0;	//64
+	a_h[5 * 6 + 4] = -11.0/40.0;	//65
 
 
 	b_h[0] = 25.0/216.0;
@@ -53,32 +53,32 @@ __host__ void Host::setRKF45(){
 
 __host__ void Host::setDP54(){
 
-	a_h[1 * 7 + 0] = 1.0/5.0;       //21
+	a_h[1 * 7 + 0] = 1.0/5.0;		//21
 
-	a_h[2 * 7 + 0] = 3.0/40.0;      //31
-	a_h[2 * 7 + 1] = 9.0/40.0;      //32
+	a_h[2 * 7 + 0] = 3.0/40.0;		//31
+	a_h[2 * 7 + 1] = 9.0/40.0;		//32
 
-	a_h[3 * 7 + 0] = 44.0/45.0; //41
-	a_h[3 * 7 + 1] = -56.0/15.0;//42
-	a_h[3 * 7 + 2] = 32.0/9.0; //43
+	a_h[3 * 7 + 0] = 44.0/45.0;		//41
+	a_h[3 * 7 + 1] = -56.0/15.0;		//42
+	a_h[3 * 7 + 2] = 32.0/9.0;		//43
 
-	a_h[4 * 7 + 0] = 19372.0/6561.0;   //51
-	a_h[4 * 7 + 1] = -25360.0/2187.0;          //52
-	a_h[4 * 7 + 2] = 64448.0/6561.0;  //53
-	a_h[4 * 7 + 3] = -212.0/729.0; //54
+	a_h[4 * 7 + 0] = 19372.0/6561.0;	//51
+	a_h[4 * 7 + 1] = -25360.0/2187.0;	//52
+	a_h[4 * 7 + 2] = 64448.0/6561.0;	//53
+	a_h[4 * 7 + 3] = -212.0/729.0;		//54
 
-	a_h[5 * 7 + 0] = 9017.0/3168.0;  //61
-	a_h[5 * 7 + 1] = -355.0/33.0;           //62
-	a_h[5 * 7 + 2] = 46732.0/5247.0;  //63
-	a_h[5 * 7 + 3] = 49.0/176.0; //64
-	a_h[5 * 7 + 4] = -5103.0/18656.0;    //65
+	a_h[5 * 7 + 0] = 9017.0/3168.0;		//61
+	a_h[5 * 7 + 1] = -355.0/33.0;		//62
+	a_h[5 * 7 + 2] = 46732.0/5247.0;	//63
+	a_h[5 * 7 + 3] = 49.0/176.0;		//64
+	a_h[5 * 7 + 4] = -5103.0/18656.0;	//65
 
-	a_h[6 * 7 + 0] = 35.0/384.0;  //61
-	a_h[6 * 7 + 1] = 0.0;           //62
-	a_h[6 * 7 + 2] = 500.0/1113.0;  //63
-	a_h[6 * 7 + 3] = 125.0/192.0; //64
-	a_h[6 * 7 + 4] = -2187.0/6784.0;    //65
-	a_h[6 * 7 + 5] = 11.0/84.0;    //65
+	a_h[6 * 7 + 0] = 35.0/384.0;		//71
+	a_h[6 * 7 + 1] = 0.0;			//72
+	a_h[6 * 7 + 2] = 500.0/1113.0;		//73
+	a_h[6 * 7 + 3] = 125.0/192.0;		//74
+	a_h[6 * 7 + 4] = -2187.0/6784.0;	//75
+	a_h[6 * 7 + 5] = 11.0/84.0;		//76
 
 	b_h[0] = 35.0/384.0;
 	b_h[1] = 0.0;
@@ -492,7 +492,7 @@ __host__ void Host::stageStep(double time, double dtiMin, double &snew){
 				vxt_h[i] += dtaa * kvx_h[i + s * N];
 				vyt_h[i] += dtaa * kvy_h[i + s * N];
 				vzt_h[i] += dtaa * kvz_h[i + s * N];
-	//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], a_h[S * RKFn + s], kx[s], dt);
+//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], a_h[S * RKFn + s], kx[s], dt);
 
 			}
 
@@ -547,7 +547,7 @@ __host__ void Host::stageStep(double time, double dtiMin, double &snew){
 		}
 	}
 
-	snew = 1.0e6;   //large number
+	snew = 1.0e6;	//large number
 	for(int i = Nperturbers; i < N; ++i){
 
 		//update
@@ -1086,7 +1086,7 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 				snew2.x = 1.5;
 			}
 			snew_d[idx] = snew2;
-	//printf("snew %d %.20g %.20g %.20g\n", idx, snew_d[idx].y, snew_d[idx].x, errork);
+//printf("snew %d %.20g %.20g %.20g\n", idx, snew_d[idx].y, snew_d[idx].x, errork);
 			// ****************************
 		}
 	}
@@ -1195,6 +1195,7 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 			double ay = 0.0;
 			double az = 0.0;
 
+
 			if(useHelio == 0){
 				if(itx < Nperturbers){
 					if(idi != id_s[itx]){
@@ -1235,9 +1236,9 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 			}
 
 			__syncthreads();
-	//if(itx == 0){
-	//printf("Np %d %.20g %.20g %.20g %d\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
-	//}
+//if(itx == 0){
+//printf("Np %d %.20g %.20g %.20g %d\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+//}
 
 			if(itx == 0){
 
@@ -1358,6 +1359,7 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 					snew2.x = 1.5;
 				}
 				snew_d[idx] = snew2;
+
 //printf("snew %d %.20g %.20g %.20g %llu\n", idx, snew_d[idx].y, snew_d[idx].x, errork, idi);
 				// ****************************
 			}
@@ -1529,6 +1531,7 @@ __global__ void update_kernel(double *x_d, double *y_d, double *z_d, double *vx_
 		vx_d[idx] += dvx_d[idx];
 		vy_d[idx] += dvy_d[idx];
 		vz_d[idx] += dvz_d[idx];
+//printf("update %d %.20g %.20g %.20g %.20g %.20g %.20g\n", idx, x_d[idx], y_d[idx], z_d[idx], vx_d[idx], vy_d[idx], vz_d[idx]);
 	}
 }
 
@@ -1644,7 +1647,7 @@ __host__ void Host::IntegrationLoop(int S, unsigned long long int Nci0, double t
 	double dts0 = dts;
 	unsigned long long int Nci;
 	double time00 = time;
-
+//printf("dts0 %g\n", dts0);
 	int Nj = Nperturbers + 1;
 	if(useIndividualTimeSteps == 1){
 		Nj = N;
@@ -1663,7 +1666,7 @@ __host__ void Host::IntegrationLoop(int S, unsigned long long int Nci0, double t
 		int ci = 0;
 		double dtiOld = dti;
 
-printf("J %d time: %.20g, %.20g %.20g %.20g dti: %g, dts: %g, Nci: %llu\n", j, time, outStart, time0, time1, dti, dts, Nci);
+printf("J %d time: %.20g, %.20g %.20g %.20g dti: %g, dts: %g, Nci: %llu %llu\n", j, time, outStart, time0, time1, dti, dts, Nci, Nsteps);
 
 		for(long long int t = 1; t <= Nsteps; ++t){
 		//for(long long int t = 1; t < 5000; ++t){
@@ -1778,14 +1781,20 @@ printf("increase time step C %g %g\n", dti, dts);
 			}
 			
 			//round dti to dts intervals
-			int dtt = (fabs(dti) + (0.5 * dts)) / dts;
-			if(dti < 0.0) dtt = -dtt;
+			int dtt;
+			if(dti >= 0.0){
+				dtt = floor(fabs(dti) / dts);
+			}
+			else{
+				//dtt = -(fabs(dti) - (0.5 * dts)) / dts;
+				dtt = -floor(fabs(dti) / dts);
+			}
 printf("dta %.20g %d %g %llu\n", dti, dtt, dts, nci);
 			dti = dtt * dts;
 			
 			
-printf("dtb %.20g %d %g %llu\n", dti, dtt, dts, nci);
 			ci = (fabs(dti) + 0.5 * dts) / dts;
+printf("dtb %.20g %d %g %llu %d\n", dti, dtt, dts, nci, ci);
 			
 			if(dti > 0 && dti < dtiMin[S]) dti = dtiMin[S];
 			if(dti < 0 && -dti < dtiMin[S]) dti = -dtiMin[S];
@@ -1794,7 +1803,7 @@ printf("dtb %.20g %d %g %llu\n", dti, dtt, dts, nci);
 			dtiOld = dti;
 			
 			dt = dti * dayUnit;
-//printf("%llu %llu %.20g, %.20g %.20g\n", nci + ci, Nci, time, time + dti, outStart);
+printf("%d %llu %llu %.20g, %.20g %.20g\n", ci, nci + ci, Nci, time, time + dti, outStart);
 
 			if(nci + ci > Nci){
 				dti = (Nci - nci) * dts;

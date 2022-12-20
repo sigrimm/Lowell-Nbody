@@ -143,7 +143,7 @@ int main(int argc, char*argv[]){
 	H.time = H.time0;
 	// **************************************************
 //H.time1 = 2451000.5;
-H.outInterval = 10.0;
+//H.outInterval = 10.0;
 //H.outStart = 2450800.5;
 
 	//move this to parameter file
@@ -503,7 +503,19 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 					double f = floor(l);
 					double s = pow(10.0, f);
 					H.dts = s * 0.1;
-//printf("%g %g %g %g %g | %g %g\n", H.dti, l, f, s, H.dts, H.dti, H.dtiMin[S]);
+//printf("H.dti %g %g %g %g %g | %g %g\n", H.dti, l, f, s, H.dts, H.dti, H.dtiMin[S]);
+
+					int dtt;
+					if(H.dti >= 0.0){
+					dtt = (fabs(H.dti) + (0.5 * H.dts)) / H.dts;
+					}
+					else{
+					dtt = -(fabs(H.dti) - (0.5 * H.dts)) / H.dts;
+					}
+					H.dti = dtt * H.dts;
+//printf("H.dtiB %.20g %d %g\n", H.dti, dtt, H.dts);
+
+
 				}
 				unsigned long long int Nci = (fabs(DT) + 0.5 * H.dts) / H.dts;
 

@@ -4,6 +4,6 @@ ARCH = -arch sm_$(SM)
 source = RKF.cu Host.cu perturbers.cu read.cu output.cu interpolate.cu Scan.cu
 headers = define.h Host.h force.h integrator.h interpolateGPU.h
 
-RKR45: $(source) $(headers)
+RKF: $(source) $(headers)
 	nvcc $(ARCH) --compiler-options -Wall -o RKF $(source) $(BUILD_DATA)
 

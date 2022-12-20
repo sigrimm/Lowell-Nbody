@@ -78,6 +78,7 @@ __host__ void Host::output(unsigned long long int t, double time){
 		//	fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[p], m_h[p], xTable_h[ii], yTable_h[ii], zTable_h[ii], 0.0, 0.0, 0.0, 0.0);
 		//}
 		for(int i = Nperturbers; i < N; ++i){
+			//printf("%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id0_h[i], m0_h[i], comx + x0_h[i], comy + y0_h[i], comz + z0_h[i], (vcomx + vx0_h[i]) * dayUnit, (vcomy + vy0_h[i]) * dayUnit, (vcomz + vz0_h[i]) * dayUnit, dtmin_h[i]);
 			fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id0_h[i], m0_h[i], comx + x0_h[i], comy + y0_h[i], comz + z0_h[i], (vcomx + vx0_h[i]) * dayUnit, (vcomy + vy0_h[i]) * dayUnit, (vcomz + vz0_h[i]) * dayUnit, dtmin_h[i]);
 		}
 	}

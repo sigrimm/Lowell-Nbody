@@ -5,8 +5,8 @@
 
 int main(){
 
-	int useHelioCentric = 1;
-	int useBinary = 1;
+	int useHelioCentric = 0;
+	int useBinary = 0;
 
 
 	FILE *infile;

@@ -3,7 +3,7 @@
 #include <math.h>
 
 #define Ninterpolate 16
-#define RKFn 13			//RKF78
+#define RKFn 13				//RKF78
 //#define RKFn 6			//RKF45
 //#define RKFn 7			//DP54
 
@@ -17,7 +17,6 @@
 #define def_c 10065.320121
 #define def_AU 149597870700.0           //AU in m
 
-#define def_sc 1.0e-15			//Tolerance for RKF integrator
 #define def_atol 1.0e-15
 #define def_rtol 1.0e-15
 #define def_fac 0.84			//safety factor for RKF integrator
