@@ -1,0 +1,7 @@
+Initial condition file = 220524_2258_genga_in_query_genga_input_10k.bin
+Number of time step levels = 3
+dt = 2.0 0.2 0.1
+dtMin = 2.0 0.1 0.0000001
+useGPU = 1
+useFIFO = 2
+outBinary = 1
