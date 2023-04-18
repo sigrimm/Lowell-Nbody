@@ -119,7 +119,9 @@ public:
 	char *outfilename;  
 	FILE *dtfile;
 	char *dtfilename;
-	FILE *XVfile; 
+	FILE *XVfile;
+
+	char *perturbersPath; 
 
 
 	//perturber buffers
@@ -167,6 +169,7 @@ public:
 	//Functions
 	__host__ Host();
 	__host__ int readparam(int, char*argv[]);
+	__host__ void printInfo();
 
 	__host__ int readHeader(FILE*, int &);
 	__host__ int readFile(FILE *);
@@ -181,8 +184,7 @@ public:
 	__host__ void setSnew();
 	__host__ void save(double);
 	__host__ void save1();
-	__host__ void perturbersMass();
-	__host__ void perturbersIDs();
+	__host__ int perturbersMass();
 	__host__ void convertV();
 	__host__ int readTable();
 	__host__ void copy1();
@@ -192,6 +194,7 @@ public:
 	__host__ void setRKF78();
 	__host__ void setDP54();
 	__host__ void setRKF45();
+	__host__ void setRK4();
 
 	__host__ int preIntegration();
 	__host__ void IntegrationLoop(int, unsigned long long int, double, double&);

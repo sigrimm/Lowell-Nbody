@@ -10,7 +10,7 @@ __host__ __device__ void accS(double mu, double xi, double yi, double zi, double
 	double rsq = rx * rx + ry * ry + rz * rz;
 	double r = sqrt(rsq);
 
-	double s = mu / (r * rsq);
+	double s = def_k2 * mu / (r * rsq);
 
 	ax += s * rx;
 	ay += s * ry;
@@ -25,7 +25,7 @@ __host__ __device__ void accP(double mj, double xj, double yj, double zj, double
 	double rsq = rx * rx + ry * ry + rz * rz;
 	double r = sqrt(rsq);
 
-	double s = mj / (r * rsq);
+	double s = def_k2 * mj / (r * rsq);
 
 	ax += s * rx;
 	ay += s * ry;
@@ -41,7 +41,7 @@ __host__ __device__ void accP2(double mj, double xj, double yj, double zj, doubl
 	double rsq = rx * rx + ry * ry + rz * rz;
 	double r = sqrt(rsq);
 
-	double s = mj / (r * rsq);
+	double s = def_k2 * mj / (r * rsq);
 	ax += s * rx;
 	ay += s * ry;
 	az += s * rz;
@@ -50,7 +50,7 @@ __host__ __device__ void accP2(double mj, double xj, double yj, double zj, doubl
 
 
 //Sitarski 1982, Isotropic equation 5, heliocentric
-//modified k2 to dayUnit
+//modified k2 to def_dayUnit
 //should be equivalent to the Quinn et all function, assuming m[0] = 1.0
 //heliocentric
 __device__ __host__ void acchGR2(double xi, double yi, double zi, double vxi, double vyi, double vzi, double &ax, double &ay, double &az){
@@ -63,8 +63,8 @@ __device__ __host__ void acchGR2(double xi, double yi, double zi, double vxi, do
 
 	double rv = xi * vxi + yi * vyi + zi * vzi;
 
-	double f1 = 1.0 / (r * rsq * c2);
-	double t1 = 4.0 / r;
+	double f1 = def_k2 / (r * rsq * c2);
+	double t1 = def_k2 * 4.0 / r;
 	double t2 = -vsq;
 	double t3 = 4.0 * rv;
 //printf("a %d %.20g %.20g %.20g\n", i, ax, ay, az);
@@ -82,7 +82,7 @@ __device__ __host__ void acchGR2(double xi, double yi, double zi, double vxi, do
 
 
 
-//A1, A2 and A3 terms for asteroids on heliocentric coordinates
+//A1, A2 and A3 terms for asteroids in heliocentric coordinates
 __host__ __device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi, double vzi, double &ax, double &ay, double &az, double A1i, double A2i, double A3i){
 
 	double rsq = xi * xi + yi * yi + zi * zi;
@@ -105,6 +105,7 @@ __host__ __device__ void NonGrav(double xi, double yi, double zi, double vxi, do
 	double t = sqrt(tsq);
 
 	double gr = 1.0 / rsq;	//only valid for asteroids, not for comets 
+
 /*
 	double rr = r / R0[i];
 	double g1 = pow(rr, -NM[i]);
@@ -123,7 +124,7 @@ printf("gr %.20g %.20g\n", gr1, gr);
 	ax += f1 * xi + f2 * tx + f3 * hx;
 	ay += f1 * yi + f2 * ty + f3 * hy;
 	az += f1 * zi + f2 * tz + f3 * hz;
-//printf("NonGrav %d %.20g %.20g %.20g\n", i, (f1 * x[i] + f2 * tx + f3 * hx) * dayUnit * dayUnit, (f1 * y[i] + f2 * ty + f3 * hy) * dayUnit * dayUnit, (f1 * z[i] + f2 * tz + f3 * hz) * dayUnit * dayUnit);
+//printf("NonGrav %d %.20g %.20g %.20g\n", i, (f1 * x[i] + f2 * tx + f3 * hx) * def_dayUnit * def_dayUnit, (f1 * y[i] + f2 * ty + f3 * hy) * def_dayUnit * def_dayUnit, (f1 * z[i] + f2 * tz + f3 * hz) * def_dayUnit * def_dayUnit);
 
 }
 
@@ -138,14 +139,13 @@ __host__ __device__ void J2(double mj, double xj, double yj, double zj, double x
 
 	//double J2E = 1.08263e-3; //1.08262668e-3;
 	//double RE = 6371.009; // Earth radius in km
-	//double muE = 398600.44 // in km^3 /s^2	G * mEarth
 
 	RE /= def_AU;	//Earth radius in AU
 
 	//int iE = 3; 	//index of Earth
 
-	//muE = 3.986004415e5 km^3s-2
-	double muE = mj;
+	//muE = 3.986004415e5 km^3s-2			G * MEarth
+	double muE = def_k2 * mj;
 
 	double xE = xi - xj;
 	double yE = yi - yj;
@@ -168,7 +168,7 @@ __host__ __device__ void J2(double mj, double xj, double yj, double zj, double x
 	ay += ty;
 	az += tz;
 
-//printf("J2 %d %.20g %.20g %.20g %.20g | %.20g %.20g %.20g\n", i, r, tx * dayUnit * dayUnit, ty * dayUnit * dayUnit, tz * dayUnit * dayUnit, xE, yE, zE); 
+//printf("J2 %d %.20g %.20g %.20g %.20g | %.20g %.20g %.20g\n", i, r, tx * def_dayUnit * def_dayUnit, ty * def_dayUnit * def_dayUnit, tz * def_dayUnit * def_dayUnit, xE, yE, zE); 
 
 
 }

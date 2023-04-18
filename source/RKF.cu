@@ -197,13 +197,14 @@ int main(int argc, char*argv[]){
 			return 0;
 		}
 	}
-	H.dt = H.dti * dayUnit;
+	H.dt = H.dti * def_dayUnit;
 
 
 	if(H.N - Nperturbers > H.NMax){
 		printf("Number of bodies larger than Nmax\n");
 		H.N = Nperturbers + H.NMax;
 	}
+	H.printInfo();
 
 	printf("infile name %s\n", H.infilename);
 
@@ -278,7 +279,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 
 	}
 
-	//convert velocities and nonGrav terms
+	//convert velocities and nonGrav terms to code units
 	H.convertV();
 	// **************************************************
 
@@ -286,8 +287,10 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	// Read perturbers masses from perturbers.h file
 	// **************************************************
 
-	H.perturbersMass();
-	H.perturbersIDs();
+	er = H.perturbersMass();
+	if(er == 0){
+		return 0;
+	}
 //m[Nperturbers] = 1.e-11; //ca mass of Flora
 
 	// **************************************************
@@ -304,7 +307,10 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	H.initialize2();
 
 
-	if(RKFn == 6){
+	if(RKFn == 4){
+		H.setRK4();
+	}
+	else if(RKFn == 6){
 		H.setRKF45();
 	}
 	else if(RKFn == 7){
@@ -369,7 +375,6 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 	cudaEventRecord(tt1);
 
 
-
 	H.dtfile = fopen(H.dtfilename, "w");
 
 	//###########################################
@@ -385,7 +390,7 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.20g %llu\n",
 			return 0;
 		}
 		H.dti = dtiOld;
-		H.dt = H.dti * dayUnit;
+		H.dt = H.dti * def_dayUnit;
 		H.time = H.outStart;
 	}
 	else{
@@ -470,6 +475,7 @@ printf("outI %.20g %.20g\n", H.time, H.outStart);
 		// Start time step loop
 		//###########################################
 		for(int tt = 0; tt < 100000; ++tt){
+		//for(int tt = 0; tt < 1; ++tt){
 
 
 			if(cOut + fabs(DT) > outI && ((H.dt > 0 && H.time0 + H.dti >= H.outStart) || (H.dt < 0 && H.time + H.dti <= H.outStart))){
@@ -572,6 +578,9 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 			cOut += fabs(DT);
 
 
+			//###########################################
+			// print outputs
+			//###########################################
 			if(cOut >= outI && ((DT > 0 && H.time >= H.outStart) || (DT < 0 && H.time <= H.outStart))){
 			//if(t % 10 == 0){
 
@@ -587,6 +596,7 @@ printf("D %.20g %.20g %llu %llu %d\n", H.time0, H.time1, cOut, outI, DT);
 				outI = H.outInterval; //needed only at the first time
 
 			}
+			//###########################################
 
 
 			if((DT > 0 && H.time >= H.time1) || (DT < 0 && H.time <= H.time1)){

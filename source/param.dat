@@ -1,0 +1,13 @@
+Initial condition file = initialLarry.dat
+Number of time step levels = 3
+dt = 0.2 0.01 0.01
+dtMin = 0.00002 0.001 0.0000001
+Use adaptive time steps = 1
+useGPU = 1
+useFIFO = 0
+useHeliocentric coordinates = 1
+outBinary = 0
+Path to perturbers file = .
+Output Interval = 10
+Start Time = 2450800.5
+End Time = 2459800.5

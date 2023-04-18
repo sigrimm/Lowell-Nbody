@@ -34,7 +34,7 @@ __host__ Host::Host(){
 	time = 0.0;
 
 	dti = 0.05;
-	dt = dti * dayUnit;
+	dt = dti * def_dayUnit;
 
 	dts = 0.01;
 
@@ -54,6 +54,7 @@ __host__ Host::Host(){
 	infilename = new char[160];
 	outfilename = new char[160];
 	dtfilename = new char[160];
+	perturbersPath = new char[160];
 	sprintf(dtfilename, "timesteps.dat");
 
 }
@@ -132,6 +133,14 @@ __host__ int Host::readparam(int argc, char*argv[]){
 			}
 			fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "useHeliocentric coordinates =") == 0){
+			er = fscanf (paramfile, "%d", &useHelio);
+			if(er <= 0){
+				printf("Error: useHelio is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
 		else if(strcmp(sp, "outBinary =") == 0){
 			er = fscanf (paramfile, "%d", &outBinary);
 			if(er <= 0){
@@ -164,14 +173,57 @@ __host__ int Host::readparam(int argc, char*argv[]){
 			}
 			fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "Path to perturbers file =") == 0){
+			er = fscanf (paramfile, "%s", perturbersPath);
+			if(er <= 0){
+				printf("Error: Path to perturbers file is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "Use adaptive time steps =") == 0){
+			er = fscanf (paramfile, "%d", &useAdaptiveTimeSteps);
+			if(er <= 0){
+				printf("Error: Use adaptive time steps is not valid!\n");
+				return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
 		else{
-			printf("Error: param.dat file is not valid!\n");
+			printf("Error: param.dat file is not valid! %s\n", sp);
 			return 0;
 		}
 	}
 
 	fclose(paramfile);
 	return 1;
+}
+
+
+__host__ void Host::printInfo(){
+
+	FILE *infofile;
+	infofile = fopen("info.dat", "w");
+
+	fprintf(infofile, "useGR = %d\n", useGR);
+	fprintf(infofile, "useJ2 = %d\n", useJ2);
+	fprintf(infofile, "useNonGrav = %d\n", useNonGrav);
+	fprintf(infofile, "useGPU = %d\n", useGPU);
+	fprintf(infofile, "useAdaptiveTimeSteps = %d\n", useAdaptiveTimeSteps);
+	fprintf(infofile, "useIndividualTimeSteps = %d\n", useIndividualTimeSteps);
+	fprintf(infofile, "useFIFO = %d\n", useFIFO);
+	fprintf(infofile, "InVersion = %g\n", InVersion);
+	fprintf(infofile, "useHelio = %d\n", useHelio);
+	fprintf(infofile, "outHelio = %d\n", outHelio);
+	fprintf(infofile, "outBinary = %d\n", outBinary);
+	fprintf(infofile, "outInterval = %lld\n", outInterval);
+	fprintf(infofile, "Nperturbers = %d\n", Nperturbers);
+
+	fprintf(infofile, "infile name %s\n", infilename);
+	fprintf(infofile, "outStart: %.20g, time0: %.20g, time1: %.20g, outInterval: %lld\n", outStart, time0, time1, outInterval);
+
+	fclose(infofile);
+
 }
 
 

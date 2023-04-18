@@ -1,88 +1,56 @@
 #include "Host.h"
-__host__ void Host::perturbersMass(){
+__host__ int Host::perturbersMass(){
 
+	FILE *pFile;
+
+	pFile = fopen("perturbers.dat", "r");
+	if(pFile == NULL){
+		printf("Error, perturbers.dat file not found\n");
+		return 0;
+	}
+
+	char name[160];
+	double im;
+	long long int id1;
+	long long int id2;
+
+
+	//read header
+	fscanf(pFile, "%[^\n]", name);
+//printf("%s\n", name);
+
+	//The order must agree with the perturbers coordinate file
 	//Units are 1/(mass of object in solar masses)
-	double pmass[] = {
-		//This values come from the Larry Wasserman aiset.f
-		//From DE-440
-		//The order must agree with the perturbers coordinate file
-		1.000000000000000e0,      	// Sun        10
 
-		6.02365794492933620e+06,	// Mercury    1
-		4.08523718656268204e+05,	// Venus      2
-		3.32946048773048213e+05,	// Earth      399
-		3.09870354673725273e+06,	// Mars       4
-		1.04734863124400454e+03,	// Jupiter    5
-		3.49790180079320044e+03,	// Saturn     6
-		2.29029507834766191e+04,	// Uranus     7
-		1.94122597758754673e+04,	// Neptune    8
-		1.36045556167380244e+08,	// Pluto      9
+	int er = 0;
+	for(int i = 0; i < 1000; ++i){
+		er = fscanf(pFile, "%lf", &im);
+		er = fscanf(pFile, "%s", name);
+		er = fscanf(pFile, "%lld", &id1);
+		er = fscanf(pFile, "%lld", &id2);
 
-		2.11902913996742201e+09,	// Ceres      1
-		9.71122664959812355e+09,	// Pallas     2
-		6.91005231035131531e+10,	// Juno       3
-		7.67646068680440331e+09,	// Vesta      4
-		2.35927034111103439e+10,	// Hygiea     10
-		6.56011187658897781e+10,	// Eunomia    15
-		1.22953445817123718e+11,	// Euphrosyne 31
-		4.94635345133462448e+10,	// Europa     52
-		3.40770353836609001e+10,	// Davida     511
-		4.68880681429191055e+10,	// Interamnia 704
-		8.34848877284898376e+10,	// Psyche     16
-		1.41468527548287018e+11,	// Cybele     65
-		1.11541082696269424e+11,	// Thisbe     88
-		9.19227747550098419e+10,	// Camilla    107
-		1.16427460635738602e+11,	// Iris       7
-		6.12076731319770355e+10,	// Sylvia     87
 
-		2.70687029523511454e+07,	// Moon       301
-	};
-	for(int i = 0; i < Nperturbers; ++i){
-		m_h[i] = 1.0/pmass[i];
-printf("m %d %.20g\n", i, m_h[i]);
-//printf("m %d %.20g %.20g\n", i, m_h[i], mass1[i] / mass1[0]);
+		if(er <= 0){
+
+			if(i != Nperturbers){
+				printf("Error, perturbers.dat contains not 'Nperturbers' objects, %d %d\n", i, Nperturbers);
+				return 0;
+
+			}
+			break;
+		}
+		m_h[i] = 1.0 / im;
+		id_h[i] = id2;
+printf("m %d %.20g %lld\n", i, m_h[i], id_h[i]);
+
+
 	}
 
+	fclose(pFile);
+
+	return 1;
 }
 
-
-__host__ void Host::perturbersIDs(){
-	//perturbers indices
-	unsigned long long int id[] = {
-		10,			//sun
-
-		1,
-		2,
-		399,
-		4,
-		5,
-		6,
-		7,
-		8,
-		72057594038083239,      // 9,
-		72057594037948899,	//Ceres      1
-		72057594037948900,	//Pallas     2
-		72057594037948901,	//Juno       3
-		72057594037948902,	//Vesta      4
-		72057594037948908,	//Hygiea     10
-		72057594037948913,	//Eunomia    15
-		72057594037948929,	//Euphrosyne 31
-		72057594037948950,	//Europa     52
-		72057594037949409,	//Davida     511
-		72057594037949602,	//Interamnia 704
-		72057594037948914,	//Psyche     16
-		72057594037948963,	//Cybele     65
-		72057594037948986,	//Thisbe     88
-		72057594037949005,	//Camilla    107
-		72057594037948905,	//Iris       7
-		72057594037948985,	//Sylvia     87
-		301,			//Moon
-	};
-
-	for(int i = 0; i < Nperturbers; ++i){
-		id_h[i] = id[i];
-	}
-}
 
 
 __global__ void bufferToX_kernel(double *XYdata_d, double *timep_d, double *xp_d, double *yp_d, double *zp_d, int N){
@@ -114,11 +82,17 @@ if(id < 30 || id > N - 10) printf("buffer %d %.20g %.20g %.20g %.20g\n", id, tim
 //read the perturbers table
 __host__ int Host::readTable(){
 
+	char *pfilename;
+	pfilename = new char[320];
 	if(useHelio == 1){
-		XVfile = fopen("All3_h.bin", "rb");
+		sprintf(pfilename, "%s/All3_h.bin", perturbersPath);
+		XVfile = fopen(pfilename, "rb");
+printf("Read Heliocentric perturbers\n");
 	}
 	else{
-		XVfile = fopen("All3_b.bin", "rb");
+		sprintf(pfilename, "%s/All3_b.bin", perturbersPath);
+		XVfile = fopen(pfilename, "rb");
+printf("Read Barycentric perturbers\n");
 	}
 
 	if(XVfile == NULL){

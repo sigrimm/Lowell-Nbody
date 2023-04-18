@@ -1,8 +1,36 @@
-#define dayUnit 0.01720209895
 #include "interpolateGPU.h"
 
 //check RKN12(10)17M
 
+__host__ void Host::setRK4(){
+
+	a_h[1 * 4 + 0] = 0.5;	//21
+
+	a_h[2 * 4 + 0] = 0.0;	//31
+	a_h[2 * 4 + 1] = 0.5;	//32
+
+	a_h[3 * 4 + 0] = 0.0;	//41
+	a_h[3 * 4 + 1] = 0.0;	//42
+	a_h[3 * 4 + 2] = 1.0;	//43
+
+	b_h[0] = 1.0/6.0;
+	b_h[1] = 1.0/3.0;
+	b_h[2] = 1.0/3.0;
+	b_h[3] = 1.0/6.0;
+
+	bb_h[0] = 0.0;
+	bb_h[1] = 0.0;
+	bb_h[2] = 0.0;
+	bb_h[3] = 0.0;
+
+	c_h[0] = 0.0;
+	c_h[1] = 0.5;
+	c_h[2] = 0.5;
+	c_h[3] = 1.0;
+
+	ee = 1.0;
+
+}
 __host__ void Host::setRKF45(){
 
 	a_h[1 * 6 + 0] = 1.0/4.0;	//21
@@ -275,6 +303,7 @@ __host__ void Host::copyConst(){
 	cudaMemcpyToSymbol(c_c, c_h, RKFn * sizeof(double), 0, cudaMemcpyHostToDevice);
 }
 
+
 //only 1 particle
 __host__ void Host::stageStep2(int i, double time, double dtiMin, double &snew){
 
@@ -331,18 +360,18 @@ __host__ void Host::stageStep2(int i, double time, double dtiMin, double &snew){
 			for(int j = Nperturbers-1; j >= 1; --j){
 				if(id_h[i] != id_h[j]){
 					accP(m_h[j], xt_h[j], yt_h[j], zt_h[j], xt_h[i], yt_h[i], zt_h[i], ax, ay, az);
-	//if(i == 27) printf("Nij %d %d %llu %llu %.20g %.20g %.20g\n", i, j, id_h[i], id_h[j], ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+	//if(i == 27) printf("Nij %d %d %llu %llu %.20g %.20g %.20g\n", i, j, id_h[i], id_h[j], ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 				}
 			}
 			accS(m_h[0] + m_h[i], xt_h[i], yt_h[i], zt_h[i], ax, ay, az);
-	//if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
-//printf("N0 %d %.20g %.20g %.20g\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+	//if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
+//printf("N0 %d %.20g %.20g %.20g\n", i, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 			for(int j = Nperturbers-1; j >= 1; --j){
 				if(id_h[i] != id_h[j]){
 					accP2(m_h[j], xt_h[j], yt_h[j], zt_h[j], ax, ay, az);
 				}
 			}
-		//printf("Np %d %.20g %.20g %.20g %d\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+		//printf("Np %d %.20g %.20g %.20g %d\n", i, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit, S);
 		}
 
 		if(useGR == 2){
@@ -515,18 +544,18 @@ __host__ void Host::stageStep(double time, double dtiMin, double &snew){
 				for(int j = Nperturbers-1; j >= 1; --j){
 					if(id_h[i] != id_h[j]){
 						accP(m_h[j], xt_h[j], yt_h[j], zt_h[j], xt_h[i], yt_h[i], zt_h[i], ax, ay, az);
-//if(i == 27) printf("Nij %d %d %llu %llu %.20g %.20g %.20g\n", i, j, id_h[i], id_h[j], ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//if(i == 27) printf("Nij %d %d %llu %llu %.20g %.20g %.20g\n", i, j, id_h[i], id_h[j], ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 					}
 				}
 				accS(m_h[0] + m_h[i], xt_h[i], yt_h[i], zt_h[i], ax, ay, az);
-//if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
-//printf("N0 %d %.20g %.20g %.20g\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
+//printf("N0 %d %.20g %.20g %.20g\n", i, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 				for(int j = Nperturbers-1; j >= 1; --j){
 					if(id_h[i] != id_h[j]){
 						accP2(m_h[j], xt_h[j], yt_h[j], zt_h[j], ax, ay, az);
 					}
 				}
-//printf("Np %d %.20g %.20g %.20g %d\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+//printf("Np %d %.20g %.20g %.20g %d\n", i, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit, S);
 			}
 
 			if(useGR == 2){
@@ -719,18 +748,18 @@ __host__ void Host::stageStep1(double dtiMin, int iStart, int N, double &snew){
 				for(int j = Nperturbers-1; j >= 1; --j){
 					if(id_h[i] != id_h[j]){
 						accP(m_h[j], xt[j], yt[j], zt[j], xi, yi, zi, ax, ay, az);
-//printf("Nij %d %d %llu %llu %.20g %.20g %.20g\n", i, j, id_h[i], id_h[j], ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//printf("Nij %d %d %llu %llu %.20g %.20g %.20g\n", i, j, id_h[i], id_h[j], ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 					}
 				}
 				accS(m_h[0] + m_h[i], xi, yi, zi, ax, ay, az);
-//if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
-//printf("N0 %d %.20g %.20g %.20g\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//if(i == 27) printf("Nij %d %d %.20g %.20g %.20g\n", i, 0, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
+//printf("N0 %d %.20g %.20g %.20g\n", i, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 				for(int j = Nperturbers-1; j >= 1; --j){
 					if(id_h[i] != id_h[j]){
 						accP2(m_h[j], xt[j], yt[j], zt[j], ax, ay, az);
 					}
 				}
-//printf("Np %d %.20g %.20g %.20g %d\n", i, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+//printf("Np %d %.20g %.20g %.20g %d\n", i, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit, S);
 			}
 
 
@@ -854,7 +883,7 @@ __host__ void Host::stageStep1(double dtiMin, int iStart, int N, double &snew){
 }
 
 
-__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double2 *snew_d, double dt, double dti, double dtiMin, int N, int useHelio, int useGR, int useJ2, int useNonGrav, int useAdaptiveTimeSteps, double ee){
+__global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *A1_d, double *A2_d, double *A3_d, double2 *snew_d, double dt, double dti, double dtiMin, const int N, const int useHelio, const int useGR, const int useJ2, const int useNonGrav, const int useAdaptiveTimeSteps, const double ee){
 
 	int itx = threadIdx.x;
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -898,7 +927,7 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 	}
 
 	for(int S = 0; S < RKFn; ++S){
-
+//if(idx == 27) printf("S %d\n", S);
 
 		if(itx < Nperturbers){
 			int ii = itx * RKFn + S;
@@ -951,6 +980,7 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 				for(int j = Nperturbers-1; j >= 0; --j){
 					if(idi != id_s[j]){
 						accP(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
+//printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 					}
 				}
 			}
@@ -958,15 +988,16 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 				for(int j = Nperturbers-1; j >= 1; --j){
 					if(idi != id_s[j]){
 						accP(m_s[j], x_s[j], y_s[j], z_s[j], xi, yi, zi, ax, ay, az);
-//printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//printf("Nij %d %d %.20g %.20g %.20g\n", idx, j, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 					}
 				}
 				accS(m_s[0] + mi, xi, yi, zi, ax, ay, az);
 
-//if(idx == 27) printf("N0 %d %.20g %.20g %.20g\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//if(idx == 27) printf("N0 %d %.20g %.20g %.20g\n", idx, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 				for(int j = Nperturbers-1; j >= 1; --j){
 					if(idi != id_s[j]){
 						accP2(m_s[j], x_s[j], y_s[j], z_s[j], ax, ay, az);
+//printf("Npi %d %d %.20g %.20g %.20g %d\n", idx, j, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit, S);
 					}
 				}
 			}
@@ -1096,7 +1127,7 @@ __global__ void stageStep1_kernel(unsigned long long int *id_d, double *m_d, dou
 
 //every particle runs on an own thread block
 //the force calculation is parallelized along the threads and reduced in registers
-__global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *A1_d, double *A2_d, double *A3_d, double2 *snew_d, double dt, double dti, double dtiMin, int N, int useHelio, int useGR, int useJ2, int useNonGrav, int useAdaptiveTimeSteps, double ee){
+__global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *xTable_d, double *yTable_d, double *zTable_d, double *A1_d, double *A2_d, double *A3_d, double2 *snew_d, double dt, double dti, double dtiMin, const int N, const int useHelio, const int useGR, const int useJ2, const int useNonGrav, const int useAdaptiveTimeSteps, const double ee){
 
 	int itx = threadIdx.x;
 	int idx = blockIdx.x + Nperturbers;
@@ -1143,15 +1174,18 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 //if(idx == 27) printf("%d %.20g %.20g\n", itx, x_s[itx], m_s[itx]);
 		}
 
-		for(int S = 0; S < RKFn; ++S){
+		if(useHelio > 0){
+			m_s[0] += mi;
+		}
 
-			if(threadIdx.x < Nperturbers){
+		for(int S = 0; S < RKFn; ++S){
+//if(idx == 27) printf("S %d\n", S);
+			if(itx < Nperturbers){
 				int ii = itx * RKFn + S;
 				x_s[itx] = xTable_d[ii];
 				y_s[itx] = yTable_d[ii];
 				z_s[itx] = zTable_d[ii];
-//printf("%.20g %.20g %.20g\n", x_s[itx], y_s[itx], z_s[itx]);
-//printf("%d %d %.20g\n", itx, S, x_s[itx]);
+//printf("%d %d %d %llu %.20g %.30g %.30g %.30g\n", itx, S, ii, id_s[itx], m_s[itx], x_s[itx], y_s[itx], z_s[itx]);
 			}
 			__syncthreads();
 
@@ -1174,7 +1208,7 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 					vxi_s[0] += dtaa * kvx_s[s];
 					vyi_s[0] += dtaa * kvy_s[s];
 					vzi_s[0] += dtaa * kvz_s[s];
-	//printf("x %d %d %.20g %.20g\n", S, s, aa, xi);
+//printf("x %d %d %.20g %.20g\n", S, s, aa, xi);
 				}
 
 
@@ -1185,9 +1219,6 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 				ky_s[S] = vyi_s[0];
 				kz_s[S] = vzi_s[0];
 
-				if(useHelio > 0){
-					m_s[0] += mi;
-				}
 			}
 			__syncthreads();
 		
@@ -1200,6 +1231,7 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 				if(itx < Nperturbers){
 					if(idi != id_s[itx]){
 						accP(m_s[itx], x_s[itx], y_s[itx], z_s[itx], xi_s[0], yi_s[0], zi_s[0], ax, ay, az);
+//printf("Nij %d %d %.20g %.20g %.20g %d\n", idx, itx, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit, S);
 					}
 				}
 			}
@@ -1207,15 +1239,15 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 				if(itx < Nperturbers){
 					if(idi != id_s[itx]){
 						accP(m_s[itx], x_s[itx], y_s[itx], z_s[itx], xi_s[0], yi_s[0], zi_s[0], ax, ay, az);
-//if(idx == 27) printf("Nij %d %d %.20g %.20g %.20g %g %g %g\n", idx, itx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, x_s[itx], xi_s[0], m_s[itx]);
+//if(idx == 27) printf("Nij %d %d %.20g %.20g %.20g %g %g %g\n", idx, itx, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit, x_s[itx], xi_s[0], m_s[itx]);
 					}
 				}
 
-//if(idx == 27) printf("N0 %d %d %.20g %.20g %.20g\n", idx, itx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit);
+//if(idx == 27) printf("N0 %d %d %.20g %.20g %.20g\n", idx, itx, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit);
 				if(itx > 0 && itx < Nperturbers){
 					if(idi != id_s[itx]){
 						accP2(m_s[itx], x_s[itx], y_s[itx], z_s[itx], ax, ay, az);
-//printf("Npi %d %d %.20g %.20g %.20g %d\n", idx, j, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+//printf("Npi %d %d %.20g %.20g %.20g %d\n", idx, itx, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit, S);
 					}
 				}
 			}
@@ -1223,21 +1255,21 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 			//reduce
 
 			for(int i = 1; i < warpSize; i*=2){
-			#if def_OldShuffle == 0
+#if def_OldShuffle == 0
 				ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
 				ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
 				az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
-			#else
+#else
 				ax += __shfld_xor(ax, i);
 				ay += __shfld_xor(ay, i);
 				az += __shfld_xor(az, i);
-			#endif
+#endif
 			//printf("s reduce  %d %d %d %.20g\n", blockIdx.x, i, threadIdx.x, s);
 			}
 
 			__syncthreads();
 //if(itx == 0){
-//printf("Np %d %.20g %.20g %.20g %d\n", idx, ax * dayUnit * dayUnit, ay * dayUnit * dayUnit, az * dayUnit * dayUnit, S);
+//printf("Np %d %.20g %.20g %.20g %d\n", idx, ax * def_dayUnit * def_dayUnit, ay * def_dayUnit * def_dayUnit, az * def_dayUnit * def_dayUnit, S);
 //}
 
 			if(itx == 0){
@@ -1368,7 +1400,7 @@ __global__ void stageStep2_kernel(unsigned long long int *id_d, double *m_d, dou
 }
 
 
-__global__ void computeError_d1_kernel(double2 *snew_d, int N){
+__global__ void computeError_d1_kernel(double2 *snew_d, const int N){
 
 	int id = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -1519,7 +1551,7 @@ __host__ void Host::update(int i){
 //printf("dx %d %.20g %.20g %.20g %.20g %.20g %.20g\n", i, x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i]);
 }
 
-__global__ void update_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, int N){
+__global__ void update_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, const int N){
 
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -1551,7 +1583,7 @@ __host__ int Host::preIntegration(){
 		time = jd_init_h[i];
 		double snew = 1.0;
 		dti = 10.0;
-		dt = dti * dayUnit;
+		dt = dti * def_dayUnit;
 		int stop = 0;
 
 		printf("preIntegration %d %.20g %.20g\n", i, time, outStart);
@@ -1584,18 +1616,18 @@ __host__ int Host::preIntegration(){
 				time += dti;
 
 				dti *= snew;
-				dt = dti * dayUnit;
+				dt = dti * def_dayUnit;
 
 				if(stop == 1){
 					break;
 				}
 				else{
-					dtmin_h[i] = fmin(fabs(dt / dayUnit), dtmin_h[i]);
+					dtmin_h[i] = fmin(fabs(dt / def_dayUnit), dtmin_h[i]);
 				}
 			}
 			else{
 				dti *= snew;
-				dt = dti * dayUnit;
+				dt = dti * def_dayUnit;
 				stop = 0;
 			}
 
@@ -1604,13 +1636,13 @@ __host__ int Host::preIntegration(){
 
 			if(dti > 0.0 && time + dti > outStart){
 				dti = (outStart - time);
-				dt = dti * dayUnit;
+				dt = dti * def_dayUnit;
 				stop = 1;
 			//printf("Final time step %.20g\n", dti);
 			}
 			if(dti < 0.0 && time + dti < outStart){
 				dti = (outStart - time);
-				dt = dti * dayUnit;
+				dt = dti * def_dayUnit;
 				stop = 1;
 			//printf("Final time step %.20g\n", dti);
 			}
@@ -1658,7 +1690,7 @@ __host__ void Host::IntegrationLoop(int S, unsigned long long int Nci0, double t
 	for(int j = Nperturbers; j < Nj; ++j){
 		dti = dti0;
 		dts = dts0;
-		dt = dti * dayUnit;
+		dt = dti * def_dayUnit;
 		Nci = Nci0;
 		time = time00;
 
@@ -1802,14 +1834,14 @@ printf("dtb %.20g %d %g %llu %d\n", dti, dtt, dts, nci, ci);
 			
 			dtiOld = dti;
 			
-			dt = dti * dayUnit;
+			dt = dti * def_dayUnit;
 printf("%d %llu %llu %.20g, %.20g %.20g\n", ci, nci + ci, Nci, time, time + dti, outStart);
 
 			if(nci + ci > Nci){
 				dti = (Nci - nci) * dts;
 				if(dt < 0) dti = -dti;
 
-				dt = dti * dayUnit;
+				dt = dti * def_dayUnit;
 printf("   correct %.20g %.20g %.20g %.20g %llu %llu\n", time, time + dti, dti, dtiOld, nci, Nci);
 printf("dtc %.20g %g\n", dti, dts);
 			}
@@ -1819,7 +1851,7 @@ printf("dtc %.20g %g\n", dti, dts);
 printf("increase time step A %g %g\n", dti, dts);
 					dti = (((nci + ci) / 10) * 10 - nci) * dts;
 					if(dt < 0) dti = -dti;
-					dt = dti * dayUnit;
+					dt = dti * def_dayUnit;
 printf("increase time step B %g %g\n", dti, dts);
 				}
 				if(fabs(dti) <= 2.0 * dts){

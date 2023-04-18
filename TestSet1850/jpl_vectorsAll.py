@@ -23,8 +23,9 @@ useHelioCentric = 1
 
 #Earth 399
 #Moon 301
-#Earth-Moon 3
-#Moon
+#Earth-Moon system 3
+
+#Moon :
 #obj = Horizons(id_type='majorbody', id='301',epochs={'start':epoch_start,'stop':epoch_stop,'step':'1d'},location='@sun')
 
 ii = ([0, 1, 2, 399, 4, 5, 6, 7, 8, 9, 301, 10])

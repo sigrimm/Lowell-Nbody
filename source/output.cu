@@ -64,12 +64,13 @@ __host__ void Host::output(unsigned long long int t, double time){
 
 	if(useHelio == 0 && outHelio == 1){
 		//convert to heliocentric output
-		comx = -x_h[0];
-		comy = -y_h[0];
-		comz = -z_h[0];
-		vcomx = -vx_h[0];
-		vcomy = -vy_h[0];
-		vcomz = -vz_h[0];
+		comx = -x0_h[0];
+		comy = -y0_h[0];
+		comz = -z0_h[0];
+		vcomx = -vx0_h[0];
+		vcomy = -vy0_h[0];
+		vcomz = -vz0_h[0];
+//printf("convert %g %g %g\n", comx, comy, comz);
 	}
 	
 	if(outBinary == 0){
@@ -78,8 +79,8 @@ __host__ void Host::output(unsigned long long int t, double time){
 		//	fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id_h[p], m_h[p], xTable_h[ii], yTable_h[ii], zTable_h[ii], 0.0, 0.0, 0.0, 0.0);
 		//}
 		for(int i = Nperturbers; i < N; ++i){
-			//printf("%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id0_h[i], m0_h[i], comx + x0_h[i], comy + y0_h[i], comz + z0_h[i], (vcomx + vx0_h[i]) * dayUnit, (vcomy + vy0_h[i]) * dayUnit, (vcomz + vz0_h[i]) * dayUnit, dtmin_h[i]);
-			fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id0_h[i], m0_h[i], comx + x0_h[i], comy + y0_h[i], comz + z0_h[i], (vcomx + vx0_h[i]) * dayUnit, (vcomy + vy0_h[i]) * dayUnit, (vcomz + vz0_h[i]) * dayUnit, dtmin_h[i]);
+			//printf("%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id0_h[i], m0_h[i], comx + x0_h[i], comy + y0_h[i], comz + z0_h[i], (vcomx + vx0_h[i]) * def_dayUnit, (vcomy + vy0_h[i]) * def_dayUnit, (vcomz + vz0_h[i]) * def_dayUnit, dtmin_h[i]);
+			fprintf(outfile, "%.10g %llu %.40g %.40g %.40g %.40g %.40g %.40g %.40g %g\n", time, id0_h[i], m0_h[i], comx + x0_h[i], comy + y0_h[i], comz + z0_h[i], (vcomx + vx0_h[i]) * def_dayUnit, (vcomy + vy0_h[i]) * def_dayUnit, (vcomz + vz0_h[i]) * def_dayUnit, dtmin_h[i]);
 		}
 	}
 	else{
@@ -90,9 +91,9 @@ __host__ void Host::output(unsigned long long int t, double time){
 			double xx = comx + x0_h[i];
 			double yy = comy + y0_h[i];
 			double zz = comz + z0_h[i];
-			double vxx = (vcomx + vx0_h[i]) * dayUnit;
-			double vyy = (vcomy + vy0_h[i]) * dayUnit;
-			double vzz = (vcomz + vz0_h[i]) * dayUnit;
+			double vxx = (vcomx + vx0_h[i]) * def_dayUnit;
+			double vyy = (vcomy + vy0_h[i]) * def_dayUnit;
+			double vzz = (vcomz + vz0_h[i]) * def_dayUnit;
 
 			fwrite(&id, sizeof(unsigned long long int), 1, outfile);
 			fwrite(&time, sizeof(double), 1, outfile);

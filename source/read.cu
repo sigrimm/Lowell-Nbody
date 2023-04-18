@@ -242,12 +242,12 @@ printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_
 __host__ void Host::convertV(){
 
 	for(int i = Nperturbers; i < N; ++i){
-		vx_h[i] /= dayUnit;
-		vy_h[i] /= dayUnit;
-		vz_h[i] /= dayUnit;
+		vx_h[i] /= def_dayUnit;
+		vy_h[i] /= def_dayUnit;
+		vz_h[i] /= def_dayUnit;
 
-		A1_h[i] /= (dayUnit * dayUnit);
-		A2_h[i] /= (dayUnit * dayUnit);
-		A3_h[i] /= (dayUnit * dayUnit);
+		A1_h[i] /= (def_dayUnit * def_dayUnit);
+		A2_h[i] /= (def_dayUnit * def_dayUnit);
+		A3_h[i] /= (def_dayUnit * def_dayUnit);
 	}
 }
