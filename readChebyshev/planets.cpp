@@ -4,7 +4,8 @@
 int planets::alloc(){
                 
         nChebyshev = (int*)malloc(Nplanets * sizeof(int));
-        p_offset = (int*)malloc(Nplanets * sizeof(int));
+        p_offset0 = (int*)malloc(Nplanets * sizeof(int));
+        p_offset1 = (int*)malloc(Nplanets * sizeof(int));
         p_N = (int*)malloc(Nplanets * sizeof(int));
         id = (int*)malloc(Nplanets * sizeof(int));
                         
@@ -175,7 +176,7 @@ int planets::readHeader(FILE *hfile){
 	return 0;
 }	
 
-int planets::readPlanets(FILE *infile, double time0, double time1){
+int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1){
 
 
 	double startTime, endTime, daysPerBlock;
@@ -203,6 +204,10 @@ int planets::readPlanets(FILE *infile, double time0, double time1){
 	printf("AUtokm %.20e\n", AUtokm);
 	printf("EM %.20e\n", EM);
 
+	fwrite(&time0, sizeof(double), 1, outfile);
+	fwrite(&time1, sizeof(double), 1, outfile);
+	fwrite(&AUtokm, sizeof(double), 1, outfile);
+	fwrite(&EM, sizeof(double), 1, outfile);
 
 	printf("read coefficients of group 1050\n");
 	//read 12 columns of group 1050
@@ -376,14 +381,19 @@ int planets::readPlanets(FILE *infile, double time0, double time1){
 	printf("dblock %d\n", dblock);
 
 
-	int dataSize = 0;
+	dataSize = 0;
 
 	for(int i = 0; i < Nplanets; ++i){
-		p_offset[i] = dataSize;
+		p_offset0[i] = dataSize;
 		p_N[i] = 0;
 		dataSize += nSub[i] *  (nChebyshev[i] * 3 + 2) * dblock;
-		printf("planet offset %d %d %d %d %d\n", i, nSub[i], nChebyshev[i], p_offset[i], nSub[i] *  (nChebyshev[i] * 3 + 2) * dblock);
-
+		p_offset1[i] = dataSize;
+		printf("planet offset %d %d %d %d %d %d\n", i, nSub[i], nChebyshev[i], p_offset0[i], p_offset1[i], nSub[i] *  (nChebyshev[i] * 3 + 2) * dblock);
+		//fprintf(outfile, "%d %d %d %d \n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i]);
+		fwrite(&id[i], sizeof(int), 1, outfile);
+		fwrite(&nChebyshev[i], sizeof(int), 1, outfile);
+		fwrite(&p_offset0[i], sizeof(int), 1, outfile);
+		fwrite(&p_offset1[i], sizeof(int), 1, outfile);
 
 	}
 
@@ -426,11 +436,11 @@ int planets::readPlanets(FILE *infile, double time0, double time1){
 
 				printf("%d %.20g %.20g\n", j, subStart, subEnd);
 
-				pertdata[p_offset[j] + p_N[j] * RSIZE] = subStart;
-				pertdata[p_offset[j] + p_N[j] * RSIZE + 1] = subEnd;
+				pertdata[p_offset0[j] + p_N[j] * RSIZE] = subStart;
+				pertdata[p_offset0[j] + p_N[j] * RSIZE + 1] = subEnd;
 
 				for(int k = 0; k < nChebyshev[j] * 3; ++k){
-					pertdata[p_offset[j] + p_N[j] * RSIZE + 2 + k] = cdata[offset + k];
+					pertdata[p_offset0[j] + p_N[j] * RSIZE + 2 + k] = cdata[offset + k];
 				}
 				++p_N[j]; 
 			}
@@ -452,11 +462,11 @@ int planets::printPlanets(FILE *outfile){
 	for(int i = 0; i < Nplanets; ++i){
 		int RSIZE = nChebyshev[i] * 3 + 2;
 		for(int j = 0; j < p_N[i]; ++j){
-			fprintf(outfile, "%d %d ", id[i], nChebyshev[i]);
 			for(int k = 0; k < RSIZE; ++k){
-				fprintf(outfile, "%.20g ", pertdata[p_offset[i] + j * RSIZE + k]);
+				//fprintf(outfile, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
+				fwrite(&pertdata[p_offset0[i] + j * RSIZE + k], sizeof(double), 1, outfile);
 			}
-			fprintf(outfile, "\n");
+			//fprintf(outfile, "\n");
 		}
 	}
 	return 1;

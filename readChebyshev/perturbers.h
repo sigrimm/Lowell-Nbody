@@ -13,16 +13,18 @@ public:
 
 	int *id;		//id of the perturbers
 	int *nChebyshev;	//Number of Chebyshev polynomials
-	int *p_offset;		//Start point of individual perturbers in data array
+	int *p_offset0;		//Start point of individual perturbers in data array
+	int *p_offset1;		//End point of individual perturbers in data array
 	int *p_N;		//Number of records in desired time interval
 
+	int dataSize;
 	double *pertdata;
 
 
 	int alloc();
 
 	int readPerturbers1(FILE *);
-	int readPerturbers2(FILE *, double, double);
+	int readPerturbers2(FILE *, FILE *, double, double, int);
 	int printPerturbers(FILE *);
 
 private:

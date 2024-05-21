@@ -61,7 +61,8 @@ int main(){
 	sprintf(headerFileName, "header.440");
 	sprintf(planetsFileName, "linux_p1550p2650.440");
 	sprintf(perturbersFileName, "sb441-n16.bsp");
-	sprintf(outFileName, "PerturbersChebyshev.dat");
+	//sprintf(outFileName, "PerturbersChebyshev.dat");
+	sprintf(outFileName, "PerturbersChebyshev.bin");
 
 	
 
@@ -74,31 +75,41 @@ int main(){
 	FILE *outFile;
 
 
-	headerFile = fopen(headerFileName, "r");
-	planetsFile = fopen(planetsFileName, "rb");
-	perturbersFile = fopen(perturbersFileName, "rb");
-	outFile = fopen(outFileName, "w");
-
-
+	//outFile = fopen(outFileName, "w");
+	outFile = fopen(outFileName, "wb");
 
 	int er;
 
+	// **********************************************
+	// Planets
+	// **********************************************
+
+	headerFile = fopen(headerFileName, "r");
+	planetsFile = fopen(planetsFileName, "rb");
+
 	er = pl.readHeader(headerFile);
-	er = pl.readPlanets(planetsFile, time0, time1);
-	er = pl.printPlanets(outFile);
-
-
-
-	er = pert.readPerturbers1(perturbersFile);
-	er = pert.readPerturbers2(perturbersFile, time0, time1);
-	er = pert.printPerturbers(outFile);
-
+	er = pl.readPlanets(planetsFile, outFile, time0, time1);
 
 	fclose(headerFile);
 	fclose(planetsFile);
-	fclose(perturbersFile);
-	fclose(outFile);
 
+	// **********************************************
+	// Perturbers
+	// **********************************************
+
+
+	perturbersFile = fopen(perturbersFileName, "rb");
+
+	er = pert.readPerturbers1(perturbersFile);
+	er = pert.readPerturbers2(perturbersFile, outFile, time0, time1, pl.dataSize);
+
+	fclose(perturbersFile);
+
+
+	er = pl.printPlanets(outFile);
+	er = pert.printPerturbers(outFile);
+
+	fclose(outFile);
 
 
 	return 0;

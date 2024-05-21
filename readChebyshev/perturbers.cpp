@@ -4,7 +4,8 @@
 int perturbers::alloc(){
 
 	nChebyshev = (int*)malloc(Npert * sizeof(int));
-	p_offset = (int*)malloc(Npert * sizeof(int));
+	p_offset0 = (int*)malloc(Npert * sizeof(int));
+	p_offset1 = (int*)malloc(Npert * sizeof(int));
 	p_N = (int*)malloc(Npert * sizeof(int));
 	id = (int*)malloc(Npert * sizeof(int));
 
@@ -85,7 +86,7 @@ int perturbers::readPerturbers1(FILE *infile){
 }
 
 
-int perturbers::readPerturbers2(FILE *infile, double time0, double time1){
+int perturbers::readPerturbers2(FILE *infile, FILE *outfile, double time0, double time1, int planetoffset){
 
 	int aStart[Npert];	//start of the arrays
 	int aEnd[Npert];	//end
@@ -194,7 +195,7 @@ int perturbers::readPerturbers2(FILE *infile, double time0, double time1){
 	//Scan through the data to extract the number of Chebyshev coefficients and 
 	//count the number of epochs
 	//-------------------------------------------------------
-	int dataSize = 0;
+	dataSize = 0;
 	for(int i = 0; i < Npert; ++i){
 
 		//-------------------------------------------------------
@@ -251,9 +252,17 @@ int perturbers::readPerturbers2(FILE *infile, double time0, double time1){
 
 			if(start > time1){
 				printf("%d %d\n", id[i],  j);
-				p_offset[i] = dataSize;
+				p_offset0[i] = dataSize;
 				p_N[i] = j;
 				dataSize += j * RSIZE;
+				p_offset1[i] = dataSize;
+				//fprintf(outfile, "%d %d %d %d\n", id[i], nChebyshev[i][i], p_offset0[i] + planetoffset, p_offset1[i] + planetoffset);
+				fwrite(&id[i], sizeof(int), 1, outfile);
+				fwrite(&nChebyshev[i], sizeof(int), 1, outfile);
+				int o0 = p_offset0[i] + planetoffset;
+				int o1 = p_offset1[i] + planetoffset;
+				fwrite(&o0, sizeof(int), 1, outfile);
+				fwrite(&o1, sizeof(int), 1, outfile);
 				break;
 			}
 
@@ -271,7 +280,6 @@ int perturbers::readPerturbers2(FILE *infile, double time0, double time1){
 	pertdata = (double*)malloc(dataSize * sizeof(double));
 
 	for(int i = 0; i < Npert; ++i){
-		printf("%d %d %d %d\n", i, p_offset[i], p_N[i], nChebyshev[i]);
 		//Read first the information at the end of the segment
 		fseek(infile, (aEnd[i] - 4) * 8, SEEK_SET);
 		double ddata[128];
@@ -288,19 +296,19 @@ int perturbers::readPerturbers2(FILE *infile, double time0, double time1){
 		fseek(infile, (aStart[i] + offset * RSIZE - 1) * 8, SEEK_SET);
 
 		for(int j = 0; j < p_N[i]; ++j){
-			fread(pertdata + p_offset[i] + j * RSIZE, RSIZE * sizeof(double), 1, infile); 
+			fread(pertdata + p_offset0[i] + j * RSIZE, RSIZE * sizeof(double), 1, infile); 
 			
-			double d0 = pertdata[p_offset[i] + j * RSIZE];
-			double d1 = pertdata[p_offset[i] + j * RSIZE + 1];
+			double d0 = pertdata[p_offset0[i] + j * RSIZE];
+			double d1 = pertdata[p_offset0[i] + j * RSIZE + 1];
 
 			double start = (d0 - d1)  / 86400.0 + 2451545.0;
 			double end = (d0 + d1)  / 86400.0 + 2451545.0;
 
 			//overwrite midpoint time and time radius with start time and end time
-			pertdata[p_offset[i] + j * RSIZE] = start;
-			pertdata[p_offset[i] + j * RSIZE + 1] = end;
+			pertdata[p_offset0[i] + j * RSIZE] = start;
+			pertdata[p_offset0[i] + j * RSIZE + 1] = end;
 
-			//printf("%d %d %.20g %.20g %d \n", id[i], j, start, end, p_offset[i] + j * RSIZE);
+			//printf("%d %d %.20g %.20g %d \n", id[i], j, start, end, p_offset0[i] + j * RSIZE);
 		}
 	}
 	return 1;
@@ -314,11 +322,11 @@ int perturbers::printPerturbers(FILE *outfile){
 	for(int i = 0; i < Npert; ++i){
 		int RSIZE = nChebyshev[i] * 3 + 2;
 		for(int j = 0; j < p_N[i]; ++j){
-			fprintf(outfile, "%d %d ", id[i], nChebyshev[i]);
 			for(int k = 0; k < RSIZE; ++k){
-				fprintf(outfile, "%.20g ", pertdata[p_offset[i] + j * RSIZE + k]);
+				//fprintf(outfile, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
+				fwrite(&pertdata[p_offset0[i] + j * RSIZE + k], sizeof(double), 1, outfile);
 			}
-			fprintf(outfile, "\n");
+			//fprintf(outfile, "\n");
 		}
 	}
 	return 1;
