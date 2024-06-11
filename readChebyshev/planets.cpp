@@ -434,7 +434,7 @@ int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1
 				double subEnd = subStart + sizeSubInterval;	//ending time of sub interval
 				int RSIZE = nChebyshev[j] * 3 + 2;
 
-				printf("%d %.20g %.20g\n", j, subStart, subEnd);
+				//printf("%d %.20g %.20g\n", j, subStart, subEnd);
 
 				pertdata[p_offset0[j] + p_N[j] * RSIZE] = subStart;
 				pertdata[p_offset0[j] + p_N[j] * RSIZE + 1] = subEnd;
