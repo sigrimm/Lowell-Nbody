@@ -15,6 +15,7 @@ int main(){
 
 
 	pl.Nplanets = 11;
+	pl.Npert = 16;
 	pert.Npert = 16;
 
 
@@ -33,24 +34,29 @@ int main(){
 	pl.id[8] = 8;
 	pl.id[9] = 9;
 	pl.id[10] = 10;
-	
-	pert.id[0] = 2000107;
-	pert.id[1] = 2000001;
-	pert.id[2] = 2000065;
-	pert.id[3] = 2000511;
-	pert.id[4] = 2000015;
-	pert.id[5] = 2000031;
-	pert.id[6] = 2000052;
-	pert.id[7] = 2000010;
-	pert.id[8] = 2000704;
-	pert.id[9] = 2000007;
-	pert.id[10] = 2000003;
-	pert.id[11] = 2000002;
-	pert.id[12] = 2000016;
-	pert.id[13] = 2000087;
-	pert.id[14] = 2000088;
-	pert.id[15] = 2000004;
 
+
+	pert.id[0] = 2000107;	//Camilla
+	pert.id[1] = 2000001;	//Ceres
+	pert.id[2] = 2000065;	//Cybele
+	pert.id[3] = 2000511;	//Davida
+	pert.id[4] = 2000015;	//Eunomia
+	pert.id[5] = 2000031;	//Euphosyne
+	pert.id[6] = 2000052;	//Europa
+	pert.id[7] = 2000010;	//Hygiea
+	pert.id[8] = 2000704;	//Interamnia
+	pert.id[9] = 2000007;	//Iris
+	pert.id[10] = 2000003;	//Juno
+	pert.id[11] = 2000002;	//Pallas
+	pert.id[12] = 2000016;	//Psyche
+	pert.id[13] = 2000087;	//Sylvia
+	pert.id[14] = 2000088;	//Thisbe
+	pert.id[15] = 2000004;	//Vesta
+
+
+	for(int i = 0; i < pl.Npert; ++i){
+		pl.id[pl.Nplanets + i] = pert.id[i] - 2000000;
+	}
 
 
 	char headerFileName[256];
@@ -92,6 +98,10 @@ int main(){
 
 	fclose(headerFile);
 	fclose(planetsFile);
+
+	for(int i = 0; i < pl.Npert; ++i){
+		pert.GM[i] = pl.GM[pl.Nplanets + i];
+	}
 
 	// **********************************************
 	// Perturbers

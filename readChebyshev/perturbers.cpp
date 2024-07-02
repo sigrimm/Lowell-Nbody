@@ -8,9 +8,11 @@ int perturbers::alloc(){
 	p_offset1 = (int*)malloc(Npert * sizeof(int));
 	p_N = (int*)malloc(Npert * sizeof(int));
 	id = (int*)malloc(Npert * sizeof(int));
+	GM = (double*)malloc(Npert * sizeof(double));
 
 	for(int i = 0; i < Npert; ++i){
 		nChebyshev[i] = 0;
+		GM[i] = 0.0;
 	}
 
 	return 1;
@@ -263,6 +265,7 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfile, double time0, doubl
 				int o1 = p_offset1[i] + planetoffset;
 				fwrite(&o0, sizeof(int), 1, outfile);
 				fwrite(&o1, sizeof(int), 1, outfile);
+				fwrite(&GM[i], sizeof(double), 1, outfile);
 				break;
 			}
 

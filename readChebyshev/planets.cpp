@@ -7,10 +7,14 @@ int planets::alloc(){
         p_offset0 = (int*)malloc(Nplanets * sizeof(int));
         p_offset1 = (int*)malloc(Nplanets * sizeof(int));
         p_N = (int*)malloc(Nplanets * sizeof(int));
-        id = (int*)malloc(Nplanets * sizeof(int));
+        id = (int*)malloc((Nplanets  + Npert)* sizeof(int));
+        GM = (double*)malloc((Nplanets + Npert) * sizeof(double));
                         
         for(int i = 0; i < Nplanets; ++i){
                 nChebyshev[i] = 0;
+        }               
+        for(int i = 0; i < Nplanets + Npert; ++i){
+		GM[i] = 0.0;
         }               
                 
         return 1;
@@ -204,10 +208,6 @@ int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1
 	printf("AUtokm %.20e\n", AUtokm);
 	printf("EM %.20e\n", EM);
 
-	fwrite(&time0, sizeof(double), 1, outfile);
-	fwrite(&time1, sizeof(double), 1, outfile);
-	fwrite(&AUtokm, sizeof(double), 1, outfile);
-	fwrite(&EM, sizeof(double), 1, outfile);
 
 	printf("read coefficients of group 1050\n");
 	//read 12 columns of group 1050
@@ -277,14 +277,28 @@ int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1
 	//read constants
 	fseek(infile, DE_blocksize8, SEEK_SET);
 	double dd;
-	double GM[11];
 
-	double AU, EMRAT;
+	double AU, EMRAT, CLIGHT, RE, J2E;
 	for(int i = 0; i < Nc; ++i){
 		fread(&dd, sizeof(double), 1, infile);
 		//Number of kilometers per astronomical unit
 		if(strcmp(cname[i], "AU") == 0){
 			AU = dd;
+			printf("%s %.20e\n", cname[i], dd);
+		}
+		//speed of light
+		if(strcmp(cname[i], "CLIGHT") == 0){
+			CLIGHT = dd;
+			printf("%s %.20e\n", cname[i], dd);
+		}
+		//Radius of Earth
+		if(strcmp(cname[i], "RE") == 0){
+			RE = dd;
+			printf("%s %.20e\n", cname[i], dd);
+		}
+		//J2 of Earth
+		if(strcmp(cname[i], "J2E") == 0){
+			J2E = dd;
 			printf("%s %.20e\n", cname[i], dd);
 		}
 		//Earth-Moon mass ratio
@@ -309,14 +323,14 @@ int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1
 			// M = E/EM
 			//E + E/EM = B
 			//E(EM+1) = B * EM
-			GM[3] = GMB * EMRAT / (1.0 + EMRAT);
-			printf("%s %.20e\n", "GME", GM[3] / def_k2);
+			GM[2] = (EMRAT / (1.0 + EMRAT)) * GMB;
+			printf("%s %.20e %.20g\n", "GME", GM[2] / def_k2, GM[2]);
 		
 			//Mass of Moon
 			//E = EM * M
 			//EM * M + M = B
 			//M(EM + 1) = B
-			GM[9] = GMB / (1.0 + EMRAT);
+			GM[9] = 1.0 / (1.0 + EMRAT) * GMB;
 			printf("%s %.20e\n", "GM9", GM[9] / def_k2);
 		}
 		//Mass of Mercury
@@ -359,11 +373,25 @@ int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1
 			GM[8] = dd;
 			printf("%s %.20e\n", cname[i], dd / def_k2);
 		}
-		//Mass of Earth
-		
-		//Mass of Moon
+		for(int j = 0; j < Npert; ++j){
+			char iid[7];
+			sprintf(iid, "MA%04d", id[Nplanets + j]);
+			if(strcmp(cname[i], iid) == 0){
+				GM[Nplanets + j] = dd;
+				printf("Mass %d %s %g\n", j, iid, dd);
+			}
+		}
+
+	
 	}
 
+	fwrite(&time0, sizeof(double), 1, outfile);
+	fwrite(&time1, sizeof(double), 1, outfile);
+	fwrite(&AUtokm, sizeof(double), 1, outfile);
+	fwrite(&EM, sizeof(double), 1, outfile);
+	fwrite(&CLIGHT, sizeof(double), 1, outfile);
+	fwrite(&RE, sizeof(double), 1, outfile);
+	fwrite(&J2E, sizeof(double), 1, outfile);
 
 	double *cdata;
 	cdata = (double*)malloc(DE_blocksize * sizeof(double));	
@@ -390,10 +418,12 @@ int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1
 		p_offset1[i] = dataSize;
 		printf("planet offset %d %d %d %d %d %d\n", i, nSub[i], nChebyshev[i], p_offset0[i], p_offset1[i], nSub[i] *  (nChebyshev[i] * 3 + 2) * dblock);
 		//fprintf(outfile, "%d %d %d %d \n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i]);
+//printf("%d %d %d %d %.20g\n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i], GM[i]);
 		fwrite(&id[i], sizeof(int), 1, outfile);
 		fwrite(&nChebyshev[i], sizeof(int), 1, outfile);
 		fwrite(&p_offset0[i], sizeof(int), 1, outfile);
 		fwrite(&p_offset1[i], sizeof(int), 1, outfile);
+		fwrite(&GM[i], sizeof(double), 1, outfile);
 
 	}
 
