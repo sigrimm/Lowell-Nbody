@@ -297,7 +297,21 @@ inline void asteroid::RKF_step(){
 		snew = (snew < s) ? snew : s;
 	}
 
-	if(snew >= 1.0){
+	if(stop == 1){
+		//accept step
+		for(int i = Nperturbers; i < N; ++i){
+			x[i] += dx[i];
+			y[i] += dy[i];
+			z[i] += dz[i];
+
+			vx[i] += dvx[i];
+			vy[i] += dvy[i];
+			vz[i] += dvz[i];
+
+		}
+		time += dt;
+	}
+	else if(snew >= 1.0){
 		//accept step
 		for(int i = Nperturbers; i < N; ++i){
 			x[i] += dx[i];
@@ -349,7 +363,7 @@ inline int asteroid::loop(){
 					dt1 = dt;
 					dt = (timett1 - time);
 					stop = 1;
-//printf("refine %.20g %.20g\n", timett1 - A.time, (timett1 - A.time) / 2.0);
+//printf("refine %.20g\n", timett1 - time);
 				}
 			}
 			else{
@@ -357,7 +371,7 @@ inline int asteroid::loop(){
 					dt1 = dt;
 					dt = (timett1 - time);
 					stop = 1;
-//printf("refine %.20g %.20g\n", timett1 - A.time, (timett1 - A.time) / 2.0);
+//printf("refine %.20g\n", timett1 - A.time);
 				}
 
 			}
@@ -404,7 +418,7 @@ inline int asteroid::loop(){
 
 		}//end of ttt loop
 		for(int p = Nperturbers; p < N; ++p){
-			printf("Reached time %.20g\n", time_reference + time);
+			printf("Reached time %.20g %.20g\n", time_reference + time, dt);
 			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g\n", time_reference + time, p, x[p], y[p], z[p], dtmin);
 		}
 

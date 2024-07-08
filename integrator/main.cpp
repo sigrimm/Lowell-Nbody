@@ -31,6 +31,7 @@ int main(){
 	A.RKF_fac = 0.84;
 	A.RKF_facmin = 0.8;
 	A.RKF_facmax = 1.5;
+	A.RKFn = 6;
 	//----------------------------------------------------------
 
 	int er = 0;
@@ -46,8 +47,6 @@ int main(){
 	A.timeEnd -= A.time_reference;
 
 	//set integrator properties
-	A.RKFn = 6;
-
 
 	A.allocate();
 	printf("Allocate memory OK\n");

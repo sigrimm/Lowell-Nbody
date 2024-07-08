@@ -3,6 +3,6 @@ Start Time = 2459800.5
 End Time = 2439800.5
 Time Step = -0.01
 Output Interval = 10.0
-Integrator = LF
+Integrator = RKF45
 RKF absolute tolerance = 1.0e-16
 RKF relative tolerance = 1.0e-16
