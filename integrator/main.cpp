@@ -9,10 +9,10 @@ int main(){
 
 	asteroid A;
 
-	//A.perturbersFile = fopen("PerturbersChebyshev.dat", "r");
-	A.perturbersFile = fopen("PerturbersChebyshev.bin", "rb");
+	//A.perturbersFile = fopen("../readChebyshev/PerturbersChebyshev.dat", "r");
+	A.perturbersFile = fopen("../readChebyshev/PerturbersChebyshev.bin", "rb");
 	if(A.perturbersFile == NULL){
-		printf("Error, perturbers file %s not found\n", "PerturbersChebyshev.bin");
+		printf("Error, perturbers file %s not found\n", "../readChebyshev/PerturbersChebyshev.bin");
 		return 0;
 	}
 

@@ -168,7 +168,7 @@ int asteroid::readIC(){
 void asteroid::allocate(){
 	N = Nperturbers + 1;
 
-	perturbersFile = fopen("PerturbersChebyshev.bin", "rb");
+	perturbersFile = fopen("../readChebyshev/PerturbersChebyshev.bin", "rb");
 	nCm = 0;
 	dts = (dt > 0.0) ? 1.0 : -1.0;      //sign of time step
 	dt1 = dt;
