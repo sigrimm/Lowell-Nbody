@@ -1,5 +1,5 @@
 //Non Grav
-inline void asteroid::NonGrav(){
+inline void asteroid::NonGrav(double *x, double *y, double *z, double *vx, double *vy, double *vz){
 
 	for(int i = Nperturbers; i < N; ++i){
 
@@ -74,7 +74,7 @@ inline void asteroid::NonGrav(){
 
 	}
 }
-inline void asteroid::GR(){
+inline void asteroid::GR(double *x, double *y, double *z, double *vx, double *vy, double *vz){
 	//GR
 	for(int i = Nperturbers; i < N; ++i){
 		//Translate to heliocentric coordinates
@@ -113,7 +113,7 @@ inline void asteroid::GR(){
 	}
 }
 
-inline void asteroid::J2(){
+inline void asteroid::J2(double *x, double *y, double *z){
 	//J2
 	for(int i = Nperturbers; i < N; ++i){
 
@@ -146,7 +146,7 @@ inline void asteroid::J2(){
 	}
 }
 
-inline void asteroid::Gravity(){
+inline void asteroid::Gravity(double *x, double *y, double *z){
 	for(int i = Nperturbers; i < N; ++i){
 		for(int pp = 0; pp < Nperturbers; ++pp){
 			int p = pp + 11;

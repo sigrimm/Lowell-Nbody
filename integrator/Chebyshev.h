@@ -1,27 +1,28 @@
 inline void asteroid::update_Chebyshev(double time){
 
+	int er;
 	//Update the Chebyshev coefficients if necessary
 	for(int p = 0; p < Nperturbers; ++p){
 
 		const int pp = p * nCm * 3;
 		if(time + time_reference > endTime[p]){
 			for(int k = 0; k < 1000000; ++k){
-				//fscanf(infile, "%d", &id);
-				//fscanf(infile, "%d", &nChebyshev);
-				//fscanf(infile, "%lf", &startTime[p]);
-				//fscanf(infile, "%lf", &endTime[p]);
+				//fscanf(perturbersFile, "%d", &id);
+				//fscanf(perturbersFile, "%d", &nChebyshev);
+				//fscanf(perturbersFile, "%lf", &startTime[p]);
+				//fscanf(perturbersFile, "%lf", &endTime[p]);
 
-				fseek(infile, offset0[p] * sizeof(double), SEEK_SET);
+				fseek(perturbersFile, offset0[p] * sizeof(double), SEEK_SET);
 
-				fread(&startTime[p], sizeof(double), 1, infile);
-				fread(&endTime[p], sizeof(double), 1, infile);
+				er = fread(&startTime[p], sizeof(double), 1, perturbersFile);
+				er = fread(&endTime[p], sizeof(double), 1, perturbersFile);
 
 
 //printf(" ++ %d %d %d %d %.20g %.20g\n", p, id[p], offset0[p], nChebyshev[p], startTime[p], endTime[p]);
 
-				fread(cdata + pp, sizeof(double), nChebyshev[p] * 3, infile);
+				er = fread(cdata + pp, sizeof(double), nChebyshev[p] * 3, perturbersFile);
 				//for(int i = 0; i < nChebyshev[p] * 3; ++i){
-				//      fscanf(infile, "%lf", &cdata[pp + i]);
+				//      fscanf(perturbersFile, "%lf", &cdata[pp + i]);
 				//      printf("%.20g ", cdata[pp + i]);
 				//}
 				//printf("\n");
@@ -35,22 +36,22 @@ inline void asteroid::update_Chebyshev(double time){
 		}
 		if(time + time_reference < startTime[p]){
 			for(int k = 0; k < 1000000; ++k){
-				//fscanf(infile, "%d", &id);
-				//fscanf(infile, "%d", &nChebyshev);
-				//fscanf(infile, "%lf", &startTime[p]);
-				//fscanf(infile, "%lf", &endTime[p]);
+				//fscanf(perturbersFile, "%d", &id);
+				//fscanf(perturbersFile, "%d", &nChebyshev);
+				//fscanf(perturbersFile, "%lf", &startTime[p]);
+				//fscanf(perturbersFile, "%lf", &endTime[p]);
 
-				fseek(infile, offset0[p] * sizeof(double), SEEK_SET);
+				fseek(perturbersFile, offset0[p] * sizeof(double), SEEK_SET);
 
-				fread(&startTime[p], sizeof(double), 1, infile);
-				fread(&endTime[p], sizeof(double), 1, infile);
+				er = fread(&startTime[p], sizeof(double), 1, perturbersFile);
+				er = fread(&endTime[p], sizeof(double), 1, perturbersFile);
 
 
 //printf(" -- %d %d %d %d %.20g %.20g\n", p, id[p], offset0[p], nChebyshev[p], startTime[p], endTime[p]);
 
-				fread(cdata + pp, sizeof(double), nChebyshev[p] * 3, infile);
+				er = fread(cdata + pp, sizeof(double), nChebyshev[p] * 3, perturbersFile);
 				//for(int i = 0; i < nChebyshev[p] * 3; ++i){
-				//      fscanf(infile, "%lf", &cdata[pp + i]);
+				//      fscanf(perturbersFile, "%lf", &cdata[pp + i]);
 				//      printf("%.20g ", cdata[pp + i]);
 				//}
 				//printf("\n");
