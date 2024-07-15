@@ -24,7 +24,7 @@ Author: Simon Grimm, ETH Zürich, University of Zürich, Switzerland
 
 allowed integrators are:
 
-- LP, leapfrog 
+- LF, leapfrog 
 - RK4, Runge Kutta 4, fixed time steps
 - RKF45, Runge Kutta Fehlberg 45, adaptive time steps
 - DP54, Runge Kutta Fehlberg 54, adaptive time steps

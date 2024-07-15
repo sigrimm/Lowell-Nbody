@@ -346,6 +346,10 @@ inline int asteroid::loop(){
 
 
 	outputFile = fopen("Out.dat", "w");
+	for(int p = Nperturbers; p < N; ++p){
+		printf("start integration %.20g %.20g\n", time_reference + time, dt);
+		fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x[p], y[p], z[p], vx[p], vy[p], vz[p], dt);
+	}
 	//for(int tt = 0; tt < 2; ++tt){
 	for(int tt = 0; tt < 2000; ++tt){
 		double dtmin = dt;
@@ -419,7 +423,7 @@ inline int asteroid::loop(){
 		}//end of ttt loop
 		for(int p = Nperturbers; p < N; ++p){
 			printf("Reached time %.20g %.20g\n", time_reference + time, dt);
-			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g\n", time_reference + time, p, x[p], y[p], z[p], dtmin);
+			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x[p], y[p], z[p], vx[p], vy[p], vz[p], dtmin);
 		}
 
 	}//end of tt loop
