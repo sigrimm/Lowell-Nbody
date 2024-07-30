@@ -351,10 +351,10 @@ inline int asteroid::loop(){
 		fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x[p], y[p], z[p], vx[p], vy[p], vz[p], dt);
 	}
 	//for(int tt = 0; tt < 2; ++tt){
-	for(int tt = 0; tt < 2000; ++tt){
+	for(int tt = 0; tt < 1000000; ++tt){
 		double dtmin = dt;
 
-		double timett1 = timeStart + dts * (tt + 1) * 10.0;
+		double timett1 = timeStart + dts * (tt + 1) * outputInterval;
 
 //printf("integrate %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1);
 
@@ -362,7 +362,7 @@ inline int asteroid::loop(){
 		for(int ttt = 0; ttt < 1000000; ++ttt){
 
 			//refine last time step of interval to match output time
-			if(dts < 0.0){
+			if(dts < 0){
 				if(time + dt < timett1){
 					dt1 = dt;
 					dt = (timett1 - time);
@@ -403,7 +403,11 @@ inline int asteroid::loop(){
 				return 0;
 			}
 
-			if(time < timeEnd){
+			if(dts < 0 && time < timeEnd){
+				printf("Reached the end of the integration\n");
+				return 0;
+			}
+			if(dts > 0 && time > timeEnd){
 				printf("Reached the end of the integration\n");
 				return 0;
 			}

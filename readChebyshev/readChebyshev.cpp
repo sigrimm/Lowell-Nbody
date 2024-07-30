@@ -9,6 +9,61 @@ int main(){
 	double time0 = 2450800.5;
 	double time1 = 2459800.5;
 
+	
+	// **********************************************
+	//read paramChebyshev.dat file
+
+	FILE *paramfile;
+	paramfile = fopen("paramChebyshev.dat", "r");
+
+	if(paramfile == NULL){
+		printf("Error, paramChebyshev.dat file does not exist\n");
+		return 0;
+	}
+
+	char sp[160];
+	int er;
+
+	for(int j = 0; j < 1000; ++j){ //loop around all lines in the param.dat file
+		int c;
+		for(int i = 0; i < 50; ++i){
+			c = fgetc(paramfile);
+			if(c == EOF){
+				break;
+			}
+			sp[i] = char(c);
+			if(c == '=' || c == ':'){
+				sp[i + 1] = '\0';
+				break;
+			}
+		}
+		if(c == EOF) break;
+		if(strcmp(sp, "Start Time =") == 0){
+			er = fscanf (paramfile, "%lf", &time0);
+			if(er <= 0){
+			printf("Error: Start Time value is not valid!\n");
+			return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "End Time =") == 0){
+			er = fscanf (paramfile, "%lf", &time1);
+			if(er <= 0){
+			printf("Error: End Time value is not valid!\n");
+			return 0;
+			}
+			fgets(sp, 3, paramfile);
+		}
+		else{
+			printf("Error: param.dat file is not valid! %s\n", sp);
+			return 0;
+		}
+	}
+	fclose(paramfile);
+	printf("Read paramChebyshev.dat file OK\n");
+	printf("Start Time: %.20g End Time %.20g\n", time0, time1);
+
+	// **********************************************
 
 	planets pl;
 	perturbers pert;
@@ -83,8 +138,6 @@ int main(){
 
 	//outFile = fopen(outFileName, "w");
 	outFile = fopen(outFileName, "wb");
-
-	int er;
 
 	// **********************************************
 	// Planets

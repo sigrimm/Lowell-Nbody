@@ -13,6 +13,7 @@ Author: Simon Grimm, ETH Zürich, University of Zürich, Switzerland
 - Download header.440
 - Download sb441-n16.bsp
 - make
+- set start time and end time of desired perturbers data in paramChebyshev.dat
 - ./readChebyshev
 
 ## Step 2, set parameters ##

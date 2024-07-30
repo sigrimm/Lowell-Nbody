@@ -6,6 +6,11 @@ int asteroid::readParam(){
 	FILE *paramfile;
 	paramfile = fopen("param.dat", "r");
 
+	if(paramfile == NULL){
+		printf("Error, param.dat file does not exist\n");
+		return 0;
+	}
+
 
 	char sp[160];
 	int er;
