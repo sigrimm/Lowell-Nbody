@@ -52,31 +52,31 @@ public:
 
 	double *cdata;
 
-	double *x;
-	double *y;
-	double *z;
+	double *x_h, *x_d;
+	double *y_h, *y_d;
+	double *z_h, *z_d;
 
-	double *vx;
-	double *vy;
-	double *vz;
+	double *vx_h, *vx_d;
+	double *vy_h, *vy_d;
+	double *vz_h, *vz_d;
 
-	double *ax;
-	double *ay;
-	double *az;
+	double *ax_h, *ax_d;
+	double *ay_h, *ay_d;
+	double *az_h, *az_d;
 
 	//Non-grav terms
-	double *A1;
-	double *A2;
-	double *A3;
+	double *A1_h, *A1_d;
+	double *A2_h, *A2_d;
+	double *A3_h, *A3_d;
 
 
 
 	//RKF arrays
 	int RKFn;
-        double *a_h;
-	double *b_h;
-	double *bb_h;
-	double *c_h;
+        double *a_h, *a_d;
+	double *b_h, *b_d;
+	double *bb_h, *bb_d;
+	double *c_h, *c_d;
         double RKF_ee;
 	double RKF_atol;
 	double RKF_rtol;
@@ -84,34 +84,38 @@ public:
 	double RKF_facmin;
 	double RKF_facmax;
 
-	double *xt;
-	double *yt;
-	double *zt;
+	double *xt_h, *xt_d;
+	double *yt_h, *yt_d;
+	double *zt_h, *zt_d;
 
-	double *vxt;
-	double *vyt;
-	double *vzt;
+	double *vxt_h, *vxt_d;
+	double *vyt_h, *vyt_d;
+	double *vzt_h, *vzt_d;
 
-	double *dx;
-	double *dy;
-	double *dz;
+	double *dx_h, *dx_d;
+	double *dy_h, *dy_d;
+	double *dz_h, *dz_d;
 
-	double *dvx;
-	double *dvy;
-	double *dvz;
+	double *dvx_h, *dvx_d;
+	double *dvy_h, *dvy_d;
+	double *dvz_h, *dvz_d;
 
-	double *kx;
-	double *ky;
-	double *kz;
+	double *kx_h, *kx_d;
+	double *ky_h, *ky_d;
+	double *kz_h, *kz_d;
 
-	double *kvx;
-	double *kvy;
-	double *kvz;
+	double *kvx_h, *kvx_d;
+	double *kvy_h, *kvy_d;
+	double *kvz_h, *kvz_d;
 
 
 	int readParam();
 	int readIC();
+	int copyIC();
 	void allocate();
+	int allocateGPU();
+	void copyOutput();
+
 	inline void update_Chebyshev(double);
 	inline void update_perturbers(double);
 	inline void NonGrav(double *, double *, double *, double *, double *, double *);

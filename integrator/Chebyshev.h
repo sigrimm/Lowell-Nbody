@@ -138,21 +138,21 @@ inline void asteroid::update_perturbers(double time){
 			vzp += Tvz[j] * cdata[pp + 2 * nC + j] * ct;
 		}
 
-		x[p] = xp;
-		y[p] = yp;
-		z[p] = zp;
+		x_h[p] = xp;
+		y_h[p] = yp;
+		z_h[p] = zp;
 
-		vx[p] = vxp;
-		vy[p] = vyp;
-		vz[p] = vzp;
+		vx_h[p] = vxp;
+		vy_h[p] = vyp;
+		vz_h[p] = vzp;
 
-//printf("positionA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, x[p], y[p], z[p], t);
-//printf("positionvA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, vx[p], vy[p], vz[p], t);
+//printf("positionA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, x_h[p], y_h[p], z_h[p], t);
+//printf("positionvA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, v_hx[p], vy_h[p], vz_h[p], t);
 
 
-//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, x[p] / AUtokm, y[p] / AUtokm, z[p] / AUtokm, t);
+//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, x_h[p] / AUtokm, y_h[p] / AUtokm, z_h[p] / AUtokm, t);
 
-//printf("%d %.20g %.20g %.20g %.20g %.20g\n", p, time, x[p], y[p], z[p], t);
+//printf("%d %.20g %.20g %.20g %.20g %.20g\n", p, time, x_h[p], y_h[p], z_h[p], t);
 
 
 	}
@@ -160,55 +160,55 @@ inline void asteroid::update_perturbers(double time){
 	//Calculate Earth and Moon positions, id 2 and 9
 	//Up to here id = 2 is the Earth-Moon barycentrum, id = 9 is the geocentric position of the Moon        
 
-	double xB = x[2];
-	double yB = y[2];
-	double zB = z[2];
+	double xB = x_h[2];
+	double yB = y_h[2];
+	double zB = z_h[2];
 
-	double vxB = vx[2];
-	double vyB = vy[2];
-	double vzB = vz[2];
+	double vxB = vx_h[2];
+	double vyB = vy_h[2];
+	double vzB = vz_h[2];
 
-	double xM = x[9];
-	double yM = y[9];
-	double zM = z[9];
+	double xM = x_h[9];
+	double yM = y_h[9];
+	double zM = z_h[9];
 
-	double vxM = vx[9];
-	double vyM = vy[9];
-	double vzM = vz[9];
+	double vxM = vx_h[9];
+	double vyM = vy_h[9];
+	double vzM = vz_h[9];
 
 	double f = 1.0/(1.0 + EM);
 
-	x[2] = xB - xM * f;
-	y[2] = yB - yM * f;
-	z[2] = zB - zM * f;
+	x_h[2] = xB - xM * f;
+	y_h[2] = yB - yM * f;
+	z_h[2] = zB - zM * f;
 
-	vx[2] = vxB - vxM * f;
-	vy[2] = vyB - vyM * f;
-	vz[2] = vzB - vzM * f;
+	vx_h[2] = vxB - vxM * f;
+	vy_h[2] = vyB - vyM * f;
+	vz_h[2] = vzB - vzM * f;
 
-	x[9] = xB + xM * EM * f;
-	y[9] = yB + yM * EM * f;
-	z[9] = zB + zM * EM * f;
+	x_h[9] = xB + xM * EM * f;
+	y_h[9] = yB + yM * EM * f;
+	z_h[9] = zB + zM * EM * f;
 
-	vx[9] = vxB + vxM * EM * f;
-	vy[9] = vyB + vyM * EM * f;
-	vz[9] = vzB + vzM * EM * f;
+	vx_h[9] = vxB + vxM * EM * f;
+	vy_h[9] = vyB + vyM * EM * f;
+	vz_h[9] = vzB + vzM * EM * f;
 
 	for(int p = 0; p < Nperturbers; ++p){
 		//positions are in km
 		//velocities are in km/day
-		x[p] /= AUtokm;
-		y[p] /= AUtokm;
-		z[p] /= AUtokm;
+		x_h[p] /= AUtokm;
+		y_h[p] /= AUtokm;
+		z_h[p] /= AUtokm;
 
-		//vx[p] /= AUtokm;
-		//vy[p] /= AUtokm;
-		//vz[p] /= AUtokm;
+		//vx_h[p] /= AUtokm;
+		//vy_h[p] /= AUtokm;
+		//vz_h[p] /= AUtokm;
 		//remove time factor again
-		vx[p] /= AUtokm / 86400.0;
-		vy[p] /= AUtokm / 86400.0;
-		vz[p] /= AUtokm / 86400.0;
-//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, x[p], y[p], z[p]);
+		vx_h[p] /= AUtokm / 86400.0;
+		vy_h[p] /= AUtokm / 86400.0;
+		vz_h[p] /= AUtokm / 86400.0;
+//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, x_h[p], y_h[p], z_h[p]);
 
 	}
 
@@ -230,18 +230,18 @@ inline void asteroid::update_perturbers(double time){
 		if(pp == 26) p = 4;     //Jupiter
 
 
-		//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, x[p], y[p], z[p]);
-		//printf("positionvB %d %.20g %.20g %.20g %.20g\n", p, time, vx[p], vy[p], vz[p]);
-		//printf("positionB %d %.20g %.20g %.20g %.20g\n", pp, time, x[pp], y[pp], z[pp]);
+		//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, x_h[p], y_h[p], z_h[p]);
+		//printf("positionvB %d %.20g %.20g %.20g %.20g\n", p, time, vx_h[p], vy_h[p], vz_h[p]);
+		//printf("positionB %d %.20g %.20g %.20g %.20g\n", pp, time, x_h[pp], y_h[pp], z_h[pp]);
 	}
 	*/
 
 	//Translate asteroid orbits from Heliocentric to Barycentric coordinates
 	//This is done so in Assist, but probably this is not correct, check!
 	for(int p = 11; p < Nperturbers; ++p){
-		x[p] += x[10];
-		y[p] += y[10];
-		z[p] += z[10];
+		x_h[p] += x_h[10];
+		y_h[p] += y_h[10];
+		z_h[p] += z_h[10];
 	}
 
 }

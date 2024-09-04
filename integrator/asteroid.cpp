@@ -146,28 +146,26 @@ int asteroid::readIC(){
 	}
 	for(int i = Nperturbers; i < N; ++i){
 		int er = 0;
-		er = fscanf(infile, "%lf", &x[i]);
-		er = fscanf(infile, "%lf", &y[i]);
-		er = fscanf(infile, "%lf", &z[i]);
-		er = fscanf(infile, "%lf", &vx[i]);
-		er = fscanf(infile, "%lf", &vy[i]);
-		er = fscanf(infile, "%lf", &vz[i]);
-		er = fscanf(infile, "%lf", &A1[i]);
-		er = fscanf(infile, "%lf", &A2[i]);
-		er = fscanf(infile, "%lf", &A3[i]);
+		er = fscanf(infile, "%lf", &x_h[i]);
+		er = fscanf(infile, "%lf", &y_h[i]);
+		er = fscanf(infile, "%lf", &z_h[i]);
+		er = fscanf(infile, "%lf", &vx_h[i]);
+		er = fscanf(infile, "%lf", &vy_h[i]);
+		er = fscanf(infile, "%lf", &vz_h[i]);
+		er = fscanf(infile, "%lf", &A1_h[i]);
+		er = fscanf(infile, "%lf", &A2_h[i]);
+		er = fscanf(infile, "%lf", &A3_h[i]);
 		if(er < 0){
 			printf("Error, reading initial conditions file failed.\n");
 		return 0;
 	}
-	//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x[i], y[i], z[i], vx[i], vy[i], vz[i], A1[i], A2[i], A3[i]);
+	//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}
 	fclose(infile);
 
 	return 1;
 
 }
-
-
 
 
 void asteroid::allocate(){
@@ -222,46 +220,45 @@ void asteroid::allocate(){
 	REAU = RE / AUtokm;   //Earth radius in AU
 
 
-	x = (double*)malloc(N * sizeof(double));
-	y = (double*)malloc(N * sizeof(double));
-	z = (double*)malloc(N * sizeof(double));
+	x_h = (double*)malloc(N * sizeof(double));
+	y_h = (double*)malloc(N * sizeof(double));
+	z_h = (double*)malloc(N * sizeof(double));
 
-	vx = (double*)malloc(N * sizeof(double));
-	vy = (double*)malloc(N * sizeof(double));
-	vz = (double*)malloc(N * sizeof(double));
+	vx_h = (double*)malloc(N * sizeof(double));
+	vy_h = (double*)malloc(N * sizeof(double));
+	vz_h = (double*)malloc(N * sizeof(double));
 
-	xt = (double*)malloc(N * sizeof(double));
-	yt = (double*)malloc(N * sizeof(double));
-	zt = (double*)malloc(N * sizeof(double));
+	xt_h = (double*)malloc(N * sizeof(double));
+	yt_h = (double*)malloc(N * sizeof(double));
+	zt_h = (double*)malloc(N * sizeof(double));
 
-	vxt = (double*)malloc(N * sizeof(double));
-	vyt = (double*)malloc(N * sizeof(double));
-	vzt = (double*)malloc(N * sizeof(double));
+	vxt_h = (double*)malloc(N * sizeof(double));
+	vyt_h = (double*)malloc(N * sizeof(double));
+	vzt_h = (double*)malloc(N * sizeof(double));
 
-	dx = (double*)malloc(N * sizeof(double));
-	dy = (double*)malloc(N * sizeof(double));
-	dz = (double*)malloc(N * sizeof(double));
+	dx_h = (double*)malloc(N * sizeof(double));
+	dy_h = (double*)malloc(N * sizeof(double));
+	dz_h = (double*)malloc(N * sizeof(double));
 
-	dvx = (double*)malloc(N * sizeof(double));
-	dvy = (double*)malloc(N * sizeof(double));
-	dvz = (double*)malloc(N * sizeof(double));
+	dvx_h = (double*)malloc(N * sizeof(double));
+	dvy_h = (double*)malloc(N * sizeof(double));
+	dvz_h = (double*)malloc(N * sizeof(double));
 
-	kx = (double*)malloc(N * RKFn * sizeof(double));
-	ky = (double*)malloc(N * RKFn * sizeof(double));
-	kz = (double*)malloc(N * RKFn * sizeof(double));
+	kx_h = (double*)malloc(N * RKFn * sizeof(double));
+	ky_h = (double*)malloc(N * RKFn * sizeof(double));
+	kz_h = (double*)malloc(N * RKFn * sizeof(double));
 
-	kvx = (double*)malloc(N * RKFn * sizeof(double));
-	kvy = (double*)malloc(N * RKFn * sizeof(double));
-	kvz = (double*)malloc(N * RKFn * sizeof(double));
+	kvx_h = (double*)malloc(N * RKFn * sizeof(double));
+	kvy_h = (double*)malloc(N * RKFn * sizeof(double));
+	kvz_h = (double*)malloc(N * RKFn * sizeof(double));
 
-	ax = (double*)malloc(N * sizeof(double));
-	ay = (double*)malloc(N * sizeof(double));
-	az = (double*)malloc(N * sizeof(double));
+	ax_h = (double*)malloc(N * sizeof(double));
+	ay_h = (double*)malloc(N * sizeof(double));
+	az_h = (double*)malloc(N * sizeof(double));
 
-	A1 = (double*)malloc(N * sizeof(double));
-	A2 = (double*)malloc(N * sizeof(double));
-	A3 = (double*)malloc(N * sizeof(double));
-
+	A1_h = (double*)malloc(N * sizeof(double));
+	A2_h = (double*)malloc(N * sizeof(double));
+	A3_h = (double*)malloc(N * sizeof(double));
 
 
 	a_h = (double*)malloc(RKFn * RKFn * sizeof(double));

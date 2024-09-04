@@ -7,6 +7,11 @@
 
 int main(){
 
+
+#if USEGPU == 1
+	printf("Use GPU %d\n", USEGPU);
+#endif
+
 	asteroid A;
 
 	//A.perturbersFile = fopen("../readChebyshev/PerturbersChebyshev.dat", "r");
@@ -49,6 +54,12 @@ int main(){
 	//set integrator properties
 
 	A.allocate();
+#if USEGPU == 1
+	er = A.allocateGPU();
+	if(er <= 0){
+		return 0;
+	}
+#endif
 	printf("Allocate memory OK\n");
 	
 	if(A.RKFn == 4){
@@ -72,6 +83,13 @@ int main(){
 	if(er <= 0){
 		return 0;
 	}
+#if USEGPU == 1
+	er = A.copyIC();
+
+	if(er <= 0){
+		return 0;
+	}
+#endif
 	printf("Read initial conditions file OK\n");
 
 	/*

@@ -3,20 +3,20 @@
 //Leapfrog step with fixed time step
 inline void asteroid::leapfrog_step(){
 	//Drift
-	for(int p = Nperturbers; p < N; ++p){
-//printf("Drift %d %.20g %.20g %.20g %.20g\n", p, x[p], vx[p], dt, 0.5* dt * vx[p]);
-		x[p] += 0.5* dt * vx[p];
-		y[p] += 0.5* dt * vy[p];
-		z[p] += 0.5* dt * vz[p];
+	for(int i = Nperturbers; i < N; ++i){
+//printf("Drift %d %.20g %.20g %.20g %.20g\n", i, x_h[i], vx_h[i], dt, 0.5* dt * vx_h[i]);
+		x_h[i] += 0.5* dt * vx_h[i];
+		y_h[i] += 0.5* dt * vy_h[i];
+		z_h[i] += 0.5* dt * vz_h[i];
 	}
 	time += dt / 2.0;
 	//printf("ta %.20g\n", time);   
 
 	// ----------------------------------------------------------------------------
 	for(int i = Nperturbers; i < N; ++i){
-		ax[i] = 0.0;
-		ay[i] = 0.0;
-		az[i] = 0.0;
+		ax_h[i] = 0.0;
+		ay_h[i] = 0.0;
+		az_h[i] = 0.0;
 	}
 	// ----------------------------------------------------------------------------
 	//Update the Chebyshev coefficients if necessary
@@ -26,26 +26,25 @@ inline void asteroid::leapfrog_step(){
 
 	// ----------------------------------------------------------------------------
 	//compute forces
-	NonGrav(x, y, z, vx, vy, vz);
-	GR(x, y, z, vx, vy, vz);
-	J2(x, y, z);
-	Gravity(x, y, z);
+	NonGrav(x_h, y_h, z_h, vx_h, vy_h, vz_h);
+	GR(x_h, y_h, z_h, vx_h, vy_h, vz_h);
+	J2(x_h, y_h, z_h);
+	Gravity(x_h, y_h, z_h);
 	// ----------------------------------------------------------------------------
 
 	//Kick
 	for(int i = Nperturbers; i < N; ++i){
-//printf("Kick %d %.20g %.20g %.20g %.20g\n", i, vx[i], ax[i], dt, dt * ax[i]);
-		vx[i] += dt * ax[i];
-		vy[i] += dt * ay[i];
-		vz[i] += dt * az[i];
+//printf("Kick %d %.20g %.20g %.20g %.20g\n", i, vx_h[i], ax_h[i], dt, dt * ax_h[i]);
+		vx_h[i] += dt * ax_h[i];
+		vy_h[i] += dt * ay_h[i];
+		vz_h[i] += dt * az_h[i];
 	}
 	//Drift
-	for(int p = Nperturbers; p < N; ++p){
-//printf("Drift %d %.20g %.20g %.20g %.20g\n", p, x[p], vx[p], dt, 0.5* dt * vx[p]);
-		x[p] += 0.5* dt * vx[p];
-		y[p] += 0.5* dt * vy[p];
-		z[p] += 0.5* dt * vz[p];
-	//printf("%.20g %d %.20g %.20g %.20g\n", time + dt / 2.0, p, x[p], y[p], z[p]);
+	for(int i = Nperturbers; i < N; ++i){
+//printf("Drift %d %.20g %.20g %.20g %.20g\n", i, x_h[i], vx_h[i], dt, 0.5* dt * vx_h[i]);
+		x_h[i] += 0.5* dt * vx_h[i];
+		y_h[i] += 0.5* dt * vy_h[i];
+		z_h[i] += 0.5* dt * vz_h[i];
 	}
 	time += dt / 2.0;
 	//printf("tb %.20g\n", time); 
@@ -63,92 +62,92 @@ inline void asteroid::RK_step(){
 		update_perturbers(time + c_h[S] * dt);
 
 		for(int i = 0; i < Nperturbers; ++i){
-			xt[i] = x[i];
-			yt[i] = y[i];
-			zt[i] = z[i];
+			xt_h[i] = x_h[i];
+			yt_h[i] = y_h[i];
+			zt_h[i] = z_h[i];
 
-			vxt[i] = vx[i];
-			vyt[i] = vy[i];
-			vzt[i] = vz[i];
+			vxt_h[i] = vx_h[i];
+			vyt_h[i] = vy_h[i];
+			vzt_h[i] = vz_h[i];
 		}
 		// ----------------------------------------------------------------------------
 
 		for(int i = Nperturbers; i < N; ++i){
-			ax[i] = 0.0;
-			ay[i] = 0.0;
-			az[i] = 0.0;
+			ax_h[i] = 0.0;
+			ay_h[i] = 0.0;
+			az_h[i] = 0.0;
 
-			xt[i] = x[i];
-			yt[i] = y[i];
-			zt[i] = z[i];
+			xt_h[i] = x_h[i];
+			yt_h[i] = y_h[i];
+			zt_h[i] = z_h[i];
 
-			vxt[i] = vx[i];
-			vyt[i] = vy[i];
-			vzt[i] = vz[i];
+			vxt_h[i] = vx_h[i];
+			vyt_h[i] = vy_h[i];
+			vzt_h[i] = vz_h[i];
 
 			for(int s = 0; s < S; ++s){
 				double dtaa = dt * a_h[S * RKFn + s];
-				xt[i]  += dtaa * kx[i + s * N];
-				yt[i]  += dtaa * ky[i + s * N];
-				zt[i]  += dtaa * kz[i + s * N];
-				vxt[i] += dtaa * kvx[i + s * N];
-				vyt[i] += dtaa * kvy[i + s * N];
-				vzt[i] += dtaa * kvz[i + s * N];
-//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], a_h[S * RKFn + s], kx[s], dt);
+				xt_h[i]  += dtaa * kx_h[i + s * N];
+				yt_h[i]  += dtaa * ky_h[i + s * N];
+				zt_h[i]  += dtaa * kz_h[i + s * N];
+				vxt_h[i] += dtaa * kvx_h[i + s * N];
+				vyt_h[i] += dtaa * kvy_h[i + s * N];
+				vzt_h[i] += dtaa * kvz_h[i + s * N];
+//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], a_h[S * RKFn + s], kx_h[s], dt);
 
 			}
 
-			kx[i + S * N] = vxt[i];
-			ky[i + S * N] = vyt[i];
-			kz[i + S * N] = vzt[i];
+			kx_h[i + S * N] = vxt_h[i];
+			ky_h[i + S * N] = vyt_h[i];
+			kz_h[i + S * N] = vzt_h[i];
 
 		}
 
 		// ----------------------------------------------------------------------------
 		//compute forces
-		NonGrav(xt, yt, zt, vxt, vyt, vzt);
-		GR(xt, yt, zt, vxt, vyt, vzt);
-		J2(xt, yt, zt);
-		Gravity(xt, yt, zt);
+		NonGrav(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h);
+		GR(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h);
+		J2(xt_h, yt_h, zt_h);
+		Gravity(xt_h, yt_h, zt_h);
 		// ----------------------------------------------------------------------------
 		for(int i = Nperturbers; i < N; ++i){
-			kvx[i + S * N] = ax[i];
-			kvy[i + S * N] = ay[i];
-			kvz[i + S * N] = az[i];
+			kvx_h[i + S * N] = ax_h[i];
+			kvy_h[i + S * N] = ay_h[i];
+			kvz_h[i + S * N] = az_h[i];
 		}
 	}
 
 	//update
 	for(int i = Nperturbers; i < N; ++i){
 
-		dx[i] = 0.0;
-		dy[i] = 0.0;
-		dz[i] = 0.0;
+		dx_h[i] = 0.0;
+		dy_h[i] = 0.0;
+		dz_h[i] = 0.0;
 
-		dvx[i] = 0.0;
-		dvy[i] = 0.0;
-		dvz[i] = 0.0;
+		dvx_h[i] = 0.0;
+		dvy_h[i] = 0.0;
+		dvz_h[i] = 0.0;
 
 		for(int S = 0; S < RKFn; ++S){
 			double dtb = dt * b_h[S];
-			dx[i] += dtb * kx[i + S * N];
-			dy[i] += dtb * ky[i + S * N];
-			dz[i] += dtb * kz[i + S * N];
+			dx_h[i] += dtb * kx_h[i + S * N];
+			dy_h[i] += dtb * ky_h[i + S * N];
+			dz_h[i] += dtb * kz_h[i + S * N];
 
-			dvx[i] += dtb * kvx[i + S * N];
-			dvy[i] += dtb * kvy[i + S * N];
-			dvz[i] += dtb * kvz[i + S * N];
+			dvx_h[i] += dtb * kvx_h[i + S * N];
+			dvy_h[i] += dtb * kvy_h[i + S * N];
+			dvz_h[i] += dtb * kvz_h[i + S * N];
 		}
 	}
 
 	for(int i = Nperturbers; i < N; ++i){
-		x[i] += dx[i];
-		y[i] += dy[i];
-		z[i] += dz[i];
+		x_h[i] += dx_h[i];
+		y_h[i] += dy_h[i];
+		z_h[i] += dz_h[i];
 
-		vx[i] += dvx[i];
-		vy[i] += dvy[i];
-		vz[i] += dvz[i];
+		vx_h[i] += dvx_h[i];
+		vy_h[i] += dvy_h[i];
+		vz_h[i] += dvz_h[i];
 
 	}
 	time += dt;
@@ -165,81 +164,81 @@ inline void asteroid::RKF_step(){
 		update_perturbers(time + c_h[S] * dt);
 
 		for(int i = 0; i < Nperturbers; ++i){
-			xt[i] = x[i];
-			yt[i] = y[i];
-			zt[i] = z[i];
+			xt_h[i] = x_h[i];
+			yt_h[i] = y_h[i];
+			zt_h[i] = z_h[i];
 
-			vxt[i] = vx[i];
-			vyt[i] = vy[i];
-			vzt[i] = vz[i];
+			vxt_h[i] = vx_h[i];
+			vyt_h[i] = vy_h[i];
+			vzt_h[i] = vz_h[i];
 		}
 		// ----------------------------------------------------------------------------
 
 		for(int i = Nperturbers; i < N; ++i){
-			ax[i] = 0.0;
-			ay[i] = 0.0;
-			az[i] = 0.0;
+			ax_h[i] = 0.0;
+			ay_h[i] = 0.0;
+			az_h[i] = 0.0;
 
-			xt[i] = x[i];
-			yt[i] = y[i];
-			zt[i] = z[i];
+			xt_h[i] = x_h[i];
+			yt_h[i] = y_h[i];
+			zt_h[i] = z_h[i];
 
-			vxt[i] = vx[i];
-			vyt[i] = vy[i];
-			vzt[i] = vz[i];
+			vxt_h[i] = vx_h[i];
+			vyt_h[i] = vy_h[i];
+			vzt_h[i] = vz_h[i];
 
 			for(int s = 0; s < S; ++s){
 				double dtaa = dt * a_h[S * RKFn + s];
-				xt[i]  += dtaa * kx[i + s * N];
-				yt[i]  += dtaa * ky[i + s * N];
-				zt[i]  += dtaa * kz[i + s * N];
-				vxt[i] += dtaa * kvx[i + s * N];
-				vyt[i] += dtaa * kvy[i + s * N];
-				vzt[i] += dtaa * kvz[i + s * N];
-//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], a_h[S * RKFn + s], kx[s], dt);
+				xt_h[i]  += dtaa * kx_h[i + s * N];
+				yt_h[i]  += dtaa * ky_h[i + s * N];
+				zt_h[i]  += dtaa * kz_h[i + s * N];
+				vxt_h[i] += dtaa * kvx_h[i + s * N];
+				vyt_h[i] += dtaa * kvy_h[i + s * N];
+				vzt_h[i] += dtaa * kvz_h[i + s * N];
+//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], a_h[S * RKFn + s], kx_h[s], dt);
 
 			}
 
-			kx[i + S * N] = vxt[i];
-			ky[i + S * N] = vyt[i];
-			kz[i + S * N] = vzt[i];
+			kx_h[i + S * N] = vxt_h[i];
+			ky_h[i + S * N] = vyt_h[i];
+			kz_h[i + S * N] = vzt_h[i];
 
 		}
 
 		// ----------------------------------------------------------------------------
 		//compute forces
-		NonGrav(xt, yt, zt, vxt, vyt, vzt);
-		GR(xt, yt, zt, vxt, vyt, vzt);
-		J2(xt, yt, zt);
-		Gravity(xt, yt, zt);
+		NonGrav(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h);
+		GR(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h);
+		J2(xt_h, yt_h, zt_h);
+		Gravity(xt_h, yt_h, zt_h);
 		// ----------------------------------------------------------------------------
 		for(int i = Nperturbers; i < N; ++i){
-			kvx[i + S * N] = ax[i];
-			kvy[i + S * N] = ay[i];
-			kvz[i + S * N] = az[i];
+			kvx_h[i + S * N] = ax_h[i];
+			kvy_h[i + S * N] = ay_h[i];
+			kvz_h[i + S * N] = az_h[i];
 		}
 	}
 
 	//update
 	for(int i = Nperturbers; i < N; ++i){
 
-		dx[i] = 0.0;
-		dy[i] = 0.0;
-		dz[i] = 0.0;
+		dx_h[i] = 0.0;
+		dy_h[i] = 0.0;
+		dz_h[i] = 0.0;
 
-		dvx[i] = 0.0;
-		dvy[i] = 0.0;
-		dvz[i] = 0.0;
+		dvx_h[i] = 0.0;
+		dvy_h[i] = 0.0;
+		dvz_h[i] = 0.0;
 
 		for(int S = 0; S < RKFn; ++S){
 			double dtb = dt * b_h[S];
-			dx[i] += dtb * kx[i + S * N];
-			dy[i] += dtb * ky[i + S * N];
-			dz[i] += dtb * kz[i + S * N];
+			dx_h[i] += dtb * kx_h[i + S * N];
+			dy_h[i] += dtb * ky_h[i + S * N];
+			dz_h[i] += dtb * kz_h[i + S * N];
 
-			dvx[i] += dtb * kvx[i + S * N];
-			dvy[i] += dtb * kvy[i + S * N];
-			dvz[i] += dtb * kvz[i + S * N];
+			dvx_h[i] += dtb * kvx_h[i + S * N];
+			dvy_h[i] += dtb * kvy_h[i + S * N];
+			dvz_h[i] += dtb * kvz_h[i + S * N];
 		}
 	}
 
@@ -249,13 +248,13 @@ inline void asteroid::RKF_step(){
 
 	for(int i = Nperturbers; i < N; ++i){
 		double ym = 0.0;
-		ym = (fabs(x[i]) > ym) ? fabs(x[i]) : ym;
-		ym = (fabs(y[i]) > ym) ? fabs(y[i]) : ym;
-		ym = (fabs(z[i]) > ym) ? fabs(z[i]) : ym;
+		ym = (fabs(x_h[i]) > ym) ? fabs(x_h[i]) : ym;
+		ym = (fabs(y_h[i]) > ym) ? fabs(y_h[i]) : ym;
+		ym = (fabs(z_h[i]) > ym) ? fabs(z_h[i]) : ym;
 
-		ym = (fabs(vx[i]) > ym) ? fabs(vx[i]) : ym;
-		ym = (fabs(vy[i]) > ym) ? fabs(vy[i]) : ym;
-		ym = (fabs(vz[i]) > ym) ? fabs(vz[i]) : ym;
+		ym = (fabs(vx_h[i]) > ym) ? fabs(vx_h[i]) : ym;
+		ym = (fabs(vy_h[i]) > ym) ? fabs(vy_h[i]) : ym;
+		ym = (fabs(vz_h[i]) > ym) ? fabs(vz_h[i]) : ym;
 
 		double isc = 1.0 / (RKF_atol + ym * RKF_rtol);
 
@@ -270,13 +269,13 @@ inline void asteroid::RKF_step(){
 
 		for(int S = 0; S < RKFn; ++S){
 			double f = (b_h[S] - bb_h[S]) * dt;
-			errorkx += f * kx[i + S * N];
-			errorky += f * ky[i + S * N];
-			errorkz += f * kz[i + S * N];
+			errorkx += f * kx_h[i + S * N];
+			errorky += f * ky_h[i + S * N];
+			errorkz += f * kz_h[i + S * N];
 
-			errorkvx += f * kvx[i + S * N];
-			errorkvy += f * kvy[i + S * N];
-			errorkvz += f * kvz[i + S * N];
+			errorkvx += f * kvx_h[i + S * N];
+			errorkvy += f * kvy_h[i + S * N];
+			errorkvz += f * kvz_h[i + S * N];
 //printf("error %d %d %g %g\n", i, S, errorkx, kx[S]);
 		}
 
@@ -300,13 +299,13 @@ inline void asteroid::RKF_step(){
 	if(stop == 1){
 		//accept step
 		for(int i = Nperturbers; i < N; ++i){
-			x[i] += dx[i];
-			y[i] += dy[i];
-			z[i] += dz[i];
+			x_h[i] += dx_h[i];
+			y_h[i] += dy_h[i];
+			z_h[i] += dz_h[i];
 
-			vx[i] += dvx[i];
-			vy[i] += dvy[i];
-			vz[i] += dvz[i];
+			vx_h[i] += dvx_h[i];
+			vy_h[i] += dvy_h[i];
+			vz_h[i] += dvz_h[i];
 
 		}
 		time += dt;
@@ -314,13 +313,13 @@ inline void asteroid::RKF_step(){
 	else if(snew >= 1.0){
 		//accept step
 		for(int i = Nperturbers; i < N; ++i){
-			x[i] += dx[i];
-			y[i] += dy[i];
-			z[i] += dz[i];
+			x_h[i] += dx_h[i];
+			y_h[i] += dy_h[i];
+			z_h[i] += dz_h[i];
 
-			vx[i] += dvx[i];
-			vy[i] += dvy[i];
-			vz[i] += dvz[i];
+			vx_h[i] += dvx_h[i];
+			vy_h[i] += dvy_h[i];
+			vz_h[i] += dvz_h[i];
 
 		}
 		time += dt;
@@ -346,9 +345,12 @@ inline int asteroid::loop(){
 
 
 	outputFile = fopen("Out.dat", "w");
+#if USEGPU == 1
+		copyOutput();
+#endif
 	for(int p = Nperturbers; p < N; ++p){
 		printf("start integration %.20g %.20g\n", time_reference + time, dt);
-		fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x[p], y[p], z[p], vx[p], vy[p], vz[p], dt);
+		fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x_h[p], y_h[p], z_h[p], vx_h[p], vy_h[p], vz_h[p], dt);
 	}
 	//for(int tt = 0; tt < 2; ++tt){
 	for(int tt = 0; tt < 1000000; ++tt){
@@ -425,9 +427,12 @@ inline int asteroid::loop(){
 			}
 
 		}//end of ttt loop
+#if USEGPU == 1
+		copyOutput();
+#endif
 		for(int p = Nperturbers; p < N; ++p){
 			printf("Reached time %.20g %.20g\n", time_reference + time, dt);
-			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x[p], y[p], z[p], vx[p], vy[p], vz[p], dtmin);
+			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x_h[p], y_h[p], z_h[p], vx_h[p], vy_h[p], vz_h[p], dtmin);
 		}
 
 	}//end of tt loop
