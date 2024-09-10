@@ -113,7 +113,7 @@ inline void asteroid::update_perturbers(double time){
 			xp += Tx[j] * cdata_h[pp + j];
 			yp += Ty[j] * cdata_h[pp + nC + j];
 			zp += Tz[j] * cdata_h[pp + 2 * nC + j];
-//printf("Chebyshev %d %.20g %.20g %.20g\n", j, Tx[j], cdata_h[pp + j], x[p]);                    
+//printf("Chebyshev %d %.20g %.20g %.20g %.20g %.20g\n", j, Tx[j], cdata_h[pp + j], xp, yp, zp);                    
 
 			vxp += Tvx[j] * cdata_h[pp + j] * ct;
 			vyp += Tvy[j] * cdata_h[pp + nC + j] * ct;

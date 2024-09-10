@@ -94,6 +94,7 @@ inline void asteroid::RK_step(){
 			vxt_h[i] = vx_h[i];
 			vyt_h[i] = vy_h[i];
 			vzt_h[i] = vz_h[i];
+//printf("p %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, time + c_h[S] * dt, xt_h[i], yt_h[i], zt_h[i], vxt_h[i], vyt_h[i], vzt_h[i]);
 		}
 		// ----------------------------------------------------------------------------
 
@@ -194,6 +195,7 @@ inline void asteroid::RK_step(){
 		vx_h[i] += dvx_h[i];
 		vy_h[i] += dvy_h[i];
 		vz_h[i] += dvz_h[i];
+//printf("%d %g %g %g\n", i, x_h[i], y_h[i], z_h[i]);
 
 	}
 	time += dt;
