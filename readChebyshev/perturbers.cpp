@@ -88,7 +88,7 @@ int perturbers::readPerturbers1(FILE *infile){
 }
 
 
-int perturbers::readPerturbers2(FILE *infile, FILE *outfile, double time0, double time1, int planetoffset){
+int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, double time0, double time1, int planetoffset){
 
 	int aStart[Npert];	//start of the arrays
 	int aEnd[Npert];	//end
@@ -258,7 +258,10 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfile, double time0, doubl
 				p_N[i] = j;
 				dataSize += j * RSIZE;
 				p_offset1[i] = dataSize;
-				//fprintf(outfile, "%d %d %d %d\n", id[i], nChebyshev[i][i], p_offset0[i] + planetoffset, p_offset1[i] + planetoffset);
+
+#if def_printT == 1
+				fprintf(outfileT, "%d %d %d %d %g\n", id[i], nChebyshev[i], p_offset0[i] + planetoffset, p_offset1[i] + planetoffset, GM[i]);
+#endif
 				fwrite(&id[i], sizeof(int), 1, outfile);
 				fwrite(&nChebyshev[i], sizeof(int), 1, outfile);
 				int o0 = p_offset0[i] + planetoffset;
@@ -317,7 +320,7 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfile, double time0, doubl
 	return 1;
 }
 
-int perturbers::printPerturbers(FILE *outfile){
+int perturbers::printPerturbers(FILE *outfileT, FILE *outfile){
 
 	//-------------------------------------------------------
 	//Print all Chebyshev polynomial in a new file
@@ -326,10 +329,14 @@ int perturbers::printPerturbers(FILE *outfile){
 		int RSIZE = nChebyshev[i] * 3 + 2;
 		for(int j = 0; j < p_N[i]; ++j){
 			for(int k = 0; k < RSIZE; ++k){
-				//fprintf(outfile, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
+#if def_printT == 1
+				fprintf(outfileT, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
+#endif
 				fwrite(&pertdata[p_offset0[i] + j * RSIZE + k], sizeof(double), 1, outfile);
 			}
-			//fprintf(outfile, "\n");
+#if def_printT == 1
+			fprintf(outfileT, "\n");
+#endif
 		}
 	}
 	return 1;

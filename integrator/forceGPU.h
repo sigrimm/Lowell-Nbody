@@ -1,6 +1,6 @@
 //Non Grav
 //Coordinates must be heliocentric
-inline void asteroid::NonGrav(double xi, double yi, double zi, double vxi, double vyi, double vzi, double A1i, double A2i, double A3i, double r, double &axi, double &ayi, double &azi){
+__device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi, double vzi, double A1i, double A2i, double A3i, double r, double &axi, double &ayi, double &azi){
 
 //printf("r %.20g %.20g %.20g %.20g\n", xi, yi ,zi, r);
 //printf("v %.20g %.20g %.20g %.20g %.20g\n", vxi, vyi, vzi, vx[i], vx[10]);
@@ -63,7 +63,7 @@ inline void asteroid::NonGrav(double xi, double yi, double zi, double vxi, doubl
 
 //GR
 //Coordinates must be heliocentric
-inline void asteroid::GR(double xi, double yi, double zi, double vxi, double vyi, double vzi, double r, double &axi, double &ayi, double &azi, double GMSun){
+__device__ void GR(double xi, double yi, double zi, double vxi, double vyi, double vzi, double r, double &axi, double &ayi, double &azi, double GMSun, const double c2){
 	//GR
 	double vsq = vxi * vxi + vyi * vyi + vzi * vzi;
 
@@ -90,7 +90,7 @@ inline void asteroid::GR(double xi, double yi, double zi, double vxi, double vyi
 }
 
 //Coordinates must be Earth centric
-inline void asteroid::J2(double xE, double yE, double zE, double &axi, double &ayi, double &azi, double GMEarth){
+__device__ void J2(double xE, double yE, double zE, double &axi, double &ayi, double &azi, const double REAU, const double J2E, double GMEarth){
 	//J2
 
 //printf("J2 %.20g %.20g %.20g\n", J2E, RE, REAU);
@@ -116,7 +116,7 @@ inline void asteroid::J2(double xE, double yE, double zE, double &axi, double &a
 //printf("J2 a %.20g %.20g %.20g\n", tx, ty, tz);
 }
 
-inline void asteroid::Gravity(double *x, double *y, double *z, double &axi, double &ayi, double &azi, int i){
+__device__ void Gravity(double xi, double yi, double zi, double *x_s, double *y_s, double *z_s, double &axi, double &ayi, double &azi, double *GM_s, const int Nperturbers){
 	for(int pp = 0; pp < Nperturbers; ++pp){
 		int p = pp + 11;
 		if(pp == 16) p = 8;	//Pluto
@@ -131,12 +131,12 @@ inline void asteroid::Gravity(double *x, double *y, double *z, double &axi, doub
 		if(pp == 25) p = 4;	//Jupiter
 		if(pp == 26) p = 10;	//Sun
 
-		double dx = x[i] - x[p];
-		double dy = y[i] - y[p];
-		double dz = z[i] - z[p];
+		double dx = xi - x_s[p];
+		double dy = yi - y_s[p];
+		double dz = zi - z_s[p];
 		double rsq = dx*dx + dy*dy + dz*dz;
 		double r = sqrt(rsq);
-		double s = GM_h[p] / (r * r * r);
+		double s = GM_s[p] / (r * r * r);
 
 		axi -= s*dx;
 		ayi -= s*dy;

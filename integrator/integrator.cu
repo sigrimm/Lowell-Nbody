@@ -1,56 +1,121 @@
+
 #include "asteroid.h"
+#include "ChebyshevGPU.h"
+#include "forceGPU.h"
+
 
 //Leapfrog step with fixed time step
-inline void asteroid::leapfrog_step(){
+__global__ void leapfrog_stepA_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, const int Nperturbers, const int N, const double dt){
+
+	int id = blockIdx.x * blockDim.x + threadIdx.x;
+
 	//Drift
-	for(int i = Nperturbers; i < N; ++i){
-//printf("Drift %d %.20g %.20g %.20g %.20g\n", i, x_h[i], vx_h[i], dt, 0.5* dt * vx_h[i]);
-		x_h[i] += 0.5* dt * vx_h[i];
-		y_h[i] += 0.5* dt * vy_h[i];
-		z_h[i] += 0.5* dt * vz_h[i];
+	if(id >= Nperturbers && id < N){
+		x_d[id] += 0.5 * dt * vx_d[id];
+		y_d[id] += 0.5 * dt * vy_d[id];
+		z_d[id] += 0.5 * dt * vz_d[id];
 	}
-	time += dt / 2.0;
-	//printf("ta %.20g\n", time);   
 
-	// ----------------------------------------------------------------------------
-	for(int i = Nperturbers; i < N; ++i){
-		ax_h[i] = 0.0;
-		ay_h[i] = 0.0;
-		az_h[i] = 0.0;
-	}
-	// ----------------------------------------------------------------------------
-	//Update the Chebyshev coefficients if necessary
-	update_Chebyshev(time);
-	update_perturbers(time);
-	// ----------------------------------------------------------------------------
-
-	// ----------------------------------------------------------------------------
-	//compute forces
-	NonGrav(x_h, y_h, z_h, vx_h, vy_h, vz_h);
-	GR(x_h, y_h, z_h, vx_h, vy_h, vz_h);
-	J2(x_h, y_h, z_h);
-	Gravity(x_h, y_h, z_h);
-	// ----------------------------------------------------------------------------
-
-	//Kick
-	for(int i = Nperturbers; i < N; ++i){
-//printf("Kick %d %.20g %.20g %.20g %.20g\n", i, vx_h[i], ax_h[i], dt, dt * ax_h[i]);
-		vx_h[i] += dt * ax_h[i];
-		vy_h[i] += dt * ay_h[i];
-		vz_h[i] += dt * az_h[i];
-	}
-	//Drift
-	for(int i = Nperturbers; i < N; ++i){
-//printf("Drift %d %.20g %.20g %.20g %.20g\n", i, x_h[i], vx_h[i], dt, 0.5* dt * vx_h[i]);
-		x_h[i] += 0.5* dt * vx_h[i];
-		y_h[i] += 0.5* dt * vy_h[i];
-		z_h[i] += 0.5* dt * vz_h[i];
-	}
-	time += dt / 2.0;
-	//printf("tb %.20g\n", time); 
 }
 
+	// ----------------------------------------------------------------------------
+	//Update the Chebyshev coefficients if necessary
+	//update_Chebyshev(time);
+	//update_perturbers(time);
+	// ----------------------------------------------------------------------------
 
+__global__ void leapfrog_stepB_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *A1_d, double *A2_d, double *A3_d, double *GM_d, const int Nperturbers, const int N, const double dt, const double c2, const double J2E, const double REAU){
+
+	int id = blockIdx.x * blockDim.x + threadIdx.x;
+
+	double ax = 0.0;
+	double ay = 0.0;
+	double az = 0.0;
+
+	//compute force
+
+	double xi;
+	double yi;
+	double zi;
+
+	double vxi;
+	double vyi;
+	double vzi;
+
+	__shared__ double x_s[def_NP];
+	__shared__ double y_s[def_NP];
+	__shared__ double z_s[def_NP];
+
+	__shared__ double vx_s[def_NP];
+	__shared__ double vy_s[def_NP];
+	__shared__ double vz_s[def_NP];
+
+	__shared__ double GM_s[def_NP];
+
+	if(id < Nperturbers){
+		x_s[id] = x_d[id];
+		y_s[id] = y_d[id];
+		z_s[id] = z_d[id];
+
+		vx_s[id] = vx_d[id];
+		vy_s[id] = vy_d[id];
+		vz_s[id] = vz_d[id];
+
+		GM_s[id] = GM_d[id];
+	}
+
+	__syncthreads();
+
+
+	if(id >= Nperturbers && id < N){
+
+		xi = x_d[id];
+		yi = y_d[id];
+		zi = z_d[id];
+
+		vxi = vx_d[id];
+		vyi = vy_d[id];
+		vzi = vz_d[id];
+
+		//heliocentric coordinates
+		double xih = xi - x_s[10];
+		double yih = yi - y_s[10];
+		double zih = zi - z_s[10];
+
+		double vxih = vxi - vx_s[10];
+		double vyih = vyi - vy_s[10];
+		double vzih = vzi - vz_s[10];
+
+		//r is used in multiple forces, so reuse it
+		double rsq = xih * xih + yih * yih + zih * zih;
+		double r = sqrt(rsq);
+
+		//Earth centric coordinates
+		double xiE = xi - x_s[2];
+		double yiE = yi - y_s[2];
+		double ziE = zi - z_s[2];
+
+		NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_d[id], A2_d[id], A3_d[id], r, ax, ay, az);
+		GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10], c2);
+		J2(xiE, yiE, ziE, ax, ay, az, REAU, J2E, GM_s[2]);
+		Gravity(xi, yi, zi, x_s, y_s, z_s, ax, ay, az, GM_s, Nperturbers);
+	}
+	// ----------------------------------------------------------------------------
+
+	if(id >= Nperturbers && id < N){
+		//Kick
+		vx_d[id] += dt * ax;
+		vy_d[id] += dt * ay;
+		vz_d[id] += dt * az;
+
+		//Drift
+		x_d[id] += 0.5 * dt * vx_d[id];
+		y_d[id] += 0.5 * dt * vy_d[id];
+		z_d[id] += 0.5 * dt * vz_d[id];
+	}
+}
+
+/*
 //Runge Kutta step with fixed time step
 inline void asteroid::RK_step(){
 
@@ -105,10 +170,31 @@ inline void asteroid::RK_step(){
 
 		// ----------------------------------------------------------------------------
 		//compute forces
-		NonGrav(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h);
-		GR(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h);
-		J2(xt_h, yt_h, zt_h);
-		Gravity(xt_h, yt_h, zt_h);
+		for(int i = Nperturbers; i < N; ++i){
+
+			//heliocentric coordinates
+			double xih = xt_h[i] - xt_h[10];
+			double yih = yt_h[i] - yt_h[10];
+			double zih = zt_h[i] - zt_h[10];
+
+			double vxih = vxt_h[i] - vxt_h[10];
+			double vyih = vyt_h[i] - vyt_h[10];
+			double vzih = vzt_h[i] - vzt_h[10];
+
+			//r is used in multiple forces, so reuse it
+			double rsq = xih * xih + yih * yih + zih * zih;
+			double r = sqrt(rsq);
+
+			//Earth centric coordinates
+			double xiE = xt_h[i] - xt_h[2];
+			double yiE = yt_h[i] - yt_h[2];
+			double ziE = zt_h[i] - zt_h[2];
+
+			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+			GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+			J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+			Gravity(xt_h, yt_h, zt_h, ax_h[i], ay_h[i], az_h[i], i);
+		}
 		// ----------------------------------------------------------------------------
 		for(int i = Nperturbers; i < N; ++i){
 			kvx_h[i + S * N] = ax_h[i];
@@ -207,10 +293,31 @@ inline void asteroid::RKF_step(){
 
 		// ----------------------------------------------------------------------------
 		//compute forces
-		NonGrav(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h);
-		GR(xt_h, yt_h, zt_h, vxt_h, vyt_h, vzt_h);
-		J2(xt_h, yt_h, zt_h);
-		Gravity(xt_h, yt_h, zt_h);
+		for(int i = Nperturbers; i < N; ++i){
+
+			//heliocentric coordinates
+			double xih = xt_h[i] - xt_h[10];
+			double yih = yt_h[i] - yt_h[10];
+			double zih = zt_h[i] - zt_h[10];
+
+			double vxih = vxt_h[i] - vxt_h[10];
+			double vyih = vyt_h[i] - vyt_h[10];
+			double vzih = vzt_h[i] - vzt_h[10];
+
+			//r is used in multiple forces, so reuse it
+			double rsq = xih * xih + yih * yih + zih * zih;
+			double r = sqrt(rsq);
+
+			//Earth centric coordinates
+			double xiE = xt_h[i] - xt_h[2];
+			double yiE = yt_h[i] - yt_h[2];
+			double ziE = zt_h[i] - zt_h[2];
+
+			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+			GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+			J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+			Gravity(xt_h, yt_h, zt_h, ax_h[i], ay_h[i], az_h[i], i);
+		}
 		// ----------------------------------------------------------------------------
 		for(int i = Nperturbers; i < N; ++i){
 			kvx_h[i + S * N] = ax_h[i];
@@ -339,17 +446,17 @@ inline void asteroid::RKF_step(){
 //printf("dt %.20g %.20g %.20g\n", time, dt, snew);
 }
 
-
+*/
 	
-inline int asteroid::loop(){
+int asteroid::loop(){
 
 
 	outputFile = fopen("Out.dat", "w");
-#if USEGPU == 1
-		copyOutput();
-#endif
+	copyOutput();
+
 	for(int p = Nperturbers; p < N; ++p){
-		printf("start integration %.20g %.20g\n", time_reference + time, dt);
+		printf("Start integration\n");
+		printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dt);
 		fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x_h[p], y_h[p], z_h[p], vx_h[p], vy_h[p], vz_h[p], dt);
 	}
 	//for(int tt = 0; tt < 2; ++tt){
@@ -381,7 +488,7 @@ inline int asteroid::loop(){
 				}
 
 			}
-
+/*
 			if(RKFn == 1){
 				leapfrog_step();
 			}
@@ -397,6 +504,16 @@ inline int asteroid::loop(){
 			if(RKFn == 13){
 				RKF_step();
 			}
+*/
+			//if(RKFn == 1){
+				leapfrog_stepA_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, Nperturbers, N, dt);
+				time += dt * 0.5;
+				update_perturbers_kernel <<< 1, 32 >>>(x_d, y_d, z_d, vx_d, vy_d, vz_d, data_d, cdata_d, id_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, nCm, EM, AUtokm, Nperturbers);
+
+				leapfrog_stepB_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, GM_d, Nperturbers, N, dt, c2, J2E, REAU);
+				time += dt / 2.0;
+			//}
+
 
 			dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;
 
@@ -422,16 +539,14 @@ inline int asteroid::loop(){
 
 			if(ttt >= 1000000 - 1){
 
-				printf("Error time step loop did not finish\n");
+				printf("Error, time step loop did not finish\n");
 				return 0;
 			}
 
 		}//end of ttt loop
-#if USEGPU == 1
 		copyOutput();
-#endif
 		for(int p = Nperturbers; p < N; ++p){
-			printf("Reached time %.20g %.20g\n", time_reference + time, dt);
+			printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dt);
 			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x_h[p], y_h[p], z_h[p], vx_h[p], vy_h[p], vz_h[p], dtmin);
 		}
 

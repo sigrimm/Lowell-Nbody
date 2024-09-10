@@ -1,8 +1,18 @@
 #include "asteroid.h"
 
 
-
 int asteroid::allocateGPU(){
+
+	cudaMalloc((void **) &startTime_d, Nperturbers * sizeof(double));
+	cudaMalloc((void **) &endTime_d, Nperturbers * sizeof(double));
+	cudaMalloc((void **) &id_d, Nperturbers * sizeof(int));
+	cudaMalloc((void **) &nChebyshev_d, Nperturbers * sizeof(int));
+	cudaMalloc((void **) &offset0_d, Nperturbers * sizeof(int));
+	cudaMalloc((void **) &offset1_d, Nperturbers * sizeof(int));
+	cudaMalloc((void **) &GM_d, Nperturbers * sizeof(double));
+
+	cudaMalloc((void **) &cdata_d, Nperturbers * nCm * 3 * sizeof(double));
+	cudaMalloc((void **) &data_d, datasize * sizeof(double));
 
 	cudaMalloc((void **) &x_d, N * sizeof(double));
 	cudaMalloc((void **) &y_d, N * sizeof(double));
@@ -61,7 +71,42 @@ int asteroid::allocateGPU(){
 
 
 
+int asteroid::readData(){
+
+	int er;
+
+	er = fread(data_h, sizeof(double), datasize, perturbersFile);
+
+	if(er <= 0){
+		return 0;
+	}
+
+	/*
+	for(int i = 0; i < 20; ++i){
+		printf("%.20g ", data_h[i]);
+	}
+	printf("\n");
+	for(int i = datasize - 20; i < datasize; ++i){
+		printf("%.20g ", data_h[i]);
+	}
+	printf("\n");
+	*/
+	
+	return 1;
+}
+
+
 int asteroid::copyIC(){
+
+	cudaMemcpy(startTime_d, startTime_h, Nperturbers * sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(endTime_d, endTime_h, Nperturbers * sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(id_d, id_h, Nperturbers * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(nChebyshev_d, nChebyshev_h, Nperturbers * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(offset0_d, offset0_h, Nperturbers * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(offset1_d, offset1_h, Nperturbers * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(GM_d, GM_h, Nperturbers * sizeof(double), cudaMemcpyHostToDevice);
+
+	cudaMemcpy(data_d, data_h, datasize * sizeof(double), cudaMemcpyHostToDevice);
 
 	cudaMemcpy(x_d, x_h, N * sizeof(double), cudaMemcpyHostToDevice);
 	cudaMemcpy(y_d, y_h, N * sizeof(double), cudaMemcpyHostToDevice);

@@ -1,25 +1,35 @@
 all: integratorGPU integrator
 
-integrator: main.o asteroid.o
-	g++ -g -o integrator main.o asteroid.o
+integrator: main.o asteroid.o RKF.o integrator.o
+	g++ -g -o integrator main.o asteroid.o RKF.o integrator.o
 
-integratorGPU: mainGPU.o asteroid1.o asteroidGPU.o
-	nvcc -o integratorGPU mainGPU.o asteroid1.o asteroidGPU.o
-
-main.o: main.cpp define.h RKF.h force.h integrator.h Chebyshev.h
+main.o: main.cpp asteroid.h 
 	g++ -g -c -O3 -DUSEGPU=0 -o main.o main.cpp
 
-asteroid.o: asteroid.cpp asteroid.h define.h
+integrator.o: integrator.cpp asteroid.h Chebyshev.h force.h
+	g++ -g -c -O3 -o integrator.o integrator.cpp
+
+RKF.o: RKF.cpp asteroid.h
+	g++ -g -c -O3 -o RKF.o RKF.cpp
+
+asteroid.o: asteroid.cpp asteroid.h
 	g++ -g -c -O3 -DUSEGPU=0 -o asteroid.o asteroid.cpp
 
 
-asteroid1.o: asteroid.cpp asteroid.h define.h
+
+integratorGPU: mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o
+	nvcc -o integratorGPU mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o
+
+asteroid1.o: asteroid.cpp asteroid.h
 	nvcc -g -c -O3 -DUSEGPU=1 -o asteroid1.o asteroid.cpp
 
-mainGPU.o: main.cpp define.h RKF.h force.h integrator.h Chebyshev.h
+mainGPU.o: main.cpp asteroid.h
 	nvcc -g -c -O3 -DUSEGPU=1 -o mainGPU.o main.cpp
 
-asteroidGPU.o: asteroid.cu asteroid.h define.h
+integratorGPU.o: integrator.cu asteroid.h ChebyshevGPU.h forceGPU.h
+	nvcc -g -c -O3 -o integratorGPU.o integrator.cu
+
+asteroidGPU.o: asteroid.cu asteroid.h
 	nvcc -c -O3 -o asteroidGPU.o asteroid.cu
 
 clean:

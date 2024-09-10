@@ -26,8 +26,8 @@ public:
 	int alloc();
 	
 	int readHeader(FILE *);
-	int readPlanets(FILE *, FILE *, double, double);
-	int printPlanets(FILE *);
+	int readPlanets(FILE *, FILE *, FILE *, double, double);
+	int printPlanets(FILE *, FILE *);
 
 private:
 

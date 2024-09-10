@@ -8,3 +8,16 @@ combined/diff*.dat
 FIFOcombined/Out*
 
 perturbers
+
+readChebyshev/*.o
+readChebyshev/PerturbersChebyshev.bin
+readChebyshev/PerturbersChebyshev.dat
+readChebyshev/header.440
+readChebyshev/linux_p1550p2650.440
+readChebyshev/sb441-n16.bsp
+readChebyshev/readChebyshev
+
+
+integrator/*.o
+integrator/integrator
+integrator/integratorGPU

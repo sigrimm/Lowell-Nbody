@@ -3,7 +3,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <cstring>
+
+
+#define def_NP 32		//used for shared memory, must be at least the number of perturbers
 
 class asteroid{
 
@@ -11,6 +15,8 @@ class asteroid{
 public:
         FILE *inputFile;
 	FILE *perturbersFile;
+	char perturbersFilePath[160];
+	char perturbersFileName[240]; // 160 + 80
 	char inputFilename[160];
         FILE *outputFile;
 
@@ -39,18 +45,19 @@ public:
 
 
 	int nCm;		//Maximum number of Chebyshev coefficients
-
+	int datasize;
 
 	//perturbers data
-	double *startTime;
-	double *endTime;
-	int *id;
-	int *nChebyshev;
-	int *offset0;
-	int *offset1;
-	double *GM;
+	double *startTime_h, *startTime_d;	//Start time of perturbers data block
+	double *endTime_h, *endTime_d;		//End time of perturbers data block
+	int *id_h, *id_d;		
+	int *nChebyshev_h, *nChebyshev_d;	//Number of Chebyshev coefficients of perturbers in current data block
+	int *offset0_h, *offset0_d;
+	int *offset1_h, *offset1_d;
+	double *GM_h, *GM_d;
 
-	double *cdata;
+	double *cdata_h, *cdata_d;		//contains one record of data for each perturber
+	double *data_h, *data_d;				//entire data file, only in GPU version
 
 	double *x_h, *x_d;
 	double *y_h, *y_d;
@@ -111,6 +118,7 @@ public:
 
 	int readParam();
 	int readIC();
+	int readData();
 	int copyIC();
 	void allocate();
 	int allocateGPU();
@@ -118,11 +126,11 @@ public:
 
 	inline void update_Chebyshev(double);
 	inline void update_perturbers(double);
-	inline void NonGrav(double *, double *, double *, double *, double *, double *);
-	inline void GR(double *, double *, double *, double *, double *, double *);
-	inline void J2(double *, double *, double *);
-	inline void Gravity(double *, double *, double *);
-	inline int loop();
+	inline void NonGrav(double, double, double, double, double, double, double, double, double, double, double &, double &, double &);
+	inline void GR(double, double, double, double, double, double, double, double &, double &, double &, double);
+	inline void J2(double, double, double, double &, double &, double &, double);
+	inline void Gravity(double *, double *, double *, double &, double &, double &, int);
+	int loop();
 
 	inline void leapfrog_step();
 	inline void RK_step();

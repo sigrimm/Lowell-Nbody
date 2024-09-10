@@ -14,6 +14,7 @@ int asteroid::readParam(){
 
 	char sp[160];
 	int er;
+	char *str;	//Needed for return value of fgest, otherwise a compiler warning is generated
 
 	for(int j = 0; j < 1000; ++j){ //loop around all lines in the param.dat file
 		int c;
@@ -35,7 +36,7 @@ int asteroid::readParam(){
 				printf("Error: Initial condition file is not valid!\n");
 				return 0;
 			}
-		fgets(sp, 3, paramfile);
+		str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "Reference Time =") == 0){
 			er = fscanf (paramfile, "%lf", &time_reference);
@@ -43,7 +44,7 @@ int asteroid::readParam(){
 				printf("Error: Reference Time value is not valid!\n");
 				return 0;
 			}
-			fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "Start Time =") == 0){
 			er = fscanf (paramfile, "%lf", &timeStart);
@@ -51,7 +52,7 @@ int asteroid::readParam(){
 				printf("Error: Start Time value is not valid!\n");
 				return 0;
 			}
-			fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "End Time =") == 0){
 			er = fscanf (paramfile, "%lf", &timeEnd);
@@ -59,7 +60,7 @@ int asteroid::readParam(){
 				printf("Error: End Time value is not valid!\n");
 				return 0;
 			}
-			fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "Output Interval =") == 0){
 			er = fscanf (paramfile, "%lf", &outputInterval);
@@ -67,7 +68,7 @@ int asteroid::readParam(){
 				printf("Error: Output Interval value is not valid!\n");
 				return 0;
 			}
-			fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "Integrator =") == 0){
 			char integratorName[160];
@@ -96,7 +97,7 @@ int asteroid::readParam(){
 				return 0;
 
 			}
-			fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "RKF absolute tolerance =") == 0){
 			er = fscanf (paramfile, "%lf", &RKF_atol);
@@ -104,7 +105,7 @@ int asteroid::readParam(){
 				printf("Error: RKF absolute tolerance value is not valid!\n");
 				return 0;
 			}
-			fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "RKF relative tolerance =") == 0){
 			er = fscanf (paramfile, "%lf", &RKF_rtol);
@@ -112,7 +113,7 @@ int asteroid::readParam(){
 				printf("Error: RKF relative tolerance value is not valid!\n");
 				return 0;
 			}
-			fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "Time Step =") == 0){
 			er = fscanf (paramfile, "%lf", &dt);
@@ -120,7 +121,15 @@ int asteroid::readParam(){
 				printf("Error: dt value is not valid!\n");
 				return 0;
 			}
-			fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "Path to perturbers file =") == 0){
+			er = fscanf (paramfile, "%s", perturbersFilePath);
+			if(er <= 0){
+				printf("Error: Path to perturbers file is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
 		}
 
 		else{
@@ -171,19 +180,18 @@ int asteroid::readIC(){
 void asteroid::allocate(){
 	N = Nperturbers + 1;
 
-	perturbersFile = fopen("../readChebyshev/PerturbersChebyshev.bin", "rb");
 	nCm = 0;
 	dts = (dt > 0.0) ? 1.0 : -1.0;      //sign of time step
 	dt1 = dt;
 	stop = 0;
 
-	startTime = (double*)malloc(Nperturbers * sizeof(double));
-	endTime = (double*)malloc(Nperturbers * sizeof(double));
-	id = (int*)malloc(Nperturbers * sizeof(int));
-	nChebyshev = (int*)malloc(Nperturbers * sizeof(int));
-	offset0 = (int*)malloc(Nperturbers * sizeof(int));
-	offset1 = (int*)malloc(Nperturbers * sizeof(int));
-	GM = (double*)malloc(Nperturbers * sizeof(double));
+	startTime_h = (double*)malloc(Nperturbers * sizeof(double));
+	endTime_h = (double*)malloc(Nperturbers * sizeof(double));
+	id_h = (int*)malloc(Nperturbers * sizeof(int));
+	nChebyshev_h = (int*)malloc(Nperturbers * sizeof(int));
+	offset0_h = (int*)malloc(Nperturbers * sizeof(int));
+	offset1_h = (int*)malloc(Nperturbers * sizeof(int));
+	GM_h = (double*)malloc(Nperturbers * sizeof(double));
 
 	//read header
 	int er;
@@ -196,24 +204,32 @@ void asteroid::allocate(){
 	er = fread(&J2E, sizeof(double), 1, perturbersFile);
 
 	for(int i = 0; i < Nperturbers; ++i){
-		er = fread(&id[i], sizeof(int), 1, perturbersFile);
-		er = fread(&nChebyshev[i], sizeof(int), 1, perturbersFile);
-		er = fread(&offset0[i], sizeof(int), 1, perturbersFile);
-		er = fread(&offset1[i], sizeof(int), 1, perturbersFile);
-		er = fread(&GM[i], sizeof(double), 1, perturbersFile);
+		er = fread(&id_h[i], sizeof(int), 1, perturbersFile);
+		er = fread(&nChebyshev_h[i], sizeof(int), 1, perturbersFile);
+		er = fread(&offset0_h[i], sizeof(int), 1, perturbersFile);
+		er = fread(&offset1_h[i], sizeof(int), 1, perturbersFile);
+		er = fread(&GM_h[i], sizeof(double), 1, perturbersFile);
 
-		nCm = (nCm > nChebyshev[i]) ? nCm : nChebyshev[i];
+		nCm = (nCm > nChebyshev_h[i]) ? nCm : nChebyshev_h[i];
 
-		offset0[i] += (3 * Nperturbers + 7);    //add size of header 7*double + Nperturbers * (4 int + double)
-		offset1[i] += (3 * Nperturbers + 7);    //add size of header
+#if USEGPU == 0
+		offset0_h[i] += (3 * Nperturbers + 7);    //add size of header 7*double + Nperturbers * (4 int + double)
+		offset1_h[i] += (3 * Nperturbers + 7);    //add size of header
+#endif
+		startTime_h[i] = 100000000.0;     //large number
+		endTime_h[i] = 0; 
+//printf("%d %d %d %d %.20g\n", id_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
+	}
+	//printf("nCm %d\n", nCm);
 
-		startTime[i] = 100000000.0;     //large number
-		endTime[i] = 0; 
-	//printf("%d %d %d %d %.20g\n", id[i], nChebyshev[i], offset0[i], offset1[i], GM[i]);
-	}  
+	//Find size of entire data file  
 
-	cdata = (double*)malloc(Nperturbers * nCm * 3 * sizeof(double));
-
+	cdata_h = (double*)malloc(Nperturbers * nCm * 3 * sizeof(double));
+#if USEGPU == 1
+	datasize = offset1_h[Nperturbers - 1] - offset0_h[0];
+	printf("size of perturbers data table %d\n", datasize);
+	data_h = (double*)malloc(datasize * sizeof(double));
+#endif
 	time = timeStart;
 	double c = (CLIGHT / AUtokm) * 86400.0;
 	c2 = c * c;

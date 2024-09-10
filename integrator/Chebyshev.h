@@ -5,62 +5,44 @@ inline void asteroid::update_Chebyshev(double time){
 	for(int p = 0; p < Nperturbers; ++p){
 
 		const int pp = p * nCm * 3;
-		if(time + time_reference > endTime[p]){
+		if(time + time_reference > endTime_h[p]){
 			for(int k = 0; k < 1000000; ++k){
-				//fscanf(perturbersFile, "%d", &id);
-				//fscanf(perturbersFile, "%d", &nChebyshev);
-				//fscanf(perturbersFile, "%lf", &startTime[p]);
-				//fscanf(perturbersFile, "%lf", &endTime[p]);
 
-				fseek(perturbersFile, offset0[p] * sizeof(double), SEEK_SET);
+				fseek(perturbersFile, offset0_h[p] * sizeof(double), SEEK_SET);
 
-				er = fread(&startTime[p], sizeof(double), 1, perturbersFile);
-				er = fread(&endTime[p], sizeof(double), 1, perturbersFile);
+				er = fread(&startTime_h[p], sizeof(double), 1, perturbersFile);
+				er = fread(&endTime_h[p], sizeof(double), 1, perturbersFile);
 
 
-//printf(" ++ %d %d %d %d %.20g %.20g\n", p, id[p], offset0[p], nChebyshev[p], startTime[p], endTime[p]);
+//printf(" ++ %d %d %d %d %.20g %.20g\n", p, id_h[p], offset0_h[p], nChebyshev_h[p], startTime_h[p], endTime_h[p]);
 
-				er = fread(cdata + pp, sizeof(double), nChebyshev[p] * 3, perturbersFile);
-				//for(int i = 0; i < nChebyshev[p] * 3; ++i){
-				//      fscanf(perturbersFile, "%lf", &cdata[pp + i]);
-				//      printf("%.20g ", cdata[pp + i]);
-				//}
-				//printf("\n");
+				er = fread(cdata_h + pp, sizeof(double), nChebyshev_h[p] * 3, perturbersFile);
 
-				if(time + time_reference <= endTime[p]){
+				if(time + time_reference <= endTime_h[p]){
 					break;
 				}
 
-				offset0[p] += nChebyshev[p] * 3 + 2;
+				offset0_h[p] += nChebyshev_h[p] * 3 + 2;
 			}
 		}
-		if(time + time_reference < startTime[p]){
+		if(time + time_reference < startTime_h[p]){
 			for(int k = 0; k < 1000000; ++k){
-				//fscanf(perturbersFile, "%d", &id);
-				//fscanf(perturbersFile, "%d", &nChebyshev);
-				//fscanf(perturbersFile, "%lf", &startTime[p]);
-				//fscanf(perturbersFile, "%lf", &endTime[p]);
 
-				fseek(perturbersFile, offset0[p] * sizeof(double), SEEK_SET);
+				fseek(perturbersFile, offset0_h[p] * sizeof(double), SEEK_SET);
 
-				er = fread(&startTime[p], sizeof(double), 1, perturbersFile);
-				er = fread(&endTime[p], sizeof(double), 1, perturbersFile);
+				er = fread(&startTime_h[p], sizeof(double), 1, perturbersFile);
+				er = fread(&endTime_h[p], sizeof(double), 1, perturbersFile);
 
 
-//printf(" -- %d %d %d %d %.20g %.20g\n", p, id[p], offset0[p], nChebyshev[p], startTime[p], endTime[p]);
+//printf(" -- %d %d %d %d %.20g %.20g\n", p, id_h[p], offset0_h[p], nChebyshev_h[p], startTime_h[p], endTime_h[p]);
 
-				er = fread(cdata + pp, sizeof(double), nChebyshev[p] * 3, perturbersFile);
-				//for(int i = 0; i < nChebyshev[p] * 3; ++i){
-				//      fscanf(perturbersFile, "%lf", &cdata[pp + i]);
-				//      printf("%.20g ", cdata[pp + i]);
-				//}
-				//printf("\n");
+				er = fread(cdata_h + pp, sizeof(double), nChebyshev_h[p] * 3, perturbersFile);
 
-				if(time + time_reference >= startTime[p]){
+				if(time + time_reference >= startTime_h[p]){
 					break;
 				}
 
-				offset0[p] -= nChebyshev[p] * 3 + 2;
+				offset0_h[p] -= nChebyshev_h[p] * 3 + 2;
 			}
 		}
 	}
@@ -78,18 +60,18 @@ inline void asteroid::update_perturbers(double time){
 
 	//Calculate positions of perturbers
 	for(int p = 0; p < Nperturbers; ++p){
-		const int nC = nChebyshev[p];
+		const int nC = nChebyshev_h[p];
 
 		const int pp = p * nCm * 3;
 
-		double sizeSubInterval = endTime[p] - startTime[p];
+		double sizeSubInterval = endTime_h[p] - startTime_h[p];
 //if(p > 10) printf("time %d %.20g %.20g %.20g %.20g\n", p, time + time_reference, sizeSubInterval, startTime[p], endTime[p]);
-		double subTime = (time_reference - startTime[p] + time) / sizeSubInterval;   //normalized time in  0 - 1
+		double subTime = (time_reference - startTime_h[p] + time) / sizeSubInterval;   //normalized time in  0 - 1
 		double t = 2.0 * subTime - 1.0;                         //mormalized time in -1 - 1
 
 		//double ct = 2.0 / sizeSubInterval;                    //correction factor for time units
 
-		//This is sone in Assist, remove the time factor later
+		//This is done so in Assist, remove the time factor later
 		double ct = 2.0 / sizeSubInterval / 86400.0;            //correction factor for time units
 
 //if(p > 10) printf("Chebyshev time %d %.20g %.20g %.20g\n", p, subTime, time, t);
@@ -127,15 +109,15 @@ inline void asteroid::update_perturbers(double time){
 		double vzp = 0.0;
 
 		for(int j = 0; j < nC; ++j){
-		//for(int j = nChebyshev[p] - 1; j >= 0; --j){    //reduce floating point errors by revert order
-			xp += Tx[j] * cdata[pp + j];
-			yp += Ty[j] * cdata[pp + nC + j];
-			zp += Tz[j] * cdata[pp + 2 * nC + j];
-//printf("Chebyshev %d %.20g %.20g %.20g\n", j, Tx[j], cdata[pp + j], x[p]);                    
+		//for(int j = nChebyshev_h[p] - 1; j >= 0; --j){    //reduce floating point errors by revert order
+			xp += Tx[j] * cdata_h[pp + j];
+			yp += Ty[j] * cdata_h[pp + nC + j];
+			zp += Tz[j] * cdata_h[pp + 2 * nC + j];
+//printf("Chebyshev %d %.20g %.20g %.20g\n", j, Tx[j], cdata_h[pp + j], x[p]);                    
 
-			vxp += Tvx[j] * cdata[pp + j] * ct;
-			vyp += Tvy[j] * cdata[pp + nC + j] * ct;
-			vzp += Tvz[j] * cdata[pp + 2 * nC + j] * ct;
+			vxp += Tvx[j] * cdata_h[pp + j] * ct;
+			vyp += Tvy[j] * cdata_h[pp + nC + j] * ct;
+			vzp += Tvz[j] * cdata_h[pp + 2 * nC + j] * ct;
 		}
 
 		x_h[p] = xp;

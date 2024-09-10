@@ -25,8 +25,8 @@ public:
 	int alloc();
 
 	int readPerturbers1(FILE *);
-	int readPerturbers2(FILE *, FILE *, double, double, int);
-	int printPerturbers(FILE *);
+	int readPerturbers2(FILE *, FILE *, FILE *, double, double, int);
+	int printPerturbers(FILE *, FILE *);
 
 private:
 

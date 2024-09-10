@@ -1,9 +1,4 @@
-#include <math.h>
 #include "asteroid.h"
-#include "force.h"
-#include "RKF.h"
-#include "integrator.h"
-#include "Chebyshev.h"
 
 int main(){
 
@@ -14,16 +9,18 @@ int main(){
 
 	asteroid A;
 
-	//A.perturbersFile = fopen("../readChebyshev/PerturbersChebyshev.dat", "r");
-	A.perturbersFile = fopen("../readChebyshev/PerturbersChebyshev.bin", "rb");
-	if(A.perturbersFile == NULL){
-		printf("Error, perturbers file %s not found\n", "../readChebyshev/PerturbersChebyshev.bin");
-		return 0;
-	}
 
 
 	A.Nperturbers = 27;
 
+
+	if(A.Nperturbers > def_NP){
+		printf("Error, Number of perturbers is larger than def_NP, increase def_NP. %d %d\n", A.Nperturbers, def_NP);
+		return 0;
+	}
+
+
+	//----------------------------------------------------------
 	//set default parameters
 	//----------------------------------------------------------
 	A.time_reference = 2451545.0;
@@ -37,22 +34,41 @@ int main(){
 	A.RKF_facmin = 0.8;
 	A.RKF_facmax = 1.5;
 	A.RKFn = 6;
+	sprintf(A.perturbersFilePath, "%s", "../readChebyshev/");
 	//----------------------------------------------------------
 
 	int er = 0;
 
+	//----------------------------------------------------------
+	//Read param.dat file
+	//----------------------------------------------------------
+	printf("Read param.dat file\n");
 	er = A.readParam();
 	if(er <= 0){
 		return 0;
 	}
 	printf("Read param.dat file OK\n");
-	printf("Initial condition file = %s\n", A.inputFilename);
+	//----------------------------------------------------------
+
+
+	//sprintf(A.perturbersFileName, "%s/PerturbersChebyshev.dat", A.perturbersFilePath);
+	//A.perturbersFile = fopen(A.perturbersFileName, "r");
+	sprintf(A.perturbersFileName, "%s/PerturbersChebyshev.bin", A.perturbersFilePath);
+
+	printf("Open Perturbers file = %s\n", A.perturbersFileName);
+
+	A.perturbersFile = fopen(A.perturbersFileName, "rb");
+	if(A.perturbersFile == NULL){
+		printf("Error, perturbers file not found: %s\n",  A.perturbersFileName);
+		return 0;
+	}
+	printf("Open Perturbers file OK\n");
+
 
 	A.timeStart -= A.time_reference;
 	A.timeEnd -= A.time_reference;
 
-	//set integrator properties
-
+	printf("Allocate memory\n");
 	A.allocate();
 #if USEGPU == 1
 	er = A.allocateGPU();
@@ -61,7 +77,20 @@ int main(){
 	}
 #endif
 	printf("Allocate memory OK\n");
+
+#if USEGPU == 1
+	printf("Read data table\n");
+	er = A.readData();
+
+	if(er <= 0){
+		return 0;
+	}
+
+	printf("Read data table OK\n");
+
+#endif
 	
+	//set integrator properties
 	if(A.RKFn == 4){
 		A.setRK4();
 	}
@@ -76,13 +105,16 @@ int main(){
 	}
 
 
-	// *********************************
-	//Set initial conditions
+	//----------------------------------------------------------
+	//Read initial conditions
+	//----------------------------------------------------------
+	printf("Read initial conditions file = %s\n", A.inputFilename);
 	er = A.readIC();
 
 	if(er <= 0){
 		return 0;
 	}
+
 #if USEGPU == 1
 	er = A.copyIC();
 
@@ -91,6 +123,7 @@ int main(){
 	}
 #endif
 	printf("Read initial conditions file OK\n");
+	//----------------------------------------------------------
 
 	/*
 	//Barycentric coordinates of 15TC25   

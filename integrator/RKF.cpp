@@ -1,3 +1,4 @@
+#include "asteroid.h"
 
 void asteroid::setRK4(){
 

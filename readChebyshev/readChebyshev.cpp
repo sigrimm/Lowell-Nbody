@@ -117,15 +117,14 @@ int main(){
 	char headerFileName[256];
 	char planetsFileName[256];
 	char perturbersFileName[256];
-	char outFileName[256];
+	char outFileNameT[256];		//text file
+	char outFileName[256];		//binary file
 
 	sprintf(headerFileName, "header.440");
 	sprintf(planetsFileName, "linux_p1550p2650.440");
 	sprintf(perturbersFileName, "sb441-n16.bsp");
-	//sprintf(outFileName, "PerturbersChebyshev.dat");
+	sprintf(outFileNameT, "PerturbersChebyshev.dat");
 	sprintf(outFileName, "PerturbersChebyshev.bin");
-
-	
 
 
 	FILE *headerFile;
@@ -133,10 +132,15 @@ int main(){
 	FILE *perturbersFile;
 
 
+	FILE *outFileT;
 	FILE *outFile;
 
 
-	//outFile = fopen(outFileName, "w");
+#if def_printT == 1
+	outFileT = fopen(outFileNameT, "w");
+#else
+	outFileT = NULL;
+#endif
 	outFile = fopen(outFileName, "wb");
 
 	// **********************************************
@@ -147,7 +151,7 @@ int main(){
 	planetsFile = fopen(planetsFileName, "rb");
 
 	er = pl.readHeader(headerFile);
-	er = pl.readPlanets(planetsFile, outFile, time0, time1);
+	er = pl.readPlanets(planetsFile, outFileT, outFile, time0, time1);
 
 	fclose(headerFile);
 	fclose(planetsFile);
@@ -164,14 +168,17 @@ int main(){
 	perturbersFile = fopen(perturbersFileName, "rb");
 
 	er = pert.readPerturbers1(perturbersFile);
-	er = pert.readPerturbers2(perturbersFile, outFile, time0, time1, pl.dataSize);
+	er = pert.readPerturbers2(perturbersFile, outFileT, outFile, time0, time1, pl.dataSize);
 
 	fclose(perturbersFile);
 
 
-	er = pl.printPlanets(outFile);
-	er = pert.printPerturbers(outFile);
+	er = pl.printPlanets(outFileT, outFile);
+	er = pert.printPerturbers(outFileT, outFile);
 
+#if def_printT == 1
+	fclose(outFileT);
+#endif
 	fclose(outFile);
 
 

@@ -180,7 +180,7 @@ int planets::readHeader(FILE *hfile){
 	return 0;
 }	
 
-int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1){
+int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double time0, double time1){
 
 
 	double startTime, endTime, daysPerBlock;
@@ -385,6 +385,16 @@ int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1
 	
 	}
 
+#if def_printT == 1
+	fprintf(outfileT,"time0 %.20g\n", time0);
+	fprintf(outfileT,"time1 %.20g\n", time1);
+	fprintf(outfileT,"AUtokm %.20g\n", AUtokm);
+	fprintf(outfileT,"EM %.20g\n", EM);
+	fprintf(outfileT,"CLIGHT %.20g\n", CLIGHT);
+	fprintf(outfileT,"RE %.20g\n", RE);
+	fprintf(outfileT,"J2E %.20g\n", J2E);
+#endif
+
 	fwrite(&time0, sizeof(double), 1, outfile);
 	fwrite(&time1, sizeof(double), 1, outfile);
 	fwrite(&AUtokm, sizeof(double), 1, outfile);
@@ -417,7 +427,9 @@ int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1
 		dataSize += nSub[i] *  (nChebyshev[i] * 3 + 2) * dblock;
 		p_offset1[i] = dataSize;
 		printf("planet offset %d %d %d %d %d %d\n", i, nSub[i], nChebyshev[i], p_offset0[i], p_offset1[i], nSub[i] *  (nChebyshev[i] * 3 + 2) * dblock);
-		//fprintf(outfile, "%d %d %d %d \n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i]);
+#if def_printT == 1
+		fprintf(outfileT, "%d %d %d %d %g\n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i], GM[i]);
+#endif
 //printf("%d %d %d %d %.20g\n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i], GM[i]);
 		fwrite(&id[i], sizeof(int), 1, outfile);
 		fwrite(&nChebyshev[i], sizeof(int), 1, outfile);
@@ -484,7 +496,7 @@ int planets::readPlanets(FILE *infile, FILE *outfile, double time0, double time1
 }
 
 
-int planets::printPlanets(FILE *outfile){
+int planets::printPlanets(FILE *outfileT, FILE *outfile){
 
 	//-------------------------------------------------------
 	//Print all Chebyshev polynomial in a new file
@@ -493,10 +505,14 @@ int planets::printPlanets(FILE *outfile){
 		int RSIZE = nChebyshev[i] * 3 + 2;
 		for(int j = 0; j < p_N[i]; ++j){
 			for(int k = 0; k < RSIZE; ++k){
-				//fprintf(outfile, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
+#if def_printT == 1
+				fprintf(outfileT, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
+#endif
 				fwrite(&pertdata[p_offset0[i] + j * RSIZE + k], sizeof(double), 1, outfile);
 			}
-			//fprintf(outfile, "\n");
+#if def_printT == 1
+			fprintf(outfileT, "\n");
+#endif
 		}
 	}
 	return 1;
