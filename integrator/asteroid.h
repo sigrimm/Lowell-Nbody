@@ -34,17 +34,16 @@ public:
 	double time;			//integration time
 	int stop;			//used to refine last time step
 
+	double AUtokm;			//AU to km
+	double EM;			//Earth to moon mass ratio
+	double CLIGHT;			//speed of light
+	double RE;			//Radius of Earth
+	double J2E;			//J2 of Earth
+	double c2;			//speed of light squared
+	double REAU;			//Earth radius in AU
 
-	double AUtokm;          //AU to km
-	double EM;              //Earth to moon mass ratio
-	double CLIGHT;          //speed of light
-	double RE;              //Radius of Earth
-	double J2E;             //J2 of Earth
-	double c2;		//speed of light squared
-	double REAU;		//Earth radius in AU
 
-
-	int nCm;		//Maximum number of Chebyshev coefficients
+	int nCm;			//Maximum number of Chebyshev coefficients
 	int datasize;
 
 	//perturbers data
@@ -57,9 +56,19 @@ public:
 	double *GM_h, *GM_d;
 
 	double *cdata_h, *cdata_d;		//contains one record of data for each perturber
-	double *data_h, *data_d;				//entire data file, only in GPU version
+	double *data_h, *data_d;		//entire data file, only in GPU version
 
-	double *x_h, *x_d;
+
+	double *xTable_h, *xTable_d;		//Perturbers table contains the position of the perturbers for all stages
+	double *yTable_h, *yTable_d;
+	double *zTable_h, *zTable_d;
+
+	double *vxTable_h, *vxTable_d;
+	double *vyTable_h, *vyTable_d;
+	double *vzTable_h, *vzTable_d;
+
+
+	double *x_h, *x_d;			//Contains only integration bodies, not perturbers
 	double *y_h, *y_d;
 	double *z_h, *z_d;
 
@@ -80,10 +89,10 @@ public:
 
 	//RKF arrays
 	int RKFn;
-        double *a_h, *a_d;
-	double *b_h, *b_d;
-	double *bb_h, *bb_d;
-	double *c_h, *c_d;
+        double *a_h;
+	double *b_h;
+	double *bb_h;
+	double *c_h;
         double RKF_ee;
 	double RKF_atol;
 	double RKF_rtol;
@@ -116,20 +125,25 @@ public:
 	double *kvz_h, *kvz_d;
 
 
+	double *snew_h, *snew_d;
+
+
 	int readParam();
 	int readIC();
+	int readICSize();
 	int readData();
 	int copyIC();
 	void allocate();
 	int allocateGPU();
 	void copyOutput();
+	int copyConst();
 
 	inline void update_Chebyshev(double);
 	inline void update_perturbers(double);
 	inline void NonGrav(double, double, double, double, double, double, double, double, double, double, double &, double &, double &);
 	inline void GR(double, double, double, double, double, double, double, double &, double &, double &, double);
 	inline void J2(double, double, double, double &, double &, double &, double);
-	inline void Gravity(double *, double *, double *, double &, double &, double &, int);
+	inline void Gravity(double, double, double, double *, double *, double *, double &, double &, double &, int);
 	int loop();
 
 	inline void leapfrog_step();

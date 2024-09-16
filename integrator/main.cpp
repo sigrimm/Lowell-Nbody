@@ -10,7 +10,6 @@ int main(){
 	asteroid A;
 
 
-
 	A.Nperturbers = 27;
 
 
@@ -50,6 +49,16 @@ int main(){
 	printf("Read param.dat file OK\n");
 	//----------------------------------------------------------
 
+	//----------------------------------------------------------
+	//Read Size of initial conditions file
+	//----------------------------------------------------------
+	printf("Read ICsize\n");
+	er = A.readICSize();
+	if(er <= 0){
+		return 0;
+	}
+	printf("Read ICSize OK with %d bodies\n", A.N);
+	//----------------------------------------------------------
 
 	//sprintf(A.perturbersFileName, "%s/PerturbersChebyshev.dat", A.perturbersFilePath);
 	//A.perturbersFile = fopen(A.perturbersFileName, "r");
@@ -117,29 +126,16 @@ int main(){
 
 #if USEGPU == 1
 	er = A.copyIC();
-
+	if(er <= 0){
+		return 0;
+	}
+	er = A.copyConst();
 	if(er <= 0){
 		return 0;
 	}
 #endif
 	printf("Read initial conditions file OK\n");
 	//----------------------------------------------------------
-
-	/*
-	//Barycentric coordinates of 15TC25   
-	A.x[A.Nperturbers + 0] = -0.621994840672447701912517459277;   // x in AU
-	A.y[A.Nperturbers + 0] = -0.828032662228602056586623803014;  // y
-	A.z[A.Nperturbers + 0] = -0.406943193813317449780697643291;  // z
-	A.vx[A.Nperturbers + 0] = 0.0122692503194383149833779356186;   // vx in AU/day
-	A.vy[A.Nperturbers + 0] = -0.00859370367531481910150503722434;   // vy
-	A.vz[A.Nperturbers + 0] = -0.0046654983615674223973446288482;  // vz
-
-	//Non-grav terms
-	A.A1[A.Nperturbers + 0] = 1.599229127169e-10;
-	A.A2[A.Nperturbers + 0] = -5.273644346744e-12;
-	A.A3[A.Nperturbers + 0] = 0.0;
-	*/
-	// *********************************
 
 	er = A.loop();	
 

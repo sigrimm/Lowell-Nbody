@@ -116,7 +116,7 @@ inline void asteroid::J2(double xE, double yE, double zE, double &axi, double &a
 //printf("J2 a %.20g %.20g %.20g\n", tx, ty, tz);
 }
 
-inline void asteroid::Gravity(double *x, double *y, double *z, double &axi, double &ayi, double &azi, int i){
+inline void asteroid::Gravity(double xi, double yi, double zi, double *xTable_h, double *yTable_h, double *zTable_h, double &axi, double &ayi, double &azi, int i){
 	for(int pp = 0; pp < Nperturbers; ++pp){
 		int p = pp + 11;
 		if(pp == 16) p = 8;	//Pluto
@@ -131,9 +131,9 @@ inline void asteroid::Gravity(double *x, double *y, double *z, double &axi, doub
 		if(pp == 25) p = 4;	//Jupiter
 		if(pp == 26) p = 10;	//Sun
 
-		double dx = x[i] - x[p];
-		double dy = y[i] - y[p];
-		double dz = z[i] - z[p];
+		double dx = xi - xTable_h[p];
+		double dy = yi - yTable_h[p];
+		double dz = zi - zTable_h[p];
 		double rsq = dx*dx + dy*dy + dz*dz;
 		double r = sqrt(rsq);
 		double s = GM_h[p] / (r * r * r);

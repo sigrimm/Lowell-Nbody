@@ -65,7 +65,7 @@ inline void asteroid::update_perturbers(double time){
 		const int pp = p * nCm * 3;
 
 		double sizeSubInterval = endTime_h[p] - startTime_h[p];
-//if(p > 10) printf("time %d %.20g %.20g %.20g %.20g\n", p, time + time_reference, sizeSubInterval, startTime[p], endTime[p]);
+//printf("time %d %.20g %.20g %.20g %.20g\n", p, time + time_reference, sizeSubInterval, startTime_h[p], endTime_h[p]);
 		double subTime = (time_reference - startTime_h[p] + time) / sizeSubInterval;   //normalized time in  0 - 1
 		double t = 2.0 * subTime - 1.0;                         //mormalized time in -1 - 1
 
@@ -120,21 +120,21 @@ inline void asteroid::update_perturbers(double time){
 			vzp += Tvz[j] * cdata_h[pp + 2 * nC + j] * ct;
 		}
 
-		x_h[p] = xp;
-		y_h[p] = yp;
-		z_h[p] = zp;
+		xTable_h[p] = xp;
+		yTable_h[p] = yp;
+		zTable_h[p] = zp;
 
-		vx_h[p] = vxp;
-		vy_h[p] = vyp;
-		vz_h[p] = vzp;
+		vxTable_h[p] = vxp;
+		vyTable_h[p] = vyp;
+		vzTable_h[p] = vzp;
 
-//printf("positionA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, x_h[p], y_h[p], z_h[p], t);
-//printf("positionvA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, v_hx[p], vy_h[p], vz_h[p], t);
+//printf("positionA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p], yTable_h[p], zTable_h[p], t);
+//printf("positionvA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, vxTable_h[p], vyTable_h[p], vzTable_h[p], t);
 
 
-//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, x_h[p] / AUtokm, y_h[p] / AUtokm, z_h[p] / AUtokm, t);
+//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p] / AUtokm, yTable_h[p] / AUtokm, zTable_h[p] / AUtokm, t);
 
-//printf("%d %.20g %.20g %.20g %.20g %.20g\n", p, time, x_h[p], y_h[p], z_h[p], t);
+//printf("%d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p], yTable_h[p], zTable_h[p], t);
 
 
 	}
@@ -142,55 +142,55 @@ inline void asteroid::update_perturbers(double time){
 	//Calculate Earth and Moon positions, id 2 and 9
 	//Up to here id = 2 is the Earth-Moon barycentrum, id = 9 is the geocentric position of the Moon        
 
-	double xB = x_h[2];
-	double yB = y_h[2];
-	double zB = z_h[2];
+	double xB = xTable_h[2];
+	double yB = yTable_h[2];
+	double zB = zTable_h[2];
 
-	double vxB = vx_h[2];
-	double vyB = vy_h[2];
-	double vzB = vz_h[2];
+	double vxB = vxTable_h[2];
+	double vyB = vyTable_h[2];
+	double vzB = vzTable_h[2];
 
-	double xM = x_h[9];
-	double yM = y_h[9];
-	double zM = z_h[9];
+	double xM = xTable_h[9];
+	double yM = yTable_h[9];
+	double zM = zTable_h[9];
 
-	double vxM = vx_h[9];
-	double vyM = vy_h[9];
-	double vzM = vz_h[9];
+	double vxM = vxTable_h[9];
+	double vyM = vyTable_h[9];
+	double vzM = vzTable_h[9];
 
 	double f = 1.0/(1.0 + EM);
 
-	x_h[2] = xB - xM * f;
-	y_h[2] = yB - yM * f;
-	z_h[2] = zB - zM * f;
+	xTable_h[2] = xB - xM * f;
+	yTable_h[2] = yB - yM * f;
+	zTable_h[2] = zB - zM * f;
 
-	vx_h[2] = vxB - vxM * f;
-	vy_h[2] = vyB - vyM * f;
-	vz_h[2] = vzB - vzM * f;
+	vxTable_h[2] = vxB - vxM * f;
+	vyTable_h[2] = vyB - vyM * f;
+	vzTable_h[2] = vzB - vzM * f;
 
-	x_h[9] = xB + xM * EM * f;
-	y_h[9] = yB + yM * EM * f;
-	z_h[9] = zB + zM * EM * f;
+	xTable_h[9] = xB + xM * EM * f;
+	yTable_h[9] = yB + yM * EM * f;
+	zTable_h[9] = zB + zM * EM * f;
 
-	vx_h[9] = vxB + vxM * EM * f;
-	vy_h[9] = vyB + vyM * EM * f;
-	vz_h[9] = vzB + vzM * EM * f;
+	vxTable_h[9] = vxB + vxM * EM * f;
+	vyTable_h[9] = vyB + vyM * EM * f;
+	vzTable_h[9] = vzB + vzM * EM * f;
 
 	for(int p = 0; p < Nperturbers; ++p){
 		//positions are in km
 		//velocities are in km/day
-		x_h[p] /= AUtokm;
-		y_h[p] /= AUtokm;
-		z_h[p] /= AUtokm;
+		xTable_h[p] /= AUtokm;
+		yTable_h[p] /= AUtokm;
+		zTable_h[p] /= AUtokm;
 
-		//vx_h[p] /= AUtokm;
-		//vy_h[p] /= AUtokm;
-		//vz_h[p] /= AUtokm;
+		//vxTable_h[p] /= AUtokm;
+		//vyTable_h[p] /= AUtokm;
+		//vzTable_h[p] /= AUtokm;
 		//remove time factor again
-		vx_h[p] /= AUtokm / 86400.0;
-		vy_h[p] /= AUtokm / 86400.0;
-		vz_h[p] /= AUtokm / 86400.0;
-//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, x_h[p], y_h[p], z_h[p]);
+		vxTable_h[p] /= AUtokm / 86400.0;
+		vyTable_h[p] /= AUtokm / 86400.0;
+		vzTable_h[p] /= AUtokm / 86400.0;
+//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p], yTable_h[p], zTable_h[p]);
 
 	}
 
@@ -212,18 +212,22 @@ inline void asteroid::update_perturbers(double time){
 		if(pp == 26) p = 4;     //Jupiter
 
 
-		//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, x_h[p], y_h[p], z_h[p]);
-		//printf("positionvB %d %.20g %.20g %.20g %.20g\n", p, time, vx_h[p], vy_h[p], vz_h[p]);
-		//printf("positionB %d %.20g %.20g %.20g %.20g\n", pp, time, x_h[pp], y_h[pp], z_h[pp]);
+		//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p], yTable_h[p], zTable_h[p]);
+		//printf("positionvB %d %.20g %.20g %.20g %.20g\n", p, time, vxTable_h[p], vyTable_h[p], vzTable_h[p]);
+		//printf("positionB %d %.20g %.20g %.20g %.20g\n", pp, time, xTable_h[pp], yTable_h[pp], zTable_h[pp]);
 	}
 	*/
 
 	//Translate asteroid orbits from Heliocentric to Barycentric coordinates
 	//This is done so in Assist, but probably this is not correct, check!
 	for(int p = 11; p < Nperturbers; ++p){
-		x_h[p] += x_h[10];
-		y_h[p] += y_h[10];
-		z_h[p] += z_h[10];
+		xTable_h[p] += xTable_h[10];
+		yTable_h[p] += yTable_h[10];
+		zTable_h[p] += zTable_h[10];
+
+		vxTable_h[p] += vxTable_h[10];
+		vyTable_h[p] += vyTable_h[10];
+		vzTable_h[p] += vzTable_h[10];
 	}
 
 }

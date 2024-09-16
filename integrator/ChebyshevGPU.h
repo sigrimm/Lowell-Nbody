@@ -1,8 +1,7 @@
-__device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *id_d, double &startTime, double &endTime, const int nChebyshev, int &offset0, double time, double time_reference, const int nCm, int p){
+__device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *id_d, double &startTime, double &endTime, const int nChebyshev, int &offset0, double time, double time_reference){
 
 	//Update the Chebyshev coefficients if necessary
-
-	const int pp = p * nCm * 3;
+	//int p = threadIdx.x;	//Perturber index
 
 	if(time + time_reference > endTime){
 		for(int k = 0; k < 1000000; ++k){
@@ -10,12 +9,10 @@ __device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *id_d,
 			startTime = data_d[offset0];
 			endTime = data_d[offset0 + 1];
 
-
 //printf(" ++ %d %d %d %d %.20g %.20g\n", p, id_d[p], offset0, nChebyshev, startTime, endTime);
 
-
 			for(int i = 0; i < nChebyshev * 3; ++i){
-				cdata_d[pp + i] = data_d[offset0 + 2 + i]; 
+				cdata_d[i] = data_d[offset0 + 2 + i]; 
 			}
 			
 
@@ -32,11 +29,10 @@ __device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *id_d,
 			startTime = data_d[offset0];
 			endTime = data_d[offset0 + 1];
 
-
 //printf(" -- %d %d %d %d %.20g %.20g\n", p, id_d[p], offset0, nChebyshev, startTime, endTime);
 
 			for(int i = 0; i < nChebyshev * 3; ++i){
-				cdata_d[pp + i] = data_d[offset0 + 2 + i]; 
+				cdata_d[i] = data_d[offset0 + 2 + i]; 
 			}
 
 			if(time + time_reference >= startTime){
@@ -48,7 +44,7 @@ __device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *id_d,
 	}
 }
 
-__device__ void update_perturbersGPU(double *x_s, double *y_s, double *z_s, double *vx_s, double *vy_s, double *vz_s, double *cdata_d, double &startTime, double &endTime, const int nChebyshev, double time_reference, double time, const int nCm, const double EM, const double AUtokm, const int Nperturbers, int p){
+__device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double *zTable_s, double *vxTable_s, double *vyTable_s, double *vzTable_s, double *cdata_d, double &startTime, double &endTime, const int nChebyshev, double time_reference, double time, const int nCm, const double EM, const double AUtokm, const int Nperturbers, int p){
 
 	if(p < Nperturbers){
 
@@ -68,10 +64,8 @@ __device__ void update_perturbersGPU(double *x_s, double *y_s, double *z_s, doub
 
 
 		//Calculate positions of perturbers
-		const int pp = p * nCm * 3;
-
 		double sizeSubInterval = endTime - startTime;
-//printf("time %d %.20g %.20g %.20g %.20g\n", p, time + time_reference, sizeSubInterval, startTime, endTime);
+//printf("time %d %d %.20g %.20g %.20g %.20g\n", blockIdx.x, p, time + time_reference, sizeSubInterval, startTime, endTime);
 		double subTime = (time_reference - startTime + time) / sizeSubInterval;   //normalized time in  0 - 1
 		double t = 2.0 * subTime - 1.0;                         //mormalized time in -1 - 1
 
@@ -97,13 +91,15 @@ __device__ void update_perturbersGPU(double *x_s, double *y_s, double *z_s, doub
 		Tvz[0] = 0.0;
 		Tvz[1] = 1.0;
 
+		double t2 = 2.0 * t;
+
 		for(int j = 2; j < nChebyshev; ++j){
-			Tx[j] = 2.0 * t * Tx[j - 1] - Tx[j - 2];
-			Ty[j] = 2.0 * t * Ty[j - 1] - Ty[j - 2];
-			Tz[j] = 2.0 * t * Tz[j - 1] - Tz[j - 2];
-			Tvx[j] = 2.0 * t * Tvx[j - 1] + 2.0 * Tx[j - 1] - Tvx[j - 2];
-			Tvy[j] = 2.0 * t * Tvy[j - 1] + 2.0 * Ty[j - 1] - Tvy[j - 2];
-			Tvz[j] = 2.0 * t * Tvz[j - 1] + 2.0 * Tz[j - 1] - Tvz[j - 2];
+			Tx[j] = t2 * Tx[j - 1] - Tx[j - 2];
+			Ty[j] = t2 * Ty[j - 1] - Ty[j - 2];
+			Tz[j] = t2 * Tz[j - 1] - Tz[j - 2];
+			Tvx[j] = t2 * Tvx[j - 1] + 2.0 * Tx[j - 1] - Tvx[j - 2];
+			Tvy[j] = t2 * Tvy[j - 1] + 2.0 * Ty[j - 1] - Tvy[j - 2];
+			Tvz[j] = t2 * Tvz[j - 1] + 2.0 * Tz[j - 1] - Tvz[j - 2];
 		}
 
 		double xp = 0.0;
@@ -116,31 +112,35 @@ __device__ void update_perturbersGPU(double *x_s, double *y_s, double *z_s, doub
 
 		for(int j = 0; j < nChebyshev; ++j){
 		//for(int j = nChebyshev - 1; j >= 0; --j){    //reduce floating point errors by revert order
-			xp += Tx[j] * cdata_d[pp + j];
-			yp += Ty[j] * cdata_d[pp + nChebyshev + j];
-			zp += Tz[j] * cdata_d[pp + 2 * nChebyshev + j];
-//printf("Chebyshev %d %.20g %.20g %.20g %.20g %.20g\n", j, Tx[j], cdata_d[pp + j], xp, yp, zp);                    
+			double cx = cdata_d[j];
+			double cy = cdata_d[nChebyshev + j];
+			double cz = cdata_d[2 * nChebyshev + j];
 
-			vxp += Tvx[j] * cdata_d[pp + j] * ct;
-			vyp += Tvy[j] * cdata_d[pp + nChebyshev + j] * ct;
-			vzp += Tvz[j] * cdata_d[pp + 2 * nChebyshev + j] * ct;
+			xp += Tx[j] * cx;
+			yp += Ty[j] * cy;
+			zp += Tz[j] * cz;
+//printf("Chebyshev %d %.20g %.20g %.20g %.20g %.20g\n", j, Tx[j], cx, xp, yp, zp);                    
+
+			vxp += Tvx[j] * cx * ct;
+			vyp += Tvy[j] * cy * ct;
+			vzp += Tvz[j] * cz * ct;
 		}
 
-		x_s[p] = xp;
-		y_s[p] = yp;
-		z_s[p] = zp;
+		xTable_s[p] = xp;
+		yTable_s[p] = yp;
+		zTable_s[p] = zp;
 
-		vx_s[p] = vxp;
-		vy_s[p] = vyp;
-		vz_s[p] = vzp;
+		vxTable_s[p] = vxp;
+		vyTable_s[p] = vyp;
+		vzTable_s[p] = vzp;
 
-//printf("positionA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, x_s[p], y_s[p], z_s[p], t);
-//printf("positionvA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, vx_s[p], vy_s[p], vz_s[p], t);
+//printf("positionA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_s[p], yTable_s[p], zTable_s[p], t);
+//printf("positionvA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, vxTable_s[p], vyTable_s[p], vzTable_s[p], t);
 
 
-//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, x_s[p] / AUtokm, y_s[p] / AUtokm, z_s[p] / AUtokm, t);
+//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_s[p] / AUtokm, yTable_s[p] / AUtokm, zTable_s[p] / AUtokm, t);
 
-//printf("%d %.20g %.20g %.20g %.20g %.20g\n", p, time, x_s[p], y_s[p], z_s[p], t);
+//printf("%d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_s[p], yTable_s[p], zTable_s[p], t);
 
 
 		//Calculate Earth and Moon positions, id 2 and 9
@@ -151,39 +151,39 @@ __device__ void update_perturbersGPU(double *x_s, double *y_s, double *z_s, doub
 
 	if(p == 0){
 
-		double xB = x_s[2];
-		double yB = y_s[2];
-		double zB = z_s[2];
+		double xB = xTable_s[2];
+		double yB = yTable_s[2];
+		double zB = zTable_s[2];
 
-		double vxB = vx_s[2];
-		double vyB = vy_s[2];
-		double vzB = vz_s[2];
+		double vxB = vxTable_s[2];
+		double vyB = vyTable_s[2];
+		double vzB = vzTable_s[2];
 
-		double xM = x_s[9];
-		double yM = y_s[9];
-		double zM = z_s[9];
+		double xM = xTable_s[9];
+		double yM = yTable_s[9];
+		double zM = zTable_s[9];
 
-		double vxM = vx_s[9];
-		double vyM = vy_s[9];
-		double vzM = vz_s[9];
+		double vxM = vxTable_s[9];
+		double vyM = vyTable_s[9];
+		double vzM = vzTable_s[9];
 
 		double f = 1.0/(1.0 + EM);
 
-		x_s[2] = xB - xM * f;
-		y_s[2] = yB - yM * f;
-		z_s[2] = zB - zM * f;
+		xTable_s[2] = xB - xM * f;
+		yTable_s[2] = yB - yM * f;
+		zTable_s[2] = zB - zM * f;
 
-		vx_s[2] = vxB - vxM * f;
-		vy_s[2] = vyB - vyM * f;
-		vz_s[2] = vzB - vzM * f;
+		vxTable_s[2] = vxB - vxM * f;
+		vyTable_s[2] = vyB - vyM * f;
+		vzTable_s[2] = vzB - vzM * f;
 
-		x_s[9] = xB + xM * EM * f;
-		y_s[9] = yB + yM * EM * f;
-		z_s[9] = zB + zM * EM * f;
+		xTable_s[9] = xB + xM * EM * f;
+		yTable_s[9] = yB + yM * EM * f;
+		zTable_s[9] = zB + zM * EM * f;
 
-		vx_s[9] = vxB + vxM * EM * f;
-		vy_s[9] = vyB + vyM * EM * f;
-		vz_s[9] = vzB + vzM * EM * f;
+		vxTable_s[9] = vxB + vxM * EM * f;
+		vyTable_s[9] = vyB + vyM * EM * f;
+		vzTable_s[9] = vzB + vzM * EM * f;
 
 	}
 
@@ -193,19 +193,19 @@ __device__ void update_perturbersGPU(double *x_s, double *y_s, double *z_s, doub
 
 		//positions are in km
 		//velocities are in km/day
-		x_s[p] /= AUtokm;
-		y_s[p] /= AUtokm;
-		z_s[p] /= AUtokm;
+		xTable_s[p] /= AUtokm;
+		yTable_s[p] /= AUtokm;
+		zTable_s[p] /= AUtokm;
 
-		//vx_s[p] /= AUtokm;
-		//vy_s[p] /= AUtokm;
-		//vz_s[p] /= AUtokm;
+		//vxTable_s[p] /= AUtokm;
+		//vyTable_s[p] /= AUtokm;
+		//vzTable_s[p] /= AUtokm;
 		//remove time factor again
-		vx_s[p] /= AUtokm / 86400.0;
-		vy_s[p] /= AUtokm / 86400.0;
-		vz_s[p] /= AUtokm / 86400.0;
+		vxTable_s[p] /= AUtokm / 86400.0;
+		vyTable_s[p] /= AUtokm / 86400.0;
+		vzTable_s[p] /= AUtokm / 86400.0;
 
-//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, x_s[p], y_s[p], z_s[p]);
+//printf("positionB %d %d %.20g %.20g %.20g %.20g\n", blockIdx.x, p, time, xTable_s[p], yTable_s[p], zTable_s[p]);
 
 
 		/*
@@ -225,77 +225,79 @@ __device__ void update_perturbersGPU(double *x_s, double *y_s, double *z_s, doub
 		if(p == 26) pp = 4;     //Jupiter
 
 
-		//printf("positionB %d %.20g %.20g %.20g %.20g\n", pp, time, x_s[pp], y_s[pp], z_s[pp]);
-		//printf("positionvB %d %.20g %.20g %.20g %.20g\n", pp, time, vx_s[pp], vy_s[pp], vz_s[pp]);
-		//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, x_s[p], y_s[p], z_s[p]);
+		//printf("positionB %d %.20g %.20g %.20g %.20g\n", pp, time, xTable_s[pp], yTable_s[pp], zTable_s[pp]);
+		//printf("positionvB %d %.20g %.20g %.20g %.20g\n", pp, time, vxTable_s[pp], vyTable_s[pp], vzTable_s[pp]);
+		//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, xTable_s[p], yTable_s[p], zTable_s[p]);
 		*/
 
-	//Translate asteroid orbits from Heliocentric to Barycentric coordinates
-	//This is done so in Assist, but probably this is not correct, check!
 	}
 	__syncthreads();
+	//Translate asteroid orbits from Heliocentric to Barycentric coordinates
+	//This is done so in Assist, but probably this is not correct, check!
 	if(p >= 11 && p < Nperturbers){
-		x_s[p] += x_s[10];
-		y_s[p] += y_s[10];
-		z_s[p] += z_s[10];
-	}
+		xTable_s[p] += xTable_s[10];
+		yTable_s[p] += yTable_s[10];
+		zTable_s[p] += zTable_s[10];
 
+		vxTable_s[p] += vxTable_s[10];
+		vyTable_s[p] += vyTable_s[10];
+		vzTable_s[p] += vzTable_s[10];
+	}
+	__syncthreads();
 }
 
 
 
+// The calculation of the perturbers position can be parallelized along the perturbers and the stage index of the Runke Kutta integrator.
+// Every perturber runs on a thread.
+// Every stage runs on a different thread block.
+// This way of scheduling is needed because perturbers must be in the same thread block because of the calcualtion of the Earth and Moon.
+__global__ void update_perturbers_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *data_d, double *cdata_d, int *id_d, double *startTime_d, double *endTime_d, int *nChebyshev_d, int *offset0_d, double time, double time_reference, const double dt, const int RKFn, const int nCm, const double EM, const double AUtokm, const int Nperturbers){
 
-__global__ void update_perturbers_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *data_d, double *cdata_d, int *id_d, double *startTime_d, double *endTime_d, int *nChebyshev_d, int *offset0_d, double time, double time_reference, const int nCm, const double EM, const double AUtokm, const int Nperturbers){
+	int id = threadIdx.x;	//Perturber index
+	int idx = blockIdx.x;	//Stage index
 
-	int id = blockIdx.x * blockDim.x + threadIdx.x;
+	__shared__ double xTable_s[def_NP];
+	__shared__ double yTable_s[def_NP];
+	__shared__ double zTable_s[def_NP];
 
-	__shared__ double x_s[def_NP];
-	__shared__ double y_s[def_NP];
-	__shared__ double z_s[def_NP];
-
-	__shared__ double vx_s[def_NP];
-	__shared__ double vy_s[def_NP];
-	__shared__ double vz_s[def_NP];
+	__shared__ double vxTable_s[def_NP];
+	__shared__ double vyTable_s[def_NP];
+	__shared__ double vzTable_s[def_NP];
 
 	int offset0;
 	double startTime;
 	double endTime;
 	int nChebyshev;
 
-	if(id < Nperturbers){
+	const int pp = (id * RKFn + idx) * nCm * 3;
 
-		x_s[id] = x_d[id];
-		y_s[id] = y_d[id];
-		z_s[id] = z_d[id];
+	if(id < Nperturbers && idx < RKFn){
 
-		vx_s[id] = vx_d[id];
-		vy_s[id] = vy_d[id];
-		vz_s[id] = vz_d[id];
-
-		offset0 = offset0_d[id];
-		startTime = startTime_d[id];
-		endTime = endTime_d[id];
+		offset0 = offset0_d[id * RKFn + idx];
+		startTime = startTime_d[id * RKFn + idx];
+		endTime = endTime_d[id * RKFn + idx];
 		nChebyshev = nChebyshev_d[id];
 
 
-		update_ChebyshevGPU(data_d, cdata_d, id_d, startTime, endTime, nChebyshev, offset0, time, time_reference, nCm, id);
+		update_ChebyshevGPU(data_d, cdata_d + pp, id_d, startTime, endTime, nChebyshev, offset0, time + c_c[idx] * dt, time_reference);
 	}
 	__syncthreads();
-	update_perturbersGPU(x_s, y_s, z_s, vx_s, vy_s, vz_s, cdata_d, startTime, endTime, nChebyshev, time_reference, time, nCm, EM, AUtokm, Nperturbers, id);
+	update_perturbersGPU(xTable_s, yTable_s, zTable_s, vxTable_s, vyTable_s, vzTable_s, cdata_d + pp, startTime, endTime, nChebyshev, time_reference, time + c_c[idx] * dt, nCm, EM, AUtokm, Nperturbers, id);
 
 	__syncthreads();
-	if(id < Nperturbers){
+	if(id < Nperturbers && idx < RKFn){
 
-		offset0_d[id] = offset0;
-		startTime_d[id] = startTime;
-		endTime_d[id] = endTime;
+		offset0_d[id * RKFn + idx] = offset0;
+		startTime_d[id * RKFn + idx] = startTime;
+		endTime_d[id * RKFn + idx] = endTime;
 
-		x_d[id] = x_s[id];
-		y_d[id] = y_s[id];
-		z_d[id] = z_s[id];
+		xTable_d[id * RKFn + idx] = xTable_s[id];
+		yTable_d[id * RKFn + idx] = yTable_s[id];
+		zTable_d[id * RKFn + idx] = zTable_s[id];
 
-		vx_d[id] = vx_s[id];
-		vy_d[id] = vy_s[id];
-		vz_d[id] = vz_s[id];
+		vxTable_d[id * RKFn + idx] = vxTable_s[id];
+		vyTable_d[id * RKFn + idx] = vyTable_s[id];
+		vzTable_d[id * RKFn + idx] = vzTable_s[id];
 	}
 }

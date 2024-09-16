@@ -116,7 +116,7 @@ __device__ void J2(double xE, double yE, double zE, double &axi, double &ayi, do
 //printf("J2 a %.20g %.20g %.20g\n", tx, ty, tz);
 }
 
-__device__ void Gravity(double xi, double yi, double zi, double *x_s, double *y_s, double *z_s, double &axi, double &ayi, double &azi, double *GM_s, const int Nperturbers){
+__device__ void Gravity(double xi, double yi, double zi, double *xTable_s, double *yTable_s, double *zTable_s, double &axi, double &ayi, double &azi, double *GM_s, const int Nperturbers){
 	for(int pp = 0; pp < Nperturbers; ++pp){
 		int p = pp + 11;
 		if(pp == 16) p = 8;	//Pluto
@@ -131,9 +131,9 @@ __device__ void Gravity(double xi, double yi, double zi, double *x_s, double *y_
 		if(pp == 25) p = 4;	//Jupiter
 		if(pp == 26) p = 10;	//Sun
 
-		double dx = xi - x_s[p];
-		double dy = yi - y_s[p];
-		double dz = zi - z_s[p];
+		double dx = xi - xTable_s[p];
+		double dy = yi - yTable_s[p];
+		double dz = zi - zTable_s[p];
 		double rsq = dx*dx + dy*dy + dz*dz;
 		double r = sqrt(rsq);
 		double s = GM_s[p] / (r * r * r);
