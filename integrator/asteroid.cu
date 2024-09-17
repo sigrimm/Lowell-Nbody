@@ -63,7 +63,7 @@ int asteroid::allocateGPU(){
 	cudaMalloc((void **) &A3_d, N * sizeof(double));
 
 
-	cudaMalloc((void **) &snew_d, sizeof(double));
+	cudaMalloc((void **) &snew_d, N * sizeof(double));
 
 	cudaDeviceSynchronize();
 	cudaError_t error = cudaGetLastError();

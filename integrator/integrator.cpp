@@ -143,6 +143,7 @@ inline void asteroid::RK_step(){
 			GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
 			J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
 			Gravity(xt_h[i], yt_h[i], zt_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
+
 		}
 		// ----------------------------------------------------------------------------
 		for(int i = 0; i < N; ++i){
@@ -442,7 +443,6 @@ int asteroid::loop(){
 			if(RKFn == 13){
 				RKF_step();
 			}
-
 			dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;
 
 			if(time + time_reference > time1 || time + time_reference < time0){

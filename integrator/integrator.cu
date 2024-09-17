@@ -109,7 +109,7 @@ __global__ void leapfrog_stepB_kernel(double *xTable_d, double *yTable_d, double
 		double vzih = vzi - vzTable_s[10];
 
 		//r is used in multiple forces, so reuse it
-		double rsq = xih * xih + yih * yih + zih * zih;
+		double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 		double r = sqrt(rsq);
 
 		//Earth centric coordinates
@@ -265,7 +265,7 @@ __global__ void RK_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 			double vzih = vzti - vzTable_s[10];
 
 			//r is used in multiple forces, so reuse it
-			double rsq = xih * xih + yih * yih + zih * zih;
+			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 			double r = sqrt(rsq);
 
 			//Earth centric coordinates
@@ -446,7 +446,7 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 			double vzih = vzti - vzTable_s[10];
 
 			//r is used in multiple forces, so reuse it
-			double rsq = xih * xih + yih * yih + zih * zih;
+			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 			double r = sqrt(rsq);
 
 			//Earth centric coordinates
@@ -543,7 +543,7 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 
 		snew = (snew < s) ? snew : s;
 
-		snew_d[0] = snew;
+		snew_d[id] = snew;
 //printf("id %d %g %g\n", id, s, snew);
 	}
 
@@ -560,7 +560,7 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 			vy_d[id] += dvy;
 			vz_d[id] += dvz;
 
-			snew_d[0] = 1.0;
+			snew_d[id] = 1.0;
 		}
 	}
 	else if(snew >= 1.0){
@@ -662,21 +662,23 @@ int asteroid::loop(){
 				}
 				dt *= snew;
 
-
 			}
 
 			dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;
 
 			if(time + time_reference > time1 || time + time_reference < time0){
+				cudaDeviceSynchronize();
 				printf("Reached the end of the Chebyshev data file\n");
 				return 0;
 			}
 
 			if(dts < 0 && time < timeEnd){
+				cudaDeviceSynchronize();
 				printf("Reached the end of the integration\n");
 				return 0;
 			}
 			if(dts > 0 && time > timeEnd){
+				cudaDeviceSynchronize();
 				printf("Reached the end of the integration\n");
 				return 0;
 			}

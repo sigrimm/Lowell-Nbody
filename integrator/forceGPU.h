@@ -6,27 +6,27 @@ __device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi,
 //printf("v %.20g %.20g %.20g %.20g %.20g\n", vxi, vyi, vzi, vx[i], vx[10]);
 
 	//angular momenrum h = r x v
-	double hx = yi * vzi - zi * vyi;
-	double hy =-xi * vzi + zi * vxi;
-	double hz = xi * vyi - yi * vxi;
+	double hx =  __dmul_rn(yi, vzi) - __dmul_rn(zi, vyi);
+	double hy = -__dmul_rn(xi, vzi) + __dmul_rn(zi, vxi);
+	double hz =  __dmul_rn(xi, vyi) - __dmul_rn(yi, vxi);
 
-	double hsq = hx * hx + hy * hy + hz * hz;
+	double hsq = __dmul_rn(hx, hx) + __dmul_rn(hy, hy) + __dmul_rn(hz, hz);
 	double h = sqrt(hsq);
 
 	//Transverse velocity t = h x r
-	double tx = hy * zi - hz * yi;
-	double ty =-hx * zi + hz * xi;
-	double tz = hx * yi - hy * xi;
+	double tx =  __dmul_rn(hy, zi) - __dmul_rn(hz, yi);
+	double ty = -__dmul_rn(hx, zi) + __dmul_rn(hz, xi);
+	double tz =  __dmul_rn(hx, yi) - __dmul_rn(hy, xi);
 
-	double tsq = tx * tx + ty * ty + tz * tz;
+	double tsq = __dmul_rn(tx, tx) + __dmul_rn(ty,ty) + __dmul_rn(tz, tz);
 	double t = sqrt(tsq);
 
 	//double gr = 1.0 / rsq;  //only valid for asteroids, not for comets 
-	double alpha = 1.0;
-	double nk = 0.0;
-	double nm = 2.0;
-	double nn = 5.093;
-	double r0 = 1.0;
+	const double alpha = 1.0;
+	const double nk = 0.0;
+	const double nm = 2.0;
+	const double nn = 5.093;
+	const double r0 = 1.0;
 
 	const double gr = alpha * pow(r / r0, -nm) * pow(1.0 + pow(r / r0, nn), -nk);
 
@@ -42,19 +42,19 @@ __device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi,
 	printf("gr %.20g %.20g\n", gr1, gr);
 	*/
 
-	//double f1 = A1i * gr / r;
-	//double f2 = A2i * gr / t;
-	//double f3 = A3i * gr / h;
+	double f1 = __dmul_rn(A1i, gr) / r;
+	double f2 = __dmul_rn(A2i, gr) / t;
+	double f3 = __dmul_rn(A3i, gr) / h;
 
 //printf("NonGrav  %.20g %.20g %.20g %.20g |%.20g %.20g %.20g\n", gr, r, t, h, f1, f2, f3);
 //printf("NonGrav a %.20g %.20g %.20g\n", ax_h[i], ay_h[i], az_h[i]);
 
-	//ax_h[i] += f1 * xi + f2 * tx + f3 * hx;
-	//ay_h[i] += f1 * yi + f2 * ty + f3 * hy;
-	//az_h[i] += f1 * zi + f2 * tz + f3 * hz;
-	axi += A1i * gr * xi / r + A2i * gr * tx / t + A3i * gr * hx / h;
-	ayi += A1i * gr * yi / r + A2i * gr * ty / t + A3i * gr * hy / h;
-	azi += A1i * gr * zi / r + A2i * gr * tz / t + A3i * gr * hz / h;
+	axi += __dmul_rn(f1, xi) + __dmul_rn(f2, tx) + __dmul_rn(f3, hx);
+	ayi += __dmul_rn(f1, yi) + __dmul_rn(f2, ty) + __dmul_rn(f3, hy);
+	azi += __dmul_rn(f1, zi) + __dmul_rn(f2, tz) + __dmul_rn(f3, hz);
+	//axi += A1i * gr * xi / r + A2i * gr * tx / t + A3i * gr * hx / h;
+	//ayi += A1i * gr * yi / r + A2i * gr * ty / t + A3i * gr * hy / h;
+	//azi += A1i * gr * zi / r + A2i * gr * tz / t + A3i * gr * hz / h;
 
 //printf("NonGrav %.20g %.20g %.20g %.20g | %.20g %.20g %.20g\n", gr, r, t, h, f1, f2, f3);
 //printf("NonGrav a %.20g %.20g %.20g\n", ax_h[i], ay_h[i], az_h[i]);
@@ -65,9 +65,9 @@ __device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi,
 //Coordinates must be heliocentric
 __device__ void GR(double xi, double yi, double zi, double vxi, double vyi, double vzi, double r, double &axi, double &ayi, double &azi, double GMSun, const double c2){
 	//GR
-	double vsq = vxi * vxi + vyi * vyi + vzi * vzi;
+	double vsq = __dmul_rn(vxi, vxi) + __dmul_rn(vyi, vyi) + __dmul_rn(vzi, vzi);
 
-	double rv = xi * vxi + yi * vyi + zi * vzi;
+	double rv = __dmul_rn(xi, vxi) + __dmul_rn(yi, vyi) + __dmul_rn(zi, vzi);
 
 	double f1 = GMSun / (r * r * r * c2);
 	double t1 = 4.0 * GMSun / r - vsq;
@@ -75,17 +75,19 @@ __device__ void GR(double xi, double yi, double zi, double vxi, double vyi, doub
 	//printf("GRa %.20g %.20g %.20g %.20g %.20g\n", vsq, r, t1, t3, f1);
 	//printf("a %d %.20g %.20g %.20g\n", i, ax_h, ay_h, az_h);
 
-	//printf("A %d %.20g %.20g %.20g %.20g %.20g %.20g\n", i, xi, yi, zi, vxi, vyi, vzi);
+	//printf("A %.20g %.20g %.20g %.20g %.20g %.20g\n", xi, yi, zi, vxi, vyi, vzi);
 	//printf("B %d %.20g %.20g %.20g\n", i, f1, t1, t3);
 
-	//double aax = f1 * (t1 * xi + t3 * vxi);
-	//double aay = f1 * (t1 * yi + t3 * vyi);
-	//double aaz = f1 * (t1 * zi + t3 * vzi);
+	double aax = f1 * (__dmul_rn(t1, xi) + __dmul_rn(t3, vxi));
+	double aay = f1 * (__dmul_rn(t1, yi) + __dmul_rn(t3, vyi));
+	double aaz = f1 * (__dmul_rn(t1, zi) + __dmul_rn(t3, vzi));
 
 	//printf("GR a %.20g %.20g %.20g\n", aax, aay, aaz);
-	axi += f1 * (t1 * xi + t3 * vxi);
-	ayi += f1 * (t1 * yi + t3 * vyi);
-	azi += f1 * (t1 * zi + t3 * vzi);
+
+	axi = __dadd_rn(axi, aax);
+	ayi = __dadd_rn(ayi, aay);
+	azi = __dadd_rn(azi, aaz);
+
 	//printf("GR a %d %.20g %.20g %.20g\n", i, ax_h[i], ay_h[i], az_h[i]);
 }
 
@@ -118,6 +120,7 @@ __device__ void J2(double xE, double yE, double zE, double &axi, double &ayi, do
 
 __device__ void Gravity(double xi, double yi, double zi, double *xTable_s, double *yTable_s, double *zTable_s, double &axi, double &ayi, double &azi, double *GM_s, const int Nperturbers){
 	for(int pp = 0; pp < Nperturbers; ++pp){
+
 		int p = pp + 11;
 		if(pp == 16) p = 8;	//Pluto
 		if(pp == 17) p = 9;	//Moon
@@ -134,13 +137,18 @@ __device__ void Gravity(double xi, double yi, double zi, double *xTable_s, doubl
 		double dx = xi - xTable_s[p];
 		double dy = yi - yTable_s[p];
 		double dz = zi - zTable_s[p];
-		double rsq = dx*dx + dy*dy + dz*dz;
-		double r = sqrt(rsq);
-		double s = GM_s[p] / (r * r * r);
 
-		axi -= s*dx;
-		ayi -= s*dy;
-		azi -= s*dz;
+		double rsq = __dmul_rn(dx, dx) + __dmul_rn(dy, dy) + __dmul_rn(dz, dz);
+		double r = sqrt(rsq);
+		double s = GM_s[p] / (r * rsq);
+
+		double aax = -__dmul_rn(s, dx);
+		double aay = -__dmul_rn(s, dy);
+		double aaz = -__dmul_rn(s, dz);
+
+		axi += aax;
+		ayi += aay;
+		azi += aaz;
 
 //printf("position %d %d %.20g %.20g %.20g %.20g %.20g\n", pp, p, time, x[p], y[p], z[p], GM_h[p]);
 	}

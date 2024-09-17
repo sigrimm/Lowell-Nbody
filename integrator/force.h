@@ -22,11 +22,11 @@ inline void asteroid::NonGrav(double xi, double yi, double zi, double vxi, doubl
 	double t = sqrt(tsq);
 
 	//double gr = 1.0 / rsq;  //only valid for asteroids, not for comets 
-	double alpha = 1.0;
-	double nk = 0.0;
-	double nm = 2.0;
-	double nn = 5.093;
-	double r0 = 1.0;
+	const double alpha = 1.0;
+	const double nk = 0.0;
+	const double nm = 2.0;
+	const double nn = 5.093;
+	const double r0 = 1.0;
 
 	const double gr = alpha * pow(r / r0, -nm) * pow(1.0 + pow(r / r0, nn), -nk);
 
@@ -42,19 +42,19 @@ inline void asteroid::NonGrav(double xi, double yi, double zi, double vxi, doubl
 	printf("gr %.20g %.20g\n", gr1, gr);
 	*/
 
-	//double f1 = A1i * gr / r;
-	//double f2 = A2i * gr / t;
-	//double f3 = A3i * gr / h;
+	double f1 = A1i * gr / r;
+	double f2 = A2i * gr / t;
+	double f3 = A3i * gr / h;
 
 //printf("NonGrav  %.20g %.20g %.20g %.20g |%.20g %.20g %.20g\n", gr, r, t, h, f1, f2, f3);
 //printf("NonGrav a %.20g %.20g %.20g\n", ax_h[i], ay_h[i], az_h[i]);
 
-	//ax_h[i] += f1 * xi + f2 * tx + f3 * hx;
-	//ay_h[i] += f1 * yi + f2 * ty + f3 * hy;
-	//az_h[i] += f1 * zi + f2 * tz + f3 * hz;
-	axi += A1i * gr * xi / r + A2i * gr * tx / t + A3i * gr * hx / h;
-	ayi += A1i * gr * yi / r + A2i * gr * ty / t + A3i * gr * hy / h;
-	azi += A1i * gr * zi / r + A2i * gr * tz / t + A3i * gr * hz / h;
+	axi += f1 * xi + f2 * tx + f3 * hx;
+	ayi += f1 * yi + f2 * ty + f3 * hy;
+	azi += f1 * zi + f2 * tz + f3 * hz;
+	//axi += A1i * gr * xi / r + A2i * gr * tx / t + A3i * gr * hx / h;
+	//ayi += A1i * gr * yi / r + A2i * gr * ty / t + A3i * gr * hy / h;
+	//azi += A1i * gr * zi / r + A2i * gr * tz / t + A3i * gr * hz / h;
 
 //printf("NonGrav %.20g %.20g %.20g %.20g | %.20g %.20g %.20g\n", gr, r, t, h, f1, f2, f3);
 //printf("NonGrav a %.20g %.20g %.20g\n", ax_h[i], ay_h[i], az_h[i]);
@@ -75,17 +75,17 @@ inline void asteroid::GR(double xi, double yi, double zi, double vxi, double vyi
 	//printf("GRa %.20g %.20g %.20g %.20g %.20g\n", vsq, r, t1, t3, f1);
 	//printf("a %d %.20g %.20g %.20g\n", i, ax_h, ay_h, az_h);
 
-	//printf("A %d %.20g %.20g %.20g %.20g %.20g %.20g\n", i, xi, yi, zi, vxi, vyi, vzi);
+	//printf("A %.20g %.20g %.20g %.20g %.20g %.20g\n", xi, yi, zi, vxi, vyi, vzi);
 	//printf("B %d %.20g %.20g %.20g\n", i, f1, t1, t3);
 
-	//double aax = f1 * (t1 * xi + t3 * vxi);
-	//double aay = f1 * (t1 * yi + t3 * vyi);
-	//double aaz = f1 * (t1 * zi + t3 * vzi);
+	double aax = f1 * (t1 * xi + t3 * vxi);
+	double aay = f1 * (t1 * yi + t3 * vyi);
+	double aaz = f1 * (t1 * zi + t3 * vzi);
 
 	//printf("GR a %.20g %.20g %.20g\n", aax, aay, aaz);
-	axi += f1 * (t1 * xi + t3 * vxi);
-	ayi += f1 * (t1 * yi + t3 * vyi);
-	azi += f1 * (t1 * zi + t3 * vzi);
+	axi += aax;
+	ayi += aay;
+	azi += aaz;
 	//printf("GR a %d %.20g %.20g %.20g\n", i, ax_h[i], ay_h[i], az_h[i]);
 }
 
@@ -134,13 +134,14 @@ inline void asteroid::Gravity(double xi, double yi, double zi, double *xTable_h,
 		double dx = xi - xTable_h[p];
 		double dy = yi - yTable_h[p];
 		double dz = zi - zTable_h[p];
-		double rsq = dx*dx + dy*dy + dz*dz;
-		double r = sqrt(rsq);
-		double s = GM_h[p] / (r * r * r);
 
-		axi -= s*dx;
-		ayi -= s*dy;
-		azi -= s*dz;
+		double rsq = dx * dx + dy * dy + dz * dz;
+		double r = sqrt(rsq);
+		double s = GM_h[p] / (r * rsq);
+
+		axi -= s * dx;
+		ayi -= s * dy;
+		azi -= s * dz;
 
 //printf("position %d %d %.20g %.20g %.20g %.20g %.20g\n", pp, p, time, x[p], y[p], z[p], GM_h[p]);
 	}
