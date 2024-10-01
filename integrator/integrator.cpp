@@ -347,9 +347,17 @@ inline void asteroid::RKF_step(){
 		s = (RKF_facmax < s) ? RKF_facmax : s;
 
 		snew = (snew < s) ? snew : s;
-		snew_h[0] = snew;
+		snew_h[i] = snew;
 	}
 
+
+	snew = 10.0;
+	//Find minimum time step
+	for(int i = 0; i < N; ++i){
+		snew = (snew < snew_h[i]) ? snew : snew_h[i];
+
+	}
+	snew_h[0] = snew;
 
 	if(snew >= 1.0){
 		//accept step
@@ -440,7 +448,9 @@ int asteroid::loop(){
 				RKF_step();
 			}
 
-			dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;
+			if(stop == 0){
+				dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;
+			}
 
 			if(time + time_reference > time1 || time + time_reference < time0){
 				printf("Reached the end of the Chebyshev data file\n");
