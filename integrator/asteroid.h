@@ -46,6 +46,8 @@ public:
 	int nCm;			//Maximum number of Chebyshev coefficients
 	int datasize;
 
+	int WarpSize = 0;
+
 	//perturbers data
 	double *startTime_h, *startTime_d;	//Start time of perturbers data block
 	double *endTime_h, *endTime_d;		//End time of perturbers data block
@@ -89,10 +91,11 @@ public:
 
 	//RKF arrays
 	int RKFn;
-        double *a_h;
-	double *b_h;
-	double *bb_h;
-	double *c_h;
+        double *RKFa_h;
+	double *RKFb_h;
+	double *RKFbb_h;
+	double *RKFc_h;
+
         double RKF_ee;
 	double RKF_atol;
 	double RKF_rtol;
@@ -100,13 +103,13 @@ public:
 	double RKF_facmin;
 	double RKF_facmax;
 
-	double *xt_h, *xt_d;
-	double *yt_h, *yt_d;
-	double *zt_h, *zt_d;
+	double *xt_h;
+	double *yt_h;
+	double *zt_h;
 
-	double *vxt_h, *vxt_d;
-	double *vyt_h, *vyt_d;
-	double *vzt_h, *vzt_d;
+	double *vxt_h;
+	double *vyt_h;
+	double *vzt_h;
 
 	double *dx_h, *dx_d;
 	double *dy_h, *dy_d;
@@ -126,6 +129,7 @@ public:
 
 
 	double *snew_h, *snew_d;
+	double *ssum_d;
 
 
 	int readParam();

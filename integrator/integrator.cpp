@@ -1,3 +1,4 @@
+#include <stdio.h>
 
 #include "asteroid.h"
 #include "Chebyshev.h"
@@ -13,7 +14,7 @@ inline void asteroid::leapfrog_step(){
 		z_h[i] += 0.5 * dt * vz_h[i];
 	}
 	time += dt * 0.5;
-	//printf("ta %.20g\n", time);   
+	//printf("ta %.20g\n", time);
 
 	// ----------------------------------------------------------------------------
 	for(int i = 0; i < N; ++i){
@@ -82,8 +83,8 @@ inline void asteroid::RK_step(){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time + c_h[S] * dt);
-		update_perturbers(time + c_h[S] * dt);
+		update_Chebyshev(time + RKFc_h[S] * dt);
+		update_perturbers(time + RKFc_h[S] * dt);
 		// ----------------------------------------------------------------------------
 
 		for(int i = 0; i < N; ++i){
@@ -100,14 +101,14 @@ inline void asteroid::RK_step(){
 			vzt_h[i] = vz_h[i];
 
 			for(int s = 0; s < S; ++s){
-				double dtaa = dt * a_h[S * RKFn + s];
+				double dtaa = dt * RKFa_h[S * RKFn + s];
 				xt_h[i]  += dtaa * kx_h[i + s * N];
 				yt_h[i]  += dtaa * ky_h[i + s * N];
 				zt_h[i]  += dtaa * kz_h[i + s * N];
 				vxt_h[i] += dtaa * kvx_h[i + s * N];
 				vyt_h[i] += dtaa * kvy_h[i + s * N];
 				vzt_h[i] += dtaa * kvz_h[i + s * N];
-//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], a_h[S * RKFn + s], kx_h[s], dt);
+//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], RKFa_h[S * RKFn + s], kx_h[s], dt);
 
 			}
 
@@ -165,7 +166,7 @@ inline void asteroid::RK_step(){
 		dvz_h[i] = 0.0;
 
 		for(int S = 0; S < RKFn; ++S){
-			double dtb = dt * b_h[S];
+			double dtb = dt * RKFb_h[S];
 			dx_h[i] += dtb * kx_h[i + S * N];
 			dy_h[i] += dtb * ky_h[i + S * N];
 			dz_h[i] += dtb * kz_h[i + S * N];
@@ -197,8 +198,8 @@ inline void asteroid::RKF_step(){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time + c_h[S] * dt);
-		update_perturbers(time + c_h[S] * dt);
+		update_Chebyshev(time + RKFc_h[S] * dt);
+		update_perturbers(time + RKFc_h[S] * dt);
 		// ----------------------------------------------------------------------------
 
 		for(int i = 0; i < N; ++i){
@@ -215,14 +216,14 @@ inline void asteroid::RKF_step(){
 			vzt_h[i] = vz_h[i];
 
 			for(int s = 0; s < S; ++s){
-				double dtaa = dt * a_h[S * RKFn + s];
+				double dtaa = dt * RKFa_h[S * RKFn + s];
 				xt_h[i]  += dtaa * kx_h[i + s * N];
 				yt_h[i]  += dtaa * ky_h[i + s * N];
 				zt_h[i]  += dtaa * kz_h[i + s * N];
 				vxt_h[i] += dtaa * kvx_h[i + s * N];
 				vyt_h[i] += dtaa * kvy_h[i + s * N];
 				vzt_h[i] += dtaa * kvz_h[i + s * N];
-//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], a_h[S * RKFn + s], kx_h[s], dt);
+//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], RKFa_h[S * RKFn + s], kx_h[s], dt);
 
 			}
 
@@ -279,7 +280,7 @@ inline void asteroid::RKF_step(){
 		dvz_h[i] = 0.0;
 
 		for(int S = 0; S < RKFn; ++S){
-			double dtb = dt * b_h[S];
+			double dtb = dt * RKFb_h[S];
 			dx_h[i] += dtb * kx_h[i + S * N];
 			dy_h[i] += dtb * ky_h[i + S * N];
 			dz_h[i] += dtb * kz_h[i + S * N];
@@ -305,6 +306,7 @@ inline void asteroid::RKF_step(){
 		ym = (fabs(vz_h[i]) > ym) ? fabs(vz_h[i]) : ym;
 
 		double isc = 1.0 / (RKF_atol + ym * RKF_rtol);
+		isc *= isc;
 
 		//error estimation
 		double errorkx = 0.0;
@@ -316,35 +318,40 @@ inline void asteroid::RKF_step(){
 		double errorkvz = 0.0;
 
 		for(int S = 0; S < RKFn; ++S){
-			double f = (b_h[S] - bb_h[S]) * dt;
-			errorkx += f * kx_h[i + S * N];
-			errorky += f * ky_h[i + S * N];
-			errorkz += f * kz_h[i + S * N];
+			double f = (RKFb_h[S] - RKFbb_h[S]) * dt;
+			int ii = i + S * N;
+			errorkx += f * kx_h[ii];
+			errorky += f * ky_h[ii];
+			errorkz += f * kz_h[ii];
 
-			errorkvx += f * kvx_h[i + S * N];
-			errorkvy += f * kvy_h[i + S * N];
-			errorkvz += f * kvz_h[i + S * N];
-//printf("error %d %d %g %g\n", i, S, errorkx, kx[S]);
+			errorkvx += f * kvx_h[ii];
+			errorkvy += f * kvy_h[ii];
+			errorkvz += f * kvz_h[ii];
+//printf("error %d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, S, f, errorkx, errorky, errorkz, errorkvx, errorkvy, errorkvz);
 		}
 
 		double errork = 0.0;
-		errork += errorkx * errorkx * isc * isc;
-		errork += errorky * errorky * isc * isc;
-		errork += errorkz * errorkz * isc * isc;
-		errork += errorkvx * errorkvx * isc * isc;
-		errork += errorkvy * errorkvy * isc * isc;
-		errork += errorkvz * errorkvz * isc * isc;
+		errork += errorkx * errorkx * isc;
+		errork += errorky * errorky * isc;
+		errork += errorkz * errorkz * isc;
+		errork += errorkvx * errorkvx * isc;
+		errork += errorkvy * errorkvy * isc;
+		errork += errorkvz * errorkvz * isc;
 
-		errork = sqrt(errork / 6.0);    //6 is the number of dimensions
+		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
 
 		double s = pow( 1.0  / errork, RKF_ee);
-		s = fmax(RKF_facmin, RKF_fac * s);
-		s = fmin(RKF_facmax, s);
+//printf("%.20g %.20g\n", errork, s);
+
+		s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
+		s = (RKF_facmax < s) ? RKF_facmax : s;
 
 		snew = (snew < s) ? snew : s;
+		snew_h[0] = snew;
 	}
 
-	if(stop == 1){
+
+	if(snew >= 1.0){
 		//accept step
 		for(int i = 0; i < N; ++i){
 			x_h[i] += dx_h[i];
@@ -357,21 +364,10 @@ inline void asteroid::RKF_step(){
 
 		}
 		time += dt;
-	}
-	else if(snew >= 1.0){
-		//accept step
-		for(int i = 0; i < N; ++i){
-			x_h[i] += dx_h[i];
-			y_h[i] += dy_h[i];
-			z_h[i] += dz_h[i];
-
-			vx_h[i] += dvx_h[i];
-			vy_h[i] += dvy_h[i];
-			vz_h[i] += dvz_h[i];
-
+		if(stop != 1){
+			//only increase time step when stop == 0
+			dt *= snew;
 		}
-		time += dt;
-		dt *= snew;
 
 		//set maximum time step to 1
 		//if(abs(dt) > 1.0){
@@ -423,7 +419,7 @@ int asteroid::loop(){
 					dt1 = dt;
 					dt = (timett1 - time);
 					stop = 1;
-//printf("refine %.20g\n", timett1 - A.time);
+//printf("refine %.20g\n", timett1 - time);
 				}
 
 			}
@@ -443,6 +439,7 @@ int asteroid::loop(){
 			if(RKFn == 13){
 				RKF_step();
 			}
+
 			dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;
 
 			if(time + time_reference > time1 || time + time_reference < time0){
@@ -461,8 +458,11 @@ int asteroid::loop(){
 
 			if(stop == 1){
 				stop = 0;
-				dt = dt1;
-				break;
+				if(snew_h[0] >= 1.0){
+					//set time step equal to the last accepted full time step
+					dt = dt1;
+					break;
+				}
 			}
 
 			if(ttt >= 1000000 - 1){

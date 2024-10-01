@@ -1,4 +1,5 @@
 #include "asteroid.h"
+#include <stdio.h>
 
 
 int asteroid::readParam(){
@@ -303,11 +304,11 @@ void asteroid::allocate(){
 	//Find size of entire data file  
 
 	cdata_h = (double*)malloc(Nperturbers * nCm * 3 * sizeof(double));
+	snew_h = (double*)malloc(sizeof(double));
 #if USEGPU == 1
 	datasize = offset1_h[(Nperturbers - 1) * RKFn] - offset0_h[0 * RKFn];
 	printf("size of perturbers data table %d\n", datasize);
 	data_h = (double*)malloc(datasize * sizeof(double));
-	snew_h = (double*)malloc(sizeof(double));
 #endif
 	time = timeStart;
 	double c = (CLIGHT / AUtokm) * 86400.0;
@@ -363,18 +364,18 @@ void asteroid::allocate(){
 	A3_h = (double*)malloc(N * sizeof(double));
 
 
-	a_h = (double*)malloc(RKFn * RKFn * sizeof(double));
-	b_h = (double*)malloc(RKFn * sizeof(double));
-	bb_h = (double*)malloc(RKFn * sizeof(double));
-	c_h = (double*)malloc(RKFn * sizeof(double));
+	RKFa_h = (double*)malloc(RKFn * RKFn * sizeof(double));
+	RKFb_h = (double*)malloc(RKFn * sizeof(double));
+	RKFbb_h = (double*)malloc(RKFn * sizeof(double));
+	RKFc_h = (double*)malloc(RKFn * sizeof(double));
 
 	for(int i = 0; i < RKFn; ++i){
 		for(int j = 0; j < RKFn; ++j){
-			a_h[i * RKFn + j] = 0.0;
+			RKFa_h[i * RKFn + j] = 0.0;
 		}
-		b_h[i] = 0.0;
-		bb_h[i] = 0.0;
-		c_h[i] = 0.0;
+		RKFb_h[i] = 0.0;
+		RKFbb_h[i] = 0.0;
+		RKFc_h[i] = 0.0;
 	}
 
 

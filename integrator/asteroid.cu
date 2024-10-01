@@ -3,6 +3,13 @@
 
 int asteroid::allocateGPU(){
 
+	//Check warp size
+	cudaDeviceProp devProp;
+	int dev = 0;					//Set device number
+	cudaGetDeviceProperties(&devProp, dev);
+	WarpSize = devProp.warpSize;
+
+
 	cudaMalloc((void **) &startTime_d, Nperturbers * RKFn * sizeof(double));
 	cudaMalloc((void **) &endTime_d, Nperturbers * RKFn * sizeof(double));
 	cudaMalloc((void **) &id_d, Nperturbers * sizeof(int));
@@ -30,14 +37,6 @@ int asteroid::allocateGPU(){
 	cudaMalloc((void **) &vy_d, N * sizeof(double));
 	cudaMalloc((void **) &vz_d, N * sizeof(double));
 
-	cudaMalloc((void **) &xt_d, N * sizeof(double));
-	cudaMalloc((void **) &yt_d, N * sizeof(double));
-	cudaMalloc((void **) &zt_d, N * sizeof(double));
-
-	cudaMalloc((void **) &vxt_d, N * sizeof(double));
-	cudaMalloc((void **) &vyt_d, N * sizeof(double));
-	cudaMalloc((void **) &vzt_d, N * sizeof(double));
-
 	cudaMalloc((void **) &dx_d, N * sizeof(double));
 	cudaMalloc((void **) &dy_d, N * sizeof(double));
 	cudaMalloc((void **) &dz_d, N * sizeof(double));
@@ -64,6 +63,7 @@ int asteroid::allocateGPU(){
 
 
 	cudaMalloc((void **) &snew_d, N * sizeof(double));
+	cudaMalloc((void **) &ssum_d, N * sizeof(double));
 
 	cudaDeviceSynchronize();
 	cudaError_t error = cudaGetLastError();

@@ -280,10 +280,10 @@ __global__ void update_perturbers_kernel(double *xTable_d, double *yTable_d, dou
 		nChebyshev = nChebyshev_d[id];
 
 
-		update_ChebyshevGPU(data_d, cdata_d + pp, id_d, startTime, endTime, nChebyshev, offset0, time + c_c[idx] * dt, time_reference);
+		update_ChebyshevGPU(data_d, cdata_d + pp, id_d, startTime, endTime, nChebyshev, offset0, time + RKFc_c[idx] * dt, time_reference);
 	}
 	__syncthreads();
-	update_perturbersGPU(xTable_s, yTable_s, zTable_s, vxTable_s, vyTable_s, vzTable_s, cdata_d + pp, startTime, endTime, nChebyshev, time_reference, time + c_c[idx] * dt, nCm, EM, AUtokm, Nperturbers, id);
+	update_perturbersGPU(xTable_s, yTable_s, zTable_s, vxTable_s, vyTable_s, vzTable_s, cdata_d + pp, startTime, endTime, nChebyshev, time_reference, time + RKFc_c[idx] * dt, nCm, EM, AUtokm, Nperturbers, id);
 
 	__syncthreads();
 	if(id < Nperturbers && idx < RKFn){

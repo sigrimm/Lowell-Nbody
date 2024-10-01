@@ -63,13 +63,13 @@ __device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi,
 
 //GR
 //Coordinates must be heliocentric
-__device__ void GR(double xi, double yi, double zi, double vxi, double vyi, double vzi, double r, double &axi, double &ayi, double &azi, double GMSun, const double c2){
+__device__ void GR(double xi, double yi, double zi, double vxi, double vyi, double vzi, double r, double &axi, double &ayi, double &azi, double GMSun){
 	//GR
 	double vsq = __dmul_rn(vxi, vxi) + __dmul_rn(vyi, vyi) + __dmul_rn(vzi, vzi);
 
 	double rv = __dmul_rn(xi, vxi) + __dmul_rn(yi, vyi) + __dmul_rn(zi, vzi);
 
-	double f1 = GMSun / (r * r * r * c2);
+	double f1 = GMSun / (r * r * r * c2_c);
 	double t1 = 4.0 * GMSun / r - vsq;
 	double t3 = 4.0 * rv;
 	//printf("GRa %.20g %.20g %.20g %.20g %.20g\n", vsq, r, t1, t3, f1);
@@ -92,17 +92,17 @@ __device__ void GR(double xi, double yi, double zi, double vxi, double vyi, doub
 }
 
 //Coordinates must be Earth centric
-__device__ void J2(double xE, double yE, double zE, double &axi, double &ayi, double &azi, const double REAU, const double J2E, double GMEarth){
+__device__ void J2(double xE, double yE, double zE, double &axi, double &ayi, double &azi, double GMEarth){
 	//J2
 
-//printf("J2 %.20g %.20g %.20g\n", J2E, RE, REAU);
+//printf("J2 %.20g %.20g\n", J2E_c, REAU_c);
 
 	double rsq = xE * xE + yE * yE + zE * zE;
 	double r = sqrt(rsq);
 	//double r5 = rsq * rsq * r;
 
-	//double t1 = GMEarth * 3.0 * J2E * REAU * REAU / (2.0 * r5);
-	double t1 = 3.0 * J2E * REAU * REAU / rsq / rsq / r / 2.0;
+	//double t1 = GMEarth * 3.0 * J2E * REAU_c * REAU_c / (2.0 * r5);
+	double t1 = 3.0 * J2E_c * REAU_c * REAU_c / rsq / rsq / r / 2.0;
 	double t2 = 5.0 * (zE * zE / rsq) - 1.0;
 
 //printf("%.20g %.20g %.20g\n", GMEarth, t1, t2);
@@ -118,8 +118,44 @@ __device__ void J2(double xE, double yE, double zE, double &axi, double &ayi, do
 //printf("J2 a %.20g %.20g %.20g\n", tx, ty, tz);
 }
 
-__device__ void Gravity(double xi, double yi, double zi, double *xTable_s, double *yTable_s, double *zTable_s, double &axi, double &ayi, double &azi, double *GM_s, const int Nperturbers){
-	for(int pp = 0; pp < Nperturbers; ++pp){
+__device__ void Gravity(double xi, double yi, double zi, double *xTable_s, double *yTable_s, double *zTable_s, double &axi, double &ayi, double &azi, double *GM_s, const int pp){
+
+	int p = pp + 11;
+	if(pp == 16) p = 8;	//Pluto
+	if(pp == 17) p = 9;	//Moon
+	if(pp == 18) p = 3;	//Mars
+	if(pp == 19) p = 0;	//Mercur
+	if(pp == 20) p = 7;	//Neptune
+	if(pp == 21) p = 6;	//Uranus
+	if(pp == 22) p = 2;	//Earth
+	if(pp == 23) p = 1;	//Venus
+	if(pp == 24) p = 5;	//Saturn
+	if(pp == 25) p = 4;	//Jupiter
+	if(pp == 26) p = 10;	//Sun
+
+	double dx = xi - xTable_s[p];
+	double dy = yi - yTable_s[p];
+	double dz = zi - zTable_s[p];
+
+	double rsq = __dmul_rn(dx, dx) + __dmul_rn(dy, dy) + __dmul_rn(dz, dz);
+	double r = sqrt(rsq);
+	double s = GM_s[p] / (r * rsq);
+
+	double aax = -__dmul_rn(s, dx);
+	double aay = -__dmul_rn(s, dy);
+	double aaz = -__dmul_rn(s, dz);
+
+	axi += aax;
+	ayi += aay;
+	azi += aaz;
+
+//printf("position %d %d %.20g %.20g %.20g %.20g %.20g\n", pp, p, time, x[p], y[p], z[p], GM_h[p]);
+}
+
+__global__ void Gravity_kernel(double xi, double yi, double zi, double *xTable_s, double *yTable_s, double *zTable_s, double &axi, double &ayi, double &azi, double *GM_s, const int Nperturbers){
+
+	int pp = threadIdx.x;
+	if(pp < Nperturbers){
 
 		int p = pp + 11;
 		if(pp == 16) p = 8;	//Pluto
@@ -149,7 +185,8 @@ __device__ void Gravity(double xi, double yi, double zi, double *xTable_s, doubl
 		axi += aax;
 		ayi += aay;
 		azi += aaz;
+	}
 
 //printf("position %d %d %.20g %.20g %.20g %.20g %.20g\n", pp, p, time, x[p], y[p], z[p], GM_h[p]);
-	}
 }
+
