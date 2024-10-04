@@ -18,6 +18,11 @@ __constant__ double RKF_facmax_c;
 __constant__ double REAU_c;
 __constant__ double J2E_c;
 __constant__ double c2_c;
+
+__constant__ int useGR_c;
+__constant__ int useJ2_c;
+__constant__ int useNonGrav_c;
+
 #include "asteroid.h"
 #include "ChebyshevGPU.h"
 #include "forceGPU.h"
@@ -37,6 +42,9 @@ __host__ int asteroid::copyConst(){
 	cudaMemcpyToSymbol(REAU_c, &REAU, sizeof(double), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(J2E_c, &J2E, sizeof(double), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c2_c, &c2, sizeof(double), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(useGR_c, &useGR, sizeof(int), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(useJ2_c, &useJ2, sizeof(int), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(useNonGrav_c, &useNonGrav, sizeof(int), 0, cudaMemcpyHostToDevice);
 
 	cudaDeviceSynchronize();
 	cudaError_t error = cudaGetLastError();
@@ -141,9 +149,15 @@ __global__ void leapfrog_stepB_kernel(double *xTable_d, double *yTable_d, double
 		double yiE = yi - yTable_s[2];
 		double ziE = zi - zTable_s[2];
 
-		NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_d[id], A2_d[id], A3_d[id], r, ax, ay, az);
-		GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
-		J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+		if(useNonGrav_c == 1){
+			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_d[id], A2_d[id], A3_d[id], r, ax, ay, az);
+		}
+		if(useGR_c == 1){
+			GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+		}
+		if(useJ2_c == 1){
+			J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+		}
 		for(int p = 0; p < Nperturbers; ++p){
 			Gravity(xi, yi, zi, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, p);
 		}
@@ -301,9 +315,15 @@ __global__ void RK_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 			double yiE = yti - yTable_s[2];
 			double ziE = zti - zTable_s[2];
 
-			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
-			GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
-			J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+			if(useNonGrav_c == 1){
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+			}
+			if(useGR_c == 1){
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+			}
+			if(useJ2_c == 1){
+				J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+			}
 			for(int p = 0; p < Nperturbers; ++p){
 				Gravity(xti, yti, zti, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, p);
 			}
@@ -494,9 +514,15 @@ __global__ void RK_step2_kernel(double *xTable_d, double *yTable_d, double *zTab
 				double yiE = yti - yTable_s[2];
 				double ziE = zti - zTable_s[2];
 
-				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
-				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
-				J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+				if(useNonGrav_c == 1){
+					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+				}
+				if(useGR_c == 1){
+					GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+				}
+				if(useJ2_c == 1){
+					J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+				}
 			}
 
 			__syncthreads();
@@ -617,10 +643,15 @@ __global__ void RK_stage_kernel(double *xTable_d, double *yTable_d, double *zTab
 		double yiE = yti - yTable_d[iE];
 		double ziE = zti - zTable_d[iE];
 
-		NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_d[id], A2_d[id], A3_d[id], r, ax, ay, az);
-		GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_d[10]);
-		J2(xiE, yiE, ziE, ax, ay, az, GM_d[2]);
-
+		if(useNonGrav_c == 1){
+			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_d[id], A2_d[id], A3_d[id], r, ax, ay, az);
+		}
+		if(useGR_c == 1){
+			GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_d[10]);
+		}
+		if(useJ2_c == 1){
+			J2(xiE, yiE, ziE, ax, ay, az, GM_d[2]);
+		}
 		ax_d[id] = ax;
 		ay_d[id] = ay;
 		az_d[id] = az;
@@ -766,9 +797,15 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 			double yiE = yti - yTable_s[2];
 			double ziE = zti - zTable_s[2];
 
-			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
-			GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
-			J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+			if(useNonGrav_c == 1){
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+			}
+			if(useGR_c == 1){
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+			}
+			if(useJ2_c == 1){
+				J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+			}
 			for(int p = 0; p < Nperturbers; ++p){
 				Gravity(xti, yti, zti, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, p);
 			}
@@ -1038,9 +1075,15 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 				double yiE = yti - yTable_s[2];
 				double ziE = zti - zTable_s[2];
 
-				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
-				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
-				J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+				if(useNonGrav_c == 1){
+					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+				}
+				if(useGR_c == 1){
+					GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+				}
+				if(useJ2_c == 1){
+					J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+				}
 			}
 
 			__syncthreads();
@@ -1320,21 +1363,25 @@ __global__ void update_kernel(double *x_d, double *y_d, double *z_d, double *vx_
 int asteroid::loop(){
 
 
-	outputFile = fopen("Out.dat", "w");
+	if(outBinary == 0){
+		outputFile = fopen(outputFilename, "w");
+	}
+	else{
+		outputFile = fopen(outputFilename, "wb");
+	}
 	copyOutput();
 
-	for(int p = 0; p < N; ++p){
-		printf("Start integration\n");
-		printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dt);
-		fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x_h[p], y_h[p], z_h[p], vx_h[p], vy_h[p], vz_h[p], dt);
-	}
+	printf("Start integration\n");
+
+	output(dt);
+
 	//for(int tt = 0; tt < 2; ++tt){
 	for(int tt = 0; tt < 1000000; ++tt){
 		double dtmin = dt;
 
 		double timett1 = timeStart + dts * (tt + 1) * outputInterval;
 
-		double snew;
+		double snew = 10.0;
 
 //printf("integrate %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1);
 
@@ -1390,8 +1437,8 @@ int asteroid::loop(){
 				//Needs at least Nperturbers threads per block
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, id_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 
-//				RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
-				RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
+				RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
+//				RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
 
 
 
@@ -1464,10 +1511,7 @@ int asteroid::loop(){
 		}//end of ttt loop
 		cudaDeviceSynchronize();
 		copyOutput();
-		for(int p = 0; p < N; ++p){
-			printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dt);
-			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x_h[p], y_h[p], z_h[p], vx_h[p], vy_h[p], vz_h[p], dtmin);
-		}
+		output(dtmin);
 
 	}//end of tt loop
 	fclose(outputFile);

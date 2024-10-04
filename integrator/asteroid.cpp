@@ -39,6 +39,14 @@ int asteroid::readParam(){
 			}
 		str = fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "Output file name =") == 0){
+			er = fscanf (paramfile, "%s", name);
+			if(er <= 0){
+				printf("Error: Output file is not valid!\n");
+				return 0;
+			}
+		str = fgets(sp, 3, paramfile);
+		}
 		else if(strcmp(sp, "Reference Time =") == 0){
 			er = fscanf (paramfile, "%lf", &time_reference);
 			if(er <= 0){
@@ -132,6 +140,38 @@ int asteroid::readParam(){
 			}
 			str = fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "Use GR correction =") == 0){
+			er = fscanf (paramfile, "%d", &useGR);
+			if(er <= 0){
+				printf("Error: Use GR correction is not valid!\n");
+				return 0;
+		}
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "Use J2 force =") == 0){
+			er = fscanf (paramfile, "%d", &useJ2);
+			if(er <= 0){
+				printf("Error: Use J2 force is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "Use non-gravitational force =") == 0){
+			er = fscanf (paramfile, "%d", &useNonGrav);
+			if(er <= 0){
+				printf("Error: Use non-gravitational force is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "Use binary output format =") == 0){
+			er = fscanf (paramfile, "%d", &outBinary);
+			if(er <= 0){
+				printf("Error: outBinary is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
 
 		else{
 			printf("Error: param.dat file is not valid! %s\n", sp);
@@ -140,16 +180,44 @@ int asteroid::readParam(){
 	}
 	fclose(paramfile);
 
+	if(outBinary == 0){
+		sprintf(outputFilename, "Out_%s.dat", name);
+	}
+	else{
+		sprintf(outputFilename, "Out_%s.bin", name);
+	}
+
+	sprintf(infoFilename, "Info_%s.dat", name);
+
 	return 1;
 
 }
+
+void asteroid::printInfo(){
+	fprintf(infoFile, "Initial condition file %s\n", inputFilename);
+	fprintf(infoFile, "Output file name %s\n", outputFilename);
+	fprintf(infoFile, "useGR correction = %d\n", useGR);
+	fprintf(infoFile, "useJ2 force = %d\n", useJ2);
+	fprintf(infoFile, "use non-gravitational force = %d\n", useNonGrav);
+	fprintf(infoFile, "Use GPU = %d\n", USEGPU);
+	fprintf(infoFile, "Use binary output format = %d\n", outBinary);
+	//fprintf(infoFile, "useFIFO = %d\n", useFIFO);
+	//fprintf(infoFile, "InVersion = %g\n", InVersion);
+
+	fprintf(infoFile, "Output Interval = %g\n", outputInterval);
+	fprintf(infoFile, "Integrator RKFn= %d\n", RKFn);
+	fprintf(infoFile, "Nperturbers = %d\n", Nperturbers);
+
+	//fprintf(infoFile, "outStart: %.20g, time0: %.20g, time1: %.20g, outInterval: %lld\n", outStart, time0, time1, outInterval);
+} 
+
+
 
 //Read the size of the initial conditions file
 int asteroid::readICSize(){
 	FILE *infile;
 
-	//infile = fopen(inputFilename, "r");
-	infile = fopen("initial.dat", "r");
+	infile = fopen(inputFilename, "r");
 	if(infile == NULL){
 		printf("Error, could not open initial condition file |%s|\n", inputFilename);
 		return 0;
@@ -192,8 +260,7 @@ int asteroid::readICSize(){
 int asteroid::readIC(){
 	FILE *infile;
 
-	//infile = fopen(inputFilename, "r");
-	infile = fopen("initial.dat", "r");
+	infile = fopen(inputFilename, "r");
 	if(infile == NULL){
 		printf("Error, could not open initial condition file |%s|\n", inputFilename);
 		return 0;
@@ -304,7 +371,6 @@ void asteroid::allocate(){
 	//Find size of entire data file  
 
 	cdata_h = (double*)malloc(Nperturbers * nCm * 3 * sizeof(double));
-	snew_h = (double*)malloc(sizeof(double));
 #if USEGPU == 1
 	datasize = offset1_h[(Nperturbers - 1) * RKFn] - offset0_h[0 * RKFn];
 	printf("size of perturbers data table %d\n", datasize);
@@ -363,6 +429,7 @@ void asteroid::allocate(){
 	A2_h = (double*)malloc(N * sizeof(double));
 	A3_h = (double*)malloc(N * sizeof(double));
 
+	snew_h = (double*)malloc(N * sizeof(double));
 
 	RKFa_h = (double*)malloc(RKFn * RKFn * sizeof(double));
 	RKFb_h = (double*)malloc(RKFn * sizeof(double));
@@ -381,4 +448,35 @@ void asteroid::allocate(){
 
 }
 
+void asteroid::output(double dtmin){
+	printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dtmin);
+	for(int i = 0; i < N; ++i){
+		if(outBinary == 0){
+			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, i, x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], dtmin);
+		}
+		else{
+			unsigned long long int id = i;//id_h[i];
+			//unsigned long long int id = __builtin_bswap64 (id_h[i]);
+			double tt = time_reference + time;
+			double xx = x_h[i];
+			double yy = y_h[i];
+			double zz = z_h[i];
+			double vxx = vx_h[i];
+			double vyy = vy_h[i];
+			double vzz = vz_h[i];
+
+			fwrite(&tt, sizeof(double), 1, outputFile);
+			fwrite(&id, sizeof(unsigned long long int), 1, outputFile);
+			fwrite(&xx, sizeof(double), 1, outputFile);
+			fwrite(&yy, sizeof(double), 1, outputFile);
+			fwrite(&zz, sizeof(double), 1, outputFile);
+			fwrite(&vxx, sizeof(double), 1, outputFile);
+			fwrite(&vyy, sizeof(double), 1, outputFile);
+			fwrite(&vzz, sizeof(double), 1, outputFile);
+			fwrite(&dtmin, sizeof(double), 1, outputFile);
+
+
+		}
+	}
+}
 

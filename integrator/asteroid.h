@@ -13,24 +13,28 @@ class asteroid{
 
 
 public:
-        FILE *inputFile;
+	FILE *inputFile;
 	FILE *perturbersFile;
 	char perturbersFilePath[160];
 	char perturbersFileName[240]; // 160 + 80
+	char name[140];
 	char inputFilename[160];
-        FILE *outputFile;
+	char outputFilename[160];
+	char infoFilename[160];
+	FILE *outputFile;
+	FILE *infoFile;
 
 	int N;
-        int Nperturbers;
-        double time_reference;
-        double timeStart;		//start time of integration
-        double timeEnd;			//end time of integration
-        double dt;			//time step
+	int Nperturbers;
+	double time_reference;
+	double timeStart;		//start time of integration
+	double timeEnd;			//end time of integration
+	double dt;			//time step
 	int dts;			//sign of time step
 	double dt1;
 	double outputInterval;		
-        double time0;			//start time of the data file
-        double time1;			//end time of the data file
+	double time0;			//start time of the data file
+	double time1;			//end time of the data file
 	double time;			//integration time
 	int stop;			//used to refine last time step
 
@@ -42,6 +46,10 @@ public:
 	double c2;			//speed of light squared
 	double REAU;			//Earth radius in AU
 
+	int useGR;
+	int useJ2;
+	int useNonGrav;
+	int outBinary;
 
 	int nCm;			//Maximum number of Chebyshev coefficients
 	int datasize;
@@ -141,6 +149,8 @@ public:
 	int allocateGPU();
 	void copyOutput();
 	int copyConst();
+	void printInfo();
+	void output(double);
 
 	inline void update_Chebyshev(double);
 	inline void update_perturbers(double);

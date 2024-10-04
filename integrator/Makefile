@@ -1,4 +1,4 @@
-all: integratorGPU integrator
+all: integrator integratorGPU
 
 integrator: main.o asteroid.o RKF.o integrator.o
 	g++ -g -o integrator main.o asteroid.o RKF.o integrator.o

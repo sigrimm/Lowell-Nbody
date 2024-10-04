@@ -14,7 +14,7 @@ inline void asteroid::leapfrog_step(){
 		z_h[i] += 0.5 * dt * vz_h[i];
 	}
 	time += dt * 0.5;
-	//printf("ta %.20g\n", time);
+//printf("ta %.20g %.20g\n", time, dt);
 
 	// ----------------------------------------------------------------------------
 	for(int i = 0; i < N; ++i){
@@ -50,9 +50,15 @@ inline void asteroid::leapfrog_step(){
 		double yiE = y_h[i] - yTable_h[2];
 		double ziE = z_h[i] - zTable_h[2];
 
-		NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
-		GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
-		J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+		if(useNonGrav == 1){
+			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+		}
+		if(useGR == 1){
+			GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+		}
+		if(useJ2 == 1){
+			J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+		}
 		Gravity(x_h[i], y_h[i], z_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
 	}
 	// ----------------------------------------------------------------------------
@@ -72,7 +78,7 @@ inline void asteroid::leapfrog_step(){
 		z_h[i] += 0.5 * dt * vz_h[i];
 	}
 	time += dt * 0.5;
-	//printf("tb %.20g\n", time); 
+//printf("tb %.20g %.20g\n", time, dt); 
 }
 
 
@@ -140,9 +146,15 @@ inline void asteroid::RK_step(){
 			double yiE = yt_h[i] - yTable_h[2];
 			double ziE = zt_h[i] - zTable_h[2];
 
-			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
-			GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
-			J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+			if(useNonGrav == 1){
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+			}
+			if(useGR == 1){
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+			}
+			if(useJ2 == 1){
+				J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+			}
 			Gravity(xt_h[i], yt_h[i], zt_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
 
 		}
@@ -223,14 +235,14 @@ inline void asteroid::RKF_step(){
 				vxt_h[i] += dtaa * kvx_h[i + s * N];
 				vyt_h[i] += dtaa * kvy_h[i + s * N];
 				vzt_h[i] += dtaa * kvz_h[i + s * N];
-//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], RKFa_h[S * RKFn + s], kx_h[s], dt);
+//if(i < 2) printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], RKFa_h[S * RKFn + s], kx_h[s], dt);
 
 			}
 
 			kx_h[i + S * N] = vxt_h[i];
 			ky_h[i + S * N] = vyt_h[i];
 			kz_h[i + S * N] = vzt_h[i];
-
+//if(i < 2) printf("K %d %d %.20g %.20g %.20g\n", i, S, kx_h[i + S * N], ky_h[i + S * N], kz_h[i + S * N]);
 		}
 
 		// ----------------------------------------------------------------------------
@@ -255,9 +267,15 @@ inline void asteroid::RKF_step(){
 			double yiE = yt_h[i] - yTable_h[2];
 			double ziE = zt_h[i] - zTable_h[2];
 
-			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
-			GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
-			J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+			if(useNonGrav == 1){
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+			}
+			if(useGR == 1){
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+			}
+			if(useJ2 == 1){
+				J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+			}
 			Gravity(xt_h[i], yt_h[i], zt_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
 		}
 		// ----------------------------------------------------------------------------
@@ -288,6 +306,7 @@ inline void asteroid::RKF_step(){
 			dvx_h[i] += dtb * kvx_h[i + S * N];
 			dvy_h[i] += dtb * kvy_h[i + S * N];
 			dvz_h[i] += dtb * kvz_h[i + S * N];
+//if(i < 2) printf("dx %d %d %g %g %g %g %g %g\n", S, i, dx_h[i], dy_h[i], dz_h[i], RKFb_h[S], kx_h[i + S * N], dt);
 		}
 	}
 
@@ -327,7 +346,7 @@ inline void asteroid::RKF_step(){
 			errorkvx += f * kvx_h[ii];
 			errorkvy += f * kvy_h[ii];
 			errorkvz += f * kvz_h[ii];
-//printf("error %d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, S, f, errorkx, errorky, errorkz, errorkvx, errorkvy, errorkvz);
+//if(i < 2) printf("error %d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, S, f, errorkx, errorky, errorkz, errorkvx, errorkvy, errorkvz);
 		}
 
 		double errork = 0.0;
@@ -341,7 +360,6 @@ inline void asteroid::RKF_step(){
 		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
 
 		double s = pow( 1.0  / errork, RKF_ee);
-//printf("%.20g %.20g\n", errork, s);
 
 		s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
 		s = (RKF_facmax < s) ? RKF_facmax : s;
@@ -387,7 +405,6 @@ inline void asteroid::RKF_step(){
 		//redo step
 		dt *= snew;
 	}
-
 //printf("dt %.20g %.20g %.20g\n", time, dt, snew);
 }
 
@@ -395,19 +412,24 @@ inline void asteroid::RKF_step(){
 	
 int asteroid::loop(){
 
-
-	outputFile = fopen("Out.dat", "w");
-	for(int p = 0; p < N; ++p){
-		printf("Start integration\n");
-		printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dt);
-		fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x_h[p], y_h[p], z_h[p], vx_h[p], vy_h[p], vz_h[p], dt);
+	if(outBinary == 0){
+		outputFile = fopen(outputFilename, "w");
 	}
+	else{
+		outputFile = fopen(outputFilename, "wb");
+	}
+	printf("Start integration\n");
+
+	output(dt);
+
 	//for(int tt = 0; tt < 2; ++tt){
 	for(int tt = 0; tt < 1000000; ++tt){
 		double dtmin = dt;
 
 		double timett1 = timeStart + dts * (tt + 1) * outputInterval;
 
+
+		double snew = 10.0;
 //printf("integrate %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1);
 
 
@@ -446,6 +468,7 @@ int asteroid::loop(){
 			}
 			if(RKFn == 13){
 				RKF_step();
+				snew = snew_h[0];
 			}
 
 			if(stop == 0){
@@ -468,7 +491,7 @@ int asteroid::loop(){
 
 			if(stop == 1){
 				stop = 0;
-				if(snew_h[0] >= 1.0){
+				if(snew >= 1.0){
 					//set time step equal to the last accepted full time step
 					dt = dt1;
 					break;
@@ -483,10 +506,7 @@ int asteroid::loop(){
 
 		}//end of ttt loop
 
-		for(int p = 0; p < N; ++p){
-			printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dt);
-			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, p, x_h[p], y_h[p], z_h[p], vx_h[p], vy_h[p], vz_h[p], dtmin);
-		}
+		output(dtmin);
 
 	}//end of tt loop
 	fclose(outputFile);

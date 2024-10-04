@@ -34,6 +34,11 @@ int main(){
 	A.RKF_facmax = 1.5;
 	A.RKFn = 6;
 	sprintf(A.perturbersFilePath, "%s", "../readChebyshev/");
+	A.useGR = 1;
+	A.useJ2 = 1;
+	A.useNonGrav = 1;
+	A.outBinary = 0;
+	sprintf(A.name, "%s", "test");
 	//----------------------------------------------------------
 
 	int er = 0;
@@ -73,6 +78,8 @@ int main(){
 	}
 	printf("Open Perturbers file OK\n");
 
+	A.infoFile = fopen(A.infoFilename, "w");
+	A.printInfo();
 
 	A.timeStart -= A.time_reference;
 	A.timeEnd -= A.time_reference;
@@ -140,6 +147,7 @@ int main(){
 	er = A.loop();	
 
 	fclose(A.perturbersFile);
+	fclose(A.infoFile);
 	
 }
 
