@@ -74,27 +74,36 @@ allowed integrators are:
 
 ## Step 3, set initial conditions ##
 
-- file name specified in param.dat
+The name of the initial conditions file must be set in the param.dat file.
+The File contains the following columns:
 
-- x y z vx vy vz A1 A2 A3
-- in Barycentric coordinates, AU and AU/day
+- id x y z vx vy vz A1 A2 A3
+
+with:
+- id, particle index, integer number
+- x ,y ,z: Barecentric positions in AU
+- vx, vy, vz: Barycentric velocoties in AU/days
+- A1, A2, A3: Non-gravitational acceleration terms in AU/days^2
 
 ## Step 4, run the integration ##
 
 - ./integrator
 
-- outputs are in Out.dat
+The name of the initial conditions file must be set in the param.dat file.
+The output file format can either be a text file (Out_<name>.dat) or a binary file (Out_<name>.bin)
+The Format can be set in the param.dat file
 
-The output files contain 
+
+The output file contains 
 - time in days
-- x position in AU
-- y position in AU
-- z position in AU
-- vx velocity in AU/day
-- vy velocity in AU/day
-- vz velocity in AU/day
-- minimal time step of interval
-- in Barycentric coordinates
+- id: particle index 
+- x: barycentric position in AU
+- y: barycentric position in AU
+- z: barycentric position in AU
+- vx: barycentric velocity in AU/day
+- vy: barycentric velocity in AU/day
+- vz: barycentric velocity in AU/day
+- minimal time step of last interval, in days
 
 <!---
 ## Step 5 compare the results with JPL ##

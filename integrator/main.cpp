@@ -22,22 +22,7 @@ int main(){
 	//----------------------------------------------------------
 	//set default parameters
 	//----------------------------------------------------------
-	A.time_reference = 2451545.0;
-	A.timeStart = 8255.5;		//start time of integration
-	A.timeEnd = -11744.5;		//end time of integration
-	A.dt = -0.01;
-	A.outputInterval = 10.0;
-	A.RKF_atol = 1.0e-16;
-	A.RKF_rtol = 1.0e-16;
-	A.RKF_fac = 0.84;
-	A.RKF_facmin = 0.8;
-	A.RKF_facmax = 1.5;
-	A.RKFn = 6;
 	sprintf(A.perturbersFilePath, "%s", "../readChebyshev/");
-	A.useGR = 1;
-	A.useJ2 = 1;
-	A.useNonGrav = 1;
-	A.outBinary = 0;
 	sprintf(A.name, "%s", "test");
 	//----------------------------------------------------------
 
@@ -57,13 +42,35 @@ int main(){
 	//----------------------------------------------------------
 	//Read Size of initial conditions file
 	//----------------------------------------------------------
+	A.inputFile = fopen(A.inputFilename, "r");
+	if(A.inputFile == NULL){
+		printf("Error, could not open initial condition file |%s|\n", A.inputFilename);
+		return 0;
+	}
+
 	printf("Read ICsize\n");
 	er = A.readICSize();
 	if(er <= 0){
 		return 0;
 	}
+	fclose(A.inputFile);
 	printf("Read ICSize OK with %d bodies\n", A.N);
 	//----------------------------------------------------------
+
+/*
+	A.inputFile = fopen(A.inputFilename, "rb");
+	if(A.inputFile == NULL){
+		printf("Error, could not open initial condition file |%s|\n", A.inputFilename);
+		return 0;
+	}
+	printf("Read IC file header\n");
+	er = A.readHeader();
+	if(er <= 0){
+		return 0;
+	}
+	printf("Read IC file header OK with %d bodies\n", A.N);
+*/
+
 
 	//sprintf(A.perturbersFileName, "%s/PerturbersChebyshev.dat", A.perturbersFilePath);
 	//A.perturbersFile = fopen(A.perturbersFileName, "r");
@@ -81,8 +88,6 @@ int main(){
 	A.infoFile = fopen(A.infoFilename, "w");
 	A.printInfo();
 
-	A.timeStart -= A.time_reference;
-	A.timeEnd -= A.time_reference;
 
 	printf("Allocate memory\n");
 	A.allocate();
@@ -125,11 +130,19 @@ int main(){
 	//Read initial conditions
 	//----------------------------------------------------------
 	printf("Read initial conditions file = %s\n", A.inputFilename);
+	A.inputFile = fopen(A.inputFilename, "r");
 	er = A.readIC();
+
+//	er = A.readFile();
 
 	if(er <= 0){
 		return 0;
 	}
+	fclose(A.inputFile);
+
+	A.timeStart -= A.time_reference;
+	A.timeEnd -= A.time_reference;
+	A.time = A.timeStart;
 
 #if USEGPU == 1
 	er = A.copyIC();

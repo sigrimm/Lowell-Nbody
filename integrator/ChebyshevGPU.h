@@ -1,4 +1,4 @@
-__device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *id_d, double &startTime, double &endTime, const int nChebyshev, int &offset0, double time, double time_reference){
+__device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *idp_d, double &startTime, double &endTime, const int nChebyshev, int &offset0, double time, double time_reference){
 
 	//Update the Chebyshev coefficients if necessary
 	//int p = threadIdx.x;	//Perturber index
@@ -9,7 +9,7 @@ __device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *id_d,
 			startTime = data_d[offset0];
 			endTime = data_d[offset0 + 1];
 
-//printf(" ++ %d %d %d %d %.20g %.20g\n", p, id_d[p], offset0, nChebyshev, startTime, endTime);
+//printf(" ++ %d %d %d %d %.20g %.20g\n", p, idp_d[p], offset0, nChebyshev, startTime, endTime);
 
 			for(int i = 0; i < nChebyshev * 3; ++i){
 				cdata_d[i] = data_d[offset0 + 2 + i]; 
@@ -29,7 +29,7 @@ __device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *id_d,
 			startTime = data_d[offset0];
 			endTime = data_d[offset0 + 1];
 
-//printf(" -- %d %d %d %d %.20g %.20g\n", p, id_d[p], offset0, nChebyshev, startTime, endTime);
+//printf(" -- %d %d %d %d %.20g %.20g\n", p, idp_d[p], offset0, nChebyshev, startTime, endTime);
 
 			for(int i = 0; i < nChebyshev * 3; ++i){
 				cdata_d[i] = data_d[offset0 + 2 + i]; 
@@ -252,7 +252,7 @@ __device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double 
 // Every perturber runs on a thread.
 // Every stage runs on a different thread block.
 // This way of scheduling is needed because perturbers must be in the same thread block because of the calcualtion of the Earth and Moon.
-__global__ void update_perturbers_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *data_d, double *cdata_d, int *id_d, double *startTime_d, double *endTime_d, int *nChebyshev_d, int *offset0_d, double time, double time_reference, const double dt, const int RKFn, const int nCm, const double EM, const double AUtokm, const int Nperturbers){
+__global__ void update_perturbers_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *data_d, double *cdata_d, int *idp_d, double *startTime_d, double *endTime_d, int *nChebyshev_d, int *offset0_d, double time, double time_reference, const double dt, const int RKFn, const int nCm, const double EM, const double AUtokm, const int Nperturbers){
 
 	int id = threadIdx.x;	//Perturber index
 	int idx = blockIdx.x;	//Stage index
@@ -280,7 +280,7 @@ __global__ void update_perturbers_kernel(double *xTable_d, double *yTable_d, dou
 		nChebyshev = nChebyshev_d[id];
 
 
-		update_ChebyshevGPU(data_d, cdata_d + pp, id_d, startTime, endTime, nChebyshev, offset0, time + RKFc_c[idx] * dt, time_reference);
+		update_ChebyshevGPU(data_d, cdata_d + pp, idp_d, startTime, endTime, nChebyshev, offset0, time + RKFc_c[idx] * dt, time_reference);
 	}
 	__syncthreads();
 	update_perturbersGPU(xTable_s, yTable_s, zTable_s, vxTable_s, vyTable_s, vzTable_s, cdata_d + pp, startTime, endTime, nChebyshev, time_reference, time + RKFc_c[idx] * dt, nCm, EM, AUtokm, Nperturbers, id);

@@ -15,41 +15,45 @@ class asteroid{
 public:
 	FILE *inputFile;
 	FILE *perturbersFile;
-	char perturbersFilePath[160];
-	char perturbersFileName[240]; // 160 + 80
-	char name[140];
-	char inputFilename[160];
-	char outputFilename[160];
-	char infoFilename[160];
 	FILE *outputFile;
 	FILE *infoFile;
 
+	char name[140];
+	char inputFilename[160];
+	char perturbersFilePath[160];
+	char perturbersFileName[240]; // 160 + 80
+	char outputFilename[160];
+	char infoFilename[160];
+
 	int N;
 	int Nperturbers;
-	double time_reference;
-	double timeStart;		//start time of integration
-	double timeEnd;			//end time of integration
-	double dt;			//time step
-	int dts;			//sign of time step
+	double inputFileVersion = 1;
+	double time_reference = 2451545.0;	//Reference time in JD 
+	double timeStart = 2450800.5;		//Start time of the integration, in JD
+	double timeEnd = 2461000.5;		//End time of the integration, in JD
+	double dt = 1.0;			//time step, in days
+	int dts;				//sign of time step
 	double dt1;
-	double outputInterval;		
-	double time0;			//start time of the data file
-	double time1;			//end time of the data file
-	double time;			//integration time
-	int stop;			//used to refine last time step
+	double outputInterval = 10;		//outut interval, in days		
+	double outStart = 0.0;			//start time when outputs are written, in JD
+	double time0;				//start time of the data file
+	double time1;				//end time of the data file
+	double time;				//integration time
+	int stop;				//used to refine last time step
 
-	double AUtokm;			//AU to km
-	double EM;			//Earth to moon mass ratio
-	double CLIGHT;			//speed of light
-	double RE;			//Radius of Earth
-	double J2E;			//J2 of Earth
-	double c2;			//speed of light squared
-	double REAU;			//Earth radius in AU
+	double AUtokm;				//AU to km
+	double EM;				//Earth to moon mass ratio
+	double CLIGHT;				//speed of light
+	double RE;				//Radius of Earth
+	double J2E;				//J2 of Earth
+	double c2;				//speed of light squared
+	double REAU;				//Earth radius in AU
 
-	int useGR;
-	int useJ2;
-	int useNonGrav;
-	int outBinary;
+	int useGR = 1;
+	int useJ2 = 1;
+	int useNonGrav = 1;
+	int outBinary = 0;
+	int cometFlag = 0;
 
 	int nCm;			//Maximum number of Chebyshev coefficients
 	int datasize;
@@ -59,7 +63,7 @@ public:
 	//perturbers data
 	double *startTime_h, *startTime_d;	//Start time of perturbers data block
 	double *endTime_h, *endTime_d;		//End time of perturbers data block
-	int *id_h, *id_d;		
+	int *idp_h, *idp_d;		
 	int *nChebyshev_h, *nChebyshev_d;	//Number of Chebyshev coefficients of perturbers in current data block
 	int *offset0_h, *offset0_d;
 	int *offset1_h, *offset1_d;
@@ -98,18 +102,18 @@ public:
 
 
 	//RKF arrays
-	int RKFn;
+	int RKFn = 6;
         double *RKFa_h;
 	double *RKFb_h;
 	double *RKFbb_h;
 	double *RKFc_h;
 
         double RKF_ee;
-	double RKF_atol;
-	double RKF_rtol;
-	double RKF_fac;
-	double RKF_facmin;
-	double RKF_facmax;
+	double RKF_atol = 1.0e-16;
+	double RKF_rtol = 1.0e-16;
+	double RKF_fac = 0.84;
+	double RKF_facmin = 0.8;
+	double RKF_facmax = 1.5;
 
 	double *xt_h;
 	double *yt_h;
@@ -136,14 +140,18 @@ public:
 	double *kvz_h, *kvz_d;
 
 
+	long long int *id_h, *id_d;
+
 	double *snew_h, *snew_d;
 	double *ssum_d;
-
+	double *jd_init_h;
 
 	int readParam();
 	int readIC();
 	int readICSize();
 	int readData();
+	int readHeader();
+	int readFile();
 	int copyIC();
 	void allocate();
 	int allocateGPU();
@@ -151,6 +159,7 @@ public:
 	int copyConst();
 	void printInfo();
 	void output(double);
+	
 
 	inline void update_Chebyshev(double);
 	inline void update_perturbers(double);

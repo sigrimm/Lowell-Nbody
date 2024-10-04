@@ -1,7 +1,7 @@
 all: integrator integratorGPU
 
-integrator: main.o asteroid.o RKF.o integrator.o
-	g++ -g -o integrator main.o asteroid.o RKF.o integrator.o
+integrator: main.o asteroid.o RKF.o integrator.o read.o
+	g++ -g -o integrator main.o asteroid.o RKF.o integrator.o read.o
 
 main.o: main.cpp asteroid.h 
 	g++ -g -c -O3 -DUSEGPU=0 -o main.o main.cpp
@@ -15,10 +15,13 @@ RKF.o: RKF.cpp asteroid.h
 asteroid.o: asteroid.cpp asteroid.h
 	g++ -g -c -O3 -DUSEGPU=0 -o asteroid.o asteroid.cpp
 
+read.o: read.cpp asteroid.h
+	g++ -g -c -O3 -o read.o read.cpp
 
 
-integratorGPU: mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o
-	nvcc -o integratorGPU mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o
+
+integratorGPU: mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o read.o
+	nvcc -o integratorGPU mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o read.o
 
 asteroid1.o: asteroid.cpp asteroid.h
 	nvcc -g -c -O3 -DUSEGPU=1 -o asteroid1.o asteroid.cpp

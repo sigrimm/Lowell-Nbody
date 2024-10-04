@@ -213,82 +213,6 @@ void asteroid::printInfo(){
 
 
 
-//Read the size of the initial conditions file
-int asteroid::readICSize(){
-	FILE *infile;
-
-	infile = fopen(inputFilename, "r");
-	if(infile == NULL){
-		printf("Error, could not open initial condition file |%s|\n", inputFilename);
-		return 0;
-	}
-
-	N = 0;
-
-	double x, y, z;
-	double vx, vy, vz;
-	double A1, A2, A3;
-
-	for(int i = 0; i < 1024 * 1024; ++i){
-		int er = 0;
-		er = fscanf(infile, "%lf", &x);
-		er = fscanf(infile, "%lf", &y);
-		er = fscanf(infile, "%lf", &z);
-		er = fscanf(infile, "%lf", &vx);
-		er = fscanf(infile, "%lf", &vy);
-		er = fscanf(infile, "%lf", &vz);
-		er = fscanf(infile, "%lf", &A1);
-		er = fscanf(infile, "%lf", &A2);
-		er = fscanf(infile, "%lf", &A3);
-		if(er < 0){
-			break;
-		}
-		if(i >= 1024 * 1024 - 1){
-			printf("Error, N is too large for scan kernels\n");
-			return 0;
-		}
-		++N;
-	//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
-	}
-	fclose(infile);
-
-	return 1;
-
-}
-
-//Read the initial conditions file
-int asteroid::readIC(){
-	FILE *infile;
-
-	infile = fopen(inputFilename, "r");
-	if(infile == NULL){
-		printf("Error, could not open initial condition file |%s|\n", inputFilename);
-		return 0;
-	}
-
-	for(int i = 0; i < N; ++i){
-		int er = 0;
-		er = fscanf(infile, "%lf", &x_h[i]);
-		er = fscanf(infile, "%lf", &y_h[i]);
-		er = fscanf(infile, "%lf", &z_h[i]);
-		er = fscanf(infile, "%lf", &vx_h[i]);
-		er = fscanf(infile, "%lf", &vy_h[i]);
-		er = fscanf(infile, "%lf", &vz_h[i]);
-		er = fscanf(infile, "%lf", &A1_h[i]);
-		er = fscanf(infile, "%lf", &A2_h[i]);
-		er = fscanf(infile, "%lf", &A3_h[i]);
-		if(er < 0){
-			printf("Error, reading initial conditions file failed.\n");
-			return 0;
-		}
-	//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
-	}
-	fclose(infile);
-
-	return 1;
-
-}
-
 
 void asteroid::allocate(){
 	nCm = 0;
@@ -296,7 +220,7 @@ void asteroid::allocate(){
 	dt1 = dt;
 	stop = 0;
 
-	id_h = (int*)malloc(Nperturbers * sizeof(int));
+	idp_h = (int*)malloc(Nperturbers * sizeof(int));
 	nChebyshev_h = (int*)malloc(Nperturbers * sizeof(int));
 #if USEGPU == 0
 	startTime_h = (double*)malloc(Nperturbers * sizeof(double));
@@ -327,7 +251,7 @@ void asteroid::allocate(){
 
 #if USEGPU == 0
 	for(int i = 0; i < Nperturbers; ++i){
-		er = fread(&id_h[i], sizeof(int), 1, perturbersFile);
+		er = fread(&idp_h[i], sizeof(int), 1, perturbersFile);
 		er = fread(&nChebyshev_h[i], sizeof(int), 1, perturbersFile);
 		er = fread(&offset0_h[i], sizeof(int), 1, perturbersFile);
 		er = fread(&offset1_h[i], sizeof(int), 1, perturbersFile);
@@ -340,11 +264,11 @@ void asteroid::allocate(){
 
 		startTime_h[i] = 100000000.0;     //large number
 		endTime_h[i] = 0.0; 
-//printf("%d %d %d %d %.20g\n", id_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
+//printf("%d %d %d %d %.20g\n", idp_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
 	}
 #else
 	for(int i = 0; i < Nperturbers; ++i){
-		er = fread(&id_h[i], sizeof(int), 1, perturbersFile);
+		er = fread(&idp_h[i], sizeof(int), 1, perturbersFile);
 		er = fread(&nChebyshev_h[i], sizeof(int), 1, perturbersFile);
 		er = fread(&offset0_h[i * RKFn], sizeof(int), 1, perturbersFile);
 		er = fread(&offset1_h[i * RKFn], sizeof(int), 1, perturbersFile);
@@ -363,7 +287,7 @@ void asteroid::allocate(){
 			endTime_h[i * RKFn + j] = endTime_h[i * RKFn];
 		}
 
-//printf("%d %d %d %d %.20g\n", id_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
+//printf("%d %d %d %d %.20g\n", idp_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
 	}
 #endif
 	//printf("nCm %d\n", nCm);
@@ -376,7 +300,6 @@ void asteroid::allocate(){
 	printf("size of perturbers data table %d\n", datasize);
 	data_h = (double*)malloc(datasize * sizeof(double));
 #endif
-	time = timeStart;
 	double c = (CLIGHT / AUtokm) * 86400.0;
 	c2 = c * c;
 	REAU = RE / AUtokm;   //Earth radius in AU
@@ -430,6 +353,9 @@ void asteroid::allocate(){
 	A3_h = (double*)malloc(N * sizeof(double));
 
 	snew_h = (double*)malloc(N * sizeof(double));
+	jd_init_h = (double*)malloc(N * sizeof(double));
+
+	id_h = (long long int*)malloc(N * sizeof(long long int));
 
 	RKFa_h = (double*)malloc(RKFn * RKFn * sizeof(double));
 	RKFb_h = (double*)malloc(RKFn * sizeof(double));
@@ -450,32 +376,35 @@ void asteroid::allocate(){
 
 void asteroid::output(double dtmin){
 	printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dtmin);
-	for(int i = 0; i < N; ++i){
-		if(outBinary == 0){
-			fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, i, x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], dtmin);
-		}
-		else{
-			unsigned long long int id = i;//id_h[i];
-			//unsigned long long int id = __builtin_bswap64 (id_h[i]);
-			double tt = time_reference + time;
-			double xx = x_h[i];
-			double yy = y_h[i];
-			double zz = z_h[i];
-			double vxx = vx_h[i];
-			double vyy = vy_h[i];
-			double vzz = vz_h[i];
 
-			fwrite(&tt, sizeof(double), 1, outputFile);
-			fwrite(&id, sizeof(unsigned long long int), 1, outputFile);
-			fwrite(&xx, sizeof(double), 1, outputFile);
-			fwrite(&yy, sizeof(double), 1, outputFile);
-			fwrite(&zz, sizeof(double), 1, outputFile);
-			fwrite(&vxx, sizeof(double), 1, outputFile);
-			fwrite(&vyy, sizeof(double), 1, outputFile);
-			fwrite(&vzz, sizeof(double), 1, outputFile);
-			fwrite(&dtmin, sizeof(double), 1, outputFile);
+	if(time_reference + time >= outStart){
+		for(int i = 0; i < N; ++i){
+			if(outBinary == 0){
+				fprintf(outputFile, "%.20g %lld %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, id_h[i], x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], dtmin);
+			}
+			else{
+				long long int id = id_h[i];
+				//unsigned long long int id = __builtin_bswap64 (id_h[i]);
+				double tt = time_reference + time;
+				double xx = x_h[i];
+				double yy = y_h[i];
+				double zz = z_h[i];
+				double vxx = vx_h[i];
+				double vyy = vy_h[i];
+				double vzz = vz_h[i];
+
+				fwrite(&tt, sizeof(double), 1, outputFile);
+				fwrite(&id, sizeof(long long int), 1, outputFile);
+				fwrite(&xx, sizeof(double), 1, outputFile);
+				fwrite(&yy, sizeof(double), 1, outputFile);
+				fwrite(&zz, sizeof(double), 1, outputFile);
+				fwrite(&vxx, sizeof(double), 1, outputFile);
+				fwrite(&vyy, sizeof(double), 1, outputFile);
+				fwrite(&vzz, sizeof(double), 1, outputFile);
+				fwrite(&dtmin, sizeof(double), 1, outputFile);
 
 
+			}
 		}
 	}
 }

@@ -418,7 +418,7 @@ int asteroid::loop(){
 	else{
 		outputFile = fopen(outputFilename, "wb");
 	}
-	printf("Start integration\n");
+	printf("Start integration %.20g\n", timeStart + time_reference);
 
 	output(dt);
 

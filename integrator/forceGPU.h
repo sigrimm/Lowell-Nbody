@@ -22,13 +22,16 @@ __device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi,
 	double t = sqrt(tsq);
 
 	//double gr = 1.0 / rsq;  //only valid for asteroids, not for comets 
-	const double alpha = 1.0;
-	const double nk = 0.0;
-	const double nm = 2.0;
-	const double nn = 5.093;
-	const double r0 = 1.0;
+	double gr = 0.0;
 
-	const double gr = alpha * pow(r / r0, -nm) * pow(1.0 + pow(r / r0, nn), -nk);
+	if(cometFlag_c == 0){
+		const double alpha = 1.0;
+		const double nk = 0.0;
+		const double nm = 2.0;
+		const double nn = 5.093;
+		const double r0 = 1.0;
+		gr = alpha * pow(r / r0, -nm) * pow(1.0 + pow(r / r0, nn), -nk);
+	}
 
 	/*
 	double rr = r / R0[i];
