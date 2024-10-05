@@ -1,3 +1,4 @@
+Initial condition file format = text
 Initial condition file = initial.dat
 Output file name = test
 Path to perturbers file = ../readChebyshev/

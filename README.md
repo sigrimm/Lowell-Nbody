@@ -63,14 +63,18 @@ Every record contains
 - make
 - modify param.dat
 
-
+  - Initial condition file format:  format of the initial conditions file, "text" or "binary".
+  - Initial condition file: name of the initial conditions file, string.
+  - Output file name: name of the output files, string.
+  - Path to perturbers file, string
+  - 
 allowed integrators are:
 
-- LF, leapfrog 
-- RK4, Runge Kutta 4, fixed time steps
-- RKF45, Runge Kutta Fehlberg 45, adaptive time steps
-- DP54, Runge Kutta Fehlberg 54, adaptive time steps
-- RKF78, Runge Kutta Fehlberg 78, adaptive time steps
+  - LF, leapfrog 
+  - RK4, Runge Kutta 4, fixed time steps
+  - RKF45, Runge Kutta Fehlberg 45, adaptive time steps
+  - DP54, Runge Kutta Fehlberg 54, adaptive time steps
+  - RKF78, Runge Kutta Fehlberg 78, adaptive time steps
 
 ## Step 3, set initial conditions ##
 

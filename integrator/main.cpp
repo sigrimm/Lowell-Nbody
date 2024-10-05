@@ -1,7 +1,9 @@
 #include "asteroid.h"
+#include <chrono>
 
 int main(){
 
+	std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
 
 #if USEGPU == 1
 	printf("Use GPU %d\n", USEGPU);
@@ -42,35 +44,36 @@ int main(){
 	//----------------------------------------------------------
 	//Read Size of initial conditions file
 	//----------------------------------------------------------
-	A.inputFile = fopen(A.inputFilename, "r");
-	if(A.inputFile == NULL){
-		printf("Error, could not open initial condition file |%s|\n", A.inputFilename);
-		return 0;
-	}
+	if(A.ICformat == 0){
+		A.inputFile = fopen(A.inputFilename, "r");
+		if(A.inputFile == NULL){
+			printf("Error, could not open initial condition file |%s|\n", A.inputFilename);
+			return 0;
+		}
 
-	printf("Read ICsize\n");
-	er = A.readICSize();
-	if(er <= 0){
-		return 0;
+		printf("Read ICsize\n");
+		er = A.readICSize();
+		if(er <= 0){
+			return 0;
+		}
+		fclose(A.inputFile);
+		printf("Read ICSize OK with %d bodies\n", A.N);
 	}
-	fclose(A.inputFile);
-	printf("Read ICSize OK with %d bodies\n", A.N);
+	else{
+
+		A.inputFile = fopen(A.inputFilename, "rb");
+		if(A.inputFile == NULL){
+			printf("Error, could not open initial condition file |%s|\n", A.inputFilename);
+			return 0;
+		}
+		printf("Read IC file header\n");
+		er = A.readHeader();
+		if(er <= 0){
+			return 0;
+		}
+		printf("Read IC file header OK with %d bodies\n", A.N);
+	}
 	//----------------------------------------------------------
-
-/*
-	A.inputFile = fopen(A.inputFilename, "rb");
-	if(A.inputFile == NULL){
-		printf("Error, could not open initial condition file |%s|\n", A.inputFilename);
-		return 0;
-	}
-	printf("Read IC file header\n");
-	er = A.readHeader();
-	if(er <= 0){
-		return 0;
-	}
-	printf("Read IC file header OK with %d bodies\n", A.N);
-*/
-
 
 	//sprintf(A.perturbersFileName, "%s/PerturbersChebyshev.dat", A.perturbersFilePath);
 	//A.perturbersFile = fopen(A.perturbersFileName, "r");
@@ -130,10 +133,13 @@ int main(){
 	//Read initial conditions
 	//----------------------------------------------------------
 	printf("Read initial conditions file = %s\n", A.inputFilename);
-	A.inputFile = fopen(A.inputFilename, "r");
-	er = A.readIC();
-
-//	er = A.readFile();
+	if(A.ICformat == 0){
+		A.inputFile = fopen(A.inputFilename, "r");
+		er = A.readIC();
+	}
+	else{
+		er = A.readFile();
+	}
 
 	if(er <= 0){
 		return 0;
@@ -161,6 +167,12 @@ int main(){
 
 	fclose(A.perturbersFile);
 	fclose(A.infoFile);
+
+	std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
+
+	int ms = 	std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count();
+	//int ns = 	std::chrono::duration_cast<std::chrono::nanoseconds> (time_end - time_begin).count();
+	printf("Run time in seconds:  %g\n", ms / 1000.0);
 	
 }
 

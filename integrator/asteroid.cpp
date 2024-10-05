@@ -31,7 +31,27 @@ int asteroid::readParam(){
 			}
 		}
 		if(c == EOF) break;
-		if(strcmp(sp, "Initial condition file =") == 0){
+		if(strcmp(sp, "Initial condition file format =") == 0){
+			char format[160];
+			er = fscanf (paramfile, "%s", format);
+			if(er <= 0){
+				printf("Error: Initial condition file format is not valid!\n");
+				return 0;
+			}
+			if(strcmp(format, "text") == 0){
+				ICformat = 0;
+			}
+			else if(strcmp(format, "binary") == 0){
+				ICformat = 1;
+			}
+			else{
+				printf("Error: Initial condition file format is not valid\n");
+				return 0;
+
+			}
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "Initial condition file =") == 0){
 			er = fscanf (paramfile, "%s", inputFilename);
 			if(er <= 0){
 				printf("Error: Initial condition file is not valid!\n");
@@ -194,8 +214,18 @@ int asteroid::readParam(){
 }
 
 void asteroid::printInfo(){
-	fprintf(infoFile, "Initial condition file %s\n", inputFilename);
-	fprintf(infoFile, "Output file name %s\n", outputFilename);
+	fprintf(infoFile, "Initial condition file format = %d\n", ICformat);
+	fprintf(infoFile, "Initial condition file = %s\n", inputFilename);
+	fprintf(infoFile, "Output file name = %s\n", outputFilename);
+	fprintf(infoFile, "Path to perturbers file = %s\n", perturbersFilePath);
+	fprintf(infoFile, "Start Time = %.20g\n", timeStart);
+	fprintf(infoFile, "End Time = %.20g\n", timeEnd);
+	fprintf(infoFile, "Time Step = %.20g\n", dt);
+	fprintf(infoFile, "Output Interval = %g\n", outputInterval);
+	fprintf(infoFile, "Integrator RKFn = %d\n", RKFn);
+	fprintf(infoFile, "RKF absolute tolerance = %.20g\n", RKF_atol);
+	fprintf(infoFile, "RKF relative tolerance = %.20g\n", RKF_rtol);
+
 	fprintf(infoFile, "useGR correction = %d\n", useGR);
 	fprintf(infoFile, "useJ2 force = %d\n", useJ2);
 	fprintf(infoFile, "use non-gravitational force = %d\n", useNonGrav);
@@ -204,8 +234,6 @@ void asteroid::printInfo(){
 	//fprintf(infoFile, "useFIFO = %d\n", useFIFO);
 	//fprintf(infoFile, "InVersion = %g\n", InVersion);
 
-	fprintf(infoFile, "Output Interval = %g\n", outputInterval);
-	fprintf(infoFile, "Integrator RKFn= %d\n", RKFn);
 	fprintf(infoFile, "Nperturbers = %d\n", Nperturbers);
 
 	//fprintf(infoFile, "outStart: %.20g, time0: %.20g, time1: %.20g, outInterval: %lld\n", outStart, time0, time1, outInterval);

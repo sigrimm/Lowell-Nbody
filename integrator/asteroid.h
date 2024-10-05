@@ -25,6 +25,7 @@ public:
 	char outputFilename[160];
 	char infoFilename[160];
 
+	int ICformat = 0;			//Format of the initial conditions file, 0 = "text" or 1 = "binary"
 	int N;
 	int Nperturbers;
 	double inputFileVersion = 1;
