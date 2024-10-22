@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 
-int asteroid::readParam(){
+int asteroid::readParam(int argc, char*argv[]){
 
 	FILE *paramfile;
 	paramfile = fopen("param.dat", "r");
@@ -199,6 +199,30 @@ int asteroid::readParam(){
 		}
 	}
 	fclose(paramfile);
+
+	//read console arguments
+	for(int i = 1; i < argc; i += 2){
+		if(strcmp(argv[i], "-outInterval") == 0){
+			outputInterval = atof(argv[i + 1]);
+		}
+		else if(strcmp(argv[i], "-dt") == 0){
+			dt = atof(argv[i + 1]);
+		}
+		else if(strcmp(argv[i], "-in") == 0){
+			sprintf(inputFilename, "%s", argv[i + 1]);
+		}
+		else if(strcmp(argv[i], "-mode") == 0){
+			GPUMode = atoi(argv[i + 1]);
+		}
+		else{
+			printf("Error, console argument is not valid.\n");
+		return 0;
+		}
+	}
+
+
+
+
 
 	if(outBinary == 0){
 		sprintf(outputFilename, "Out_%s.dat", name);

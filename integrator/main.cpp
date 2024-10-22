@@ -1,7 +1,7 @@
 #include "asteroid.h"
 #include <chrono>
 
-int main(){
+int main(int argc, char*argv[]){
 
 	std::chrono::steady_clock::time_point time_begin = std::chrono::steady_clock::now();
 
@@ -34,7 +34,7 @@ int main(){
 	//Read param.dat file
 	//----------------------------------------------------------
 	printf("Read param.dat file\n");
-	er = A.readParam();
+	er = A.readParam(argc, argv);
 	if(er <= 0){
 		return 0;
 	}

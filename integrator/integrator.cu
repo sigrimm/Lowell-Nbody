@@ -1423,8 +1423,12 @@ int asteroid::loop(){
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 	
 				//Needs at least Nperturbers threads per block
-				RK_step_kernel <<< (N + 63) / 64 , dim3(64, 1, 1) >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, time, dt, RKFn, Nperturbers, N);
-//				RK_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, GM_d, A1_d, A2_d, A3_d, time, dt, RKFn, Nperturbers, N);
+				if(GPUMode == 0){
+					RK_step_kernel <<< (N + 63) / 64 , dim3(64, 1, 1) >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, time, dt, RKFn, Nperturbers, N);
+				}
+				else{
+					RK_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, GM_d, A1_d, A2_d, A3_d, time, dt, RKFn, Nperturbers, N);
+				}
 
 //				for(int S = 0; S < RKFn; ++S){
 
@@ -1438,9 +1442,12 @@ int asteroid::loop(){
 				//Needs at least Nperturbers threads per block
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 
-				RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
-//				RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
-
+				if(GPUMode == 0){
+					RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
+				}
+				else{
+					RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
+				}
 
 
 				//Calculate the minimal time step value

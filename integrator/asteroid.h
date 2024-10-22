@@ -60,6 +60,7 @@ public:
 	int datasize;
 
 	int WarpSize = 0;
+	int GPUMode = 0;
 
 	//perturbers data
 	double *startTime_h, *startTime_d;	//Start time of perturbers data block
@@ -147,7 +148,7 @@ public:
 	double *ssum_d;
 	double *jd_init_h;
 
-	int readParam();
+	int readParam(int , char*argv[]);
 	int readIC();
 	int readICSize();
 	int readData();
