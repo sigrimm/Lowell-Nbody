@@ -184,6 +184,14 @@ int asteroid::readParam(int argc, char*argv[]){
 			}
 			str = fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "Use comets =  =") == 0){
+			er = fscanf (paramfile, "%d", &cometFlag);
+			if(er <= 0){
+				printf("Error: Use comets is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
 		else if(strcmp(sp, "Use binary output format =") == 0){
 			er = fscanf (paramfile, "%d", &outBinary);
 			if(er <= 0){

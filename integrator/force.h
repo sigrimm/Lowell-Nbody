@@ -21,15 +21,24 @@ inline void asteroid::NonGrav(double xi, double yi, double zi, double vxi, doubl
 	double tsq = tx * tx + ty * ty + tz * tz;
 	double t = sqrt(tsq);
 
-	//double gr = 1.0 / rsq;  //only valid for asteroids, not for comets 
 	double gr = 0.0;
 
 	if(cometFlag == 0){
-		const double alpha = 1.0;
-		const double nk = 0.0;
-		const double nm = 2.0;
+		//const double alpha = 1.0;
+		//const double nk = 0.0;
+		//const double nm = 2.0;
+		//const double nn = 5.093;
+		//const double r0 = 1.0;
+		//gr = alpha * pow(r / r0, -nm) * pow(1.0 + pow(r / r0, nn), -nk);
+		gr = 1.0 / (r * r);
+		//double gr = 1.0 / rsq;  //only valid for asteroids, not for comets 
+	}
+	else{
+		const double alpha = 0.1112620426;
+		const double nk = 4.6142;
+		const double nm = 2.15;
 		const double nn = 5.093;
-		const double r0 = 1.0;
+		const double r0 = 2.808;
 		gr = alpha * pow(r / r0, -nm) * pow(1.0 + pow(r / r0, nn), -nk);
 	}
 
@@ -146,6 +155,7 @@ inline void asteroid::Gravity(double xi, double yi, double zi, double *xTable_h,
 		axi -= s * dx;
 		ayi -= s * dy;
 		azi -= s * dz;
+//printf("%d %d %g %g\n", pp, p, r, s * dx);
 
 //printf("position %d %d %.20g %.20g %.20g %.20g %.20g\n", pp, p, time, x[p], y[p], z[p], GM_h[p]);
 	}

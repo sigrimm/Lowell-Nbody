@@ -46,6 +46,7 @@ __host__ int asteroid::copyConst(){
 	cudaMemcpyToSymbol(useGR_c, &useGR, sizeof(int), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(useJ2_c, &useJ2, sizeof(int), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(useNonGrav_c, &useNonGrav, sizeof(int), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(cometFlag_c, &cometFlag, sizeof(int), 0, cudaMemcpyHostToDevice);
 
 	cudaDeviceSynchronize();
 	cudaError_t error = cudaGetLastError();

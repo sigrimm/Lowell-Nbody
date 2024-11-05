@@ -12,4 +12,5 @@ RKF relative tolerance = 1.0e-16
 Use GR correction = 1
 Use J2 force = 1
 Use non-gravitational force = 1
+Use comets = 0
 Use binary output format = 0
