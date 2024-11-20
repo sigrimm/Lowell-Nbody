@@ -704,8 +704,8 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 	double A2;
 	double A3;
 
-	if(id < Nperturbers){
-		GM_s[id] = GM_d[id];
+	if(itx < Nperturbers){
+		GM_s[itx] = GM_d[itx];
 	}
 	if(id < N){
 		x0 = x_d[id];
@@ -1463,7 +1463,6 @@ int asteroid::loop(){
 				cudaDeviceSynchronize();
 				cudaMemcpy(snew_h, ssum_d, sizeof(double), cudaMemcpyDeviceToHost);
 				snew = snew_h[0];
-
 
 				if(snew >= 1.0){
 					//accept step

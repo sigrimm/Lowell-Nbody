@@ -219,6 +219,9 @@ int asteroid::readParam(int argc, char*argv[]){
 		else if(strcmp(argv[i], "-in") == 0){
 			sprintf(inputFilename, "%s", argv[i + 1]);
 		}
+		else if(strcmp(argv[i], "-out") == 0){
+			sprintf(name, "%s", argv[i + 1]);
+		}
 		else if(strcmp(argv[i], "-mode") == 0){
 			GPUMode = atoi(argv[i + 1]);
 		}

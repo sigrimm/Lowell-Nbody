@@ -308,6 +308,7 @@ inline void asteroid::RKF_step(){
 			dvz_h[i] += dtb * kvz_h[i + S * N];
 //if(i < 2) printf("dx %d %d %g %g %g %g %g %g\n", S, i, dx_h[i], dy_h[i], dz_h[i], RKFb_h[S], kx_h[i + S * N], dt);
 		}
+
 	}
 
 
@@ -376,7 +377,6 @@ inline void asteroid::RKF_step(){
 
 	}
 	snew_h[0] = snew;
-
 	if(snew >= 1.0){
 		//accept step
 		for(int i = 0; i < N; ++i){
@@ -387,7 +387,6 @@ inline void asteroid::RKF_step(){
 			vx_h[i] += dvx_h[i];
 			vy_h[i] += dvy_h[i];
 			vz_h[i] += dvz_h[i];
-
 		}
 		time += dt;
 		if(stop != 1){
