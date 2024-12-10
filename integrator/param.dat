@@ -14,3 +14,10 @@ Use J2 force = 1
 Use non-gravitational force = 1
 Use comets = 0
 Use binary output format = 0
+comet alpha = 0.1112620426
+comet nk = 4.6142
+comet nm = 2.15
+comet nn = 5.093
+comet r0 = 2.808
+comet tau = 0.0
+

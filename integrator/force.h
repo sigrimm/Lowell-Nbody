@@ -34,12 +34,8 @@ inline void asteroid::NonGrav(double xi, double yi, double zi, double vxi, doubl
 		//double gr = 1.0 / rsq;  //only valid for asteroids, not for comets 
 	}
 	else{
-		const double alpha = 0.1112620426;
-		const double nk = 4.6142;
-		const double nm = 2.15;
-		const double nn = 5.093;
-		const double r0 = 2.808;
-		gr = alpha * pow(r / r0, -nm) * pow(1.0 + pow(r / r0, nn), -nk);
+		double rr = r / nonGrav_r0;
+		gr = nonGrav_alpha * pow(rr, -nonGrav_nm) * pow(1.0 + pow(rr, nonGrav_nn), -nonGrav_nk);
 	}
 
 

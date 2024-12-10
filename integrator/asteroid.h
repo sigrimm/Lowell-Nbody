@@ -56,6 +56,13 @@ public:
 	int outBinary = 0;
 	int cometFlag = 0;
 
+	double nonGrav_alpha = 0.1112620426;
+	double nonGrav_nk = 4.6142;
+	double nonGrav_nm = 2.15;
+	double nonGrav_nn = 5.093;
+	double nonGrav_r0 = 2.808;
+	double nonGrav_tau = 0.0;
+
 	int nCm;			//Maximum number of Chebyshev coefficients
 	int datasize;
 

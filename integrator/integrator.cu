@@ -24,6 +24,13 @@ __constant__ int useJ2_c;
 __constant__ int useNonGrav_c;
 __constant__ int cometFlag_c;
 
+__constant__ double nonGrav_alpha_c;
+__constant__ double nonGrav_nk_c;
+__constant__ double nonGrav_nm_c;
+__constant__ double nonGrav_nn_c;
+__constant__ double nonGrav_r0_c;
+__constant__ double nonGrav_tau_c;
+
 #include "asteroid.h"
 #include "ChebyshevGPU.h"
 #include "forceGPU.h"
@@ -47,6 +54,13 @@ __host__ int asteroid::copyConst(){
 	cudaMemcpyToSymbol(useJ2_c, &useJ2, sizeof(int), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(useNonGrav_c, &useNonGrav, sizeof(int), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(cometFlag_c, &cometFlag, sizeof(int), 0, cudaMemcpyHostToDevice);
+
+	cudaMemcpyToSymbol(nonGrav_alpha_c, &nonGrav_alpha, sizeof(double), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(nonGrav_nk_c, &nonGrav_nk, sizeof(double), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(nonGrav_nm_c, &nonGrav_nm, sizeof(double), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(nonGrav_nn_c, &nonGrav_nn, sizeof(double), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(nonGrav_r0_c, &nonGrav_r0, sizeof(double), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(nonGrav_tau_c, &nonGrav_tau, sizeof(double), 0, cudaMemcpyHostToDevice);
 
 	cudaDeviceSynchronize();
 	cudaError_t error = cudaGetLastError();

@@ -192,6 +192,54 @@ int asteroid::readParam(int argc, char*argv[]){
 			}
 			str = fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "comet alpha =") == 0){
+			er = fscanf (paramfile, "%lf", &nonGrav_alpha);
+			if(er <= 0){
+				printf("Error: comet alpha is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "comet nk =") == 0){
+			er = fscanf (paramfile, "%lf", &nonGrav_nk);
+			if(er <= 0){
+				printf("Error: comet nk is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "comet nm =") == 0){
+			er = fscanf (paramfile, "%lf", &nonGrav_nm);
+			if(er <= 0){
+				printf("Error: comet nm is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "comet nn =") == 0){
+			er = fscanf (paramfile, "%lf", &nonGrav_nn);
+			if(er <= 0){
+				printf("Error: comet nn is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "comet r0 =") == 0){
+			er = fscanf (paramfile, "%lf", &nonGrav_r0);
+			if(er <= 0){
+				printf("Error: comet r0 is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
+		else if(strcmp(sp, "comet tau =") == 0){
+			er = fscanf (paramfile, "%lf", &nonGrav_tau);
+			if(er <= 0){
+				printf("Error: comet tau is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
 		else if(strcmp(sp, "Use binary output format =") == 0){
 			er = fscanf (paramfile, "%d", &outBinary);
 			if(er <= 0){
