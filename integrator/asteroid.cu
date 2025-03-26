@@ -61,7 +61,8 @@ int asteroid::allocateGPU(){
 	cudaMalloc((void **) &A2_d, N * sizeof(double));
 	cudaMalloc((void **) &A3_d, N * sizeof(double));
 
-	cudaMalloc((void **) &id_d, N * sizeof(long long int));
+	cudaMalloc((void **) &Rsave_d, N * Rbuffersize * sizeof(double));
+	cudaMalloc((void **) &Tsave_d, Rbuffersize * sizeof(double));
 
 	cudaMalloc((void **) &snew_d, N * sizeof(double));
 	cudaMalloc((void **) &ssum_d, N * sizeof(double));

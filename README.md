@@ -64,6 +64,12 @@ Every record contains
 - modify param.dat
 
   - Initial condition file format:  format of the initial conditions file, "text" or "binary".
+  - Initial condition file coordinates:  format of the initial conditions coordinate system:
+    - cartesian heliocentric ecliptic
+    - cartesian heliocentric equatorial
+    - cartesian barycentric ecliptic
+    - cartesian barycentric equatorial
+    - orbital heliocentric ecliptic
   - Initial condition file: name of the initial conditions file, string.
   - Output file name: name of the output files, string.
   - Path to perturbers file, string
@@ -85,8 +91,8 @@ The File contains the following columns:
 
 with:
 - id, particle index, integer number
-- x ,y ,z: Barecentric positions in AU
-- vx, vy, vz: Barycentric velocoties in AU/days
+- x ,y ,z: Barycentric positions in AU
+- vx, vy, vz: Barycentric velocities in AU/days
 - A1, A2, A3: Non-gravitational acceleration terms in AU/days^2
 
 ## Step 4, run the integration ##

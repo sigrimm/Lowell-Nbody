@@ -24,6 +24,7 @@ __device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi,
 	double gr = 0.0;
 
 	if(cometFlag_c == 0){
+		// *********Asteroids*************
 		//const double alpha = 1.0;
 		//const double nk = 0.0;
 		//const double nm = 2.0;
@@ -31,31 +32,27 @@ __device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi,
 		//const double r0 = 1.0;
 		//gr = alpha * pow(r / r0, -nm) * pow(1.0 + pow(r / r0, nn), -nk);
 		gr = 1.0 / (r * r);
-		//double gr = 1.0 / rsq;  //only valid for asteroids, not for comets 
 	}
 	else{
+
+		// ************Comets**************
+		//Larry uses constant values for these parameters, for all comets the same
+		//add time delay for comets
+
+
+		//double tTau = time - nonGrav_tau_c;
+
 		double rr = r / nonGrav_r0_c;
-		r = nonGrav_alpha_c * pow(rr, -nonGrav_nm_c) * pow(1.0 + pow(rr, nonGrav_nn_c), -nonGrav_nk_c);
+		double g1 = pow(rr, -nonGrav_nm_c);
+		double g2 = pow(rr, nonGrav_nn_c);
+		double g3 = pow(1.0 + g2, -nonGrav_nk_c);
+		gr = nonGrav_alpha_c * g1 * g3;
 	}
-
-	/*
-	double rr = r / R0[i];
-	double g1 = pow(rr, -NM[i]);
-	double g2 = pow(rr, Nn[i]);
-	double g3 = pow(1.0 + g2, -NK[i]);
-	double gr = ALN[i] * g1 * g3;
-	//Larry uses constant values for these parameters, for all comets the same
-	//add time delay for comets
-
-	printf("gr %.20g %.20g\n", gr1, gr);
-	*/
 
 	double f1 = __dmul_rn(A1i, gr) / r;
 	double f2 = __dmul_rn(A2i, gr) / t;
 	double f3 = __dmul_rn(A3i, gr) / h;
 
-//printf("NonGrav  %.20g %.20g %.20g %.20g |%.20g %.20g %.20g\n", gr, r, t, h, f1, f2, f3);
-//printf("NonGrav a %.20g %.20g %.20g\n", ax_h[i], ay_h[i], az_h[i]);
 
 	axi += __dmul_rn(f1, xi) + __dmul_rn(f2, tx) + __dmul_rn(f3, hx);
 	ayi += __dmul_rn(f1, yi) + __dmul_rn(f2, ty) + __dmul_rn(f3, hy);
@@ -63,9 +60,6 @@ __device__ void NonGrav(double xi, double yi, double zi, double vxi, double vyi,
 	//axi += A1i * gr * xi / r + A2i * gr * tx / t + A3i * gr * hx / h;
 	//ayi += A1i * gr * yi / r + A2i * gr * ty / t + A3i * gr * hy / h;
 	//azi += A1i * gr * zi / r + A2i * gr * tz / t + A3i * gr * hz / h;
-
-//printf("NonGrav %.20g %.20g %.20g %.20g | %.20g %.20g %.20g\n", gr, r, t, h, f1, f2, f3);
-//printf("NonGrav a %.20g %.20g %.20g\n", ax_h[i], ay_h[i], az_h[i]);
 
 }
 

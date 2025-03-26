@@ -51,6 +51,45 @@ int asteroid::readParam(int argc, char*argv[]){
 			}
 			str = fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "Initial condition file coordinates =") == 0){
+			char format[160];
+			er = fscanf (paramfile, " %[^\n]s", format);
+			if(er <= 0){
+				printf("Error: Initial condition file coordinates is not valid!\n");
+				return 0;
+			}
+			if(strcmp(format, "cartesian heliocentric ecliptic") == 0){
+				ICorbital = 0;
+				ICecliptic = 1;
+				ICheliocentric = 1;
+			}
+			else if(strcmp(format, "cartesian heliocentric equatorial") == 0){
+				ICorbital = 0;
+				ICecliptic = 0;
+				ICheliocentric = 1;
+			}
+			else if(strcmp(format, "cartesian barycentric ecliptic") == 0){
+				ICorbital = 0;
+				ICecliptic = 1;
+				ICheliocentric = 0;
+			}
+			else if(strcmp(format, "cartesian barycentric equatorial") == 0){
+				ICorbital = 0;
+				ICecliptic = 0;
+				ICheliocentric = 0;
+			}
+			else if(strcmp(format, "orbital heliocentric ecliptic") == 0){
+				ICorbital = 1;
+				ICecliptic = 1;
+				ICheliocentric = 1;
+			}
+			else{
+				printf("Error: Initial condition file coordinates is not valid!\n");
+				return 0;
+
+			}
+			str = fgets(sp, 3, paramfile);
+		}
 		else if(strcmp(sp, "Initial condition file =") == 0){
 			er = fscanf (paramfile, "%s", inputFilename);
 			if(er <= 0){
@@ -292,6 +331,14 @@ int asteroid::readParam(int argc, char*argv[]){
 
 	sprintf(infoFilename, "Info_%s.dat", name);
 
+
+
+	if(ICformat > 0 && ICformat != 0){
+		printf("Error, combination of initial condition format and initial condition coordinate system is not allowed\n");
+		return 0;
+	}
+
+
 	return 1;
 
 }
@@ -482,6 +529,8 @@ void asteroid::allocate(){
 		RKFc_h[i] = 0.0;
 	}
 
+	Rsave_h = (double*)malloc(Rbuffersize * N * sizeof(double));
+	Tsave_h = (double*)malloc(Rbuffersize * sizeof(double));
 
 }
 

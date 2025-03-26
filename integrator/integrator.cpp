@@ -4,6 +4,31 @@
 #include "Chebyshev.h"
 #include "force.h"
 
+void asteroid::HelioToBary(){
+	//Update the Chebyshev coefficients if necessary
+	update_Chebyshev(timeStart);
+	update_perturbers(timeStart);
+
+
+printf("%.20g %.20g %.20g %.20g %.20g %.20g\n", xTable_h[10], yTable_h[10], zTable_h[10], vxTable_h[10], vyTable_h[10], vzTable_h[10]);
+
+	//heliocentric coordinates
+	for(int i = 0; i < N; ++i){
+		x_h[i] += xTable_h[10];
+		y_h[i] += yTable_h[10];
+		z_h[i] += zTable_h[10];
+
+		vx_h[i] += vxTable_h[10];
+		vy_h[i] += vyTable_h[10];
+		vz_h[i] += vzTable_h[10];
+
+
+		printf("xyz bary %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+	}
+}
+
+
+
 //Leapfrog step with fixed time step
 inline void asteroid::leapfrog_step(){
 	//Drift
@@ -45,6 +70,13 @@ inline void asteroid::leapfrog_step(){
 		double rsq = xih * xih + yih * yih + zih * zih;
 		double r = sqrt(rsq);
 
+		if(cometFlag == 0){
+			if(i == 0){
+				Tsave_h[timeStep] = time;
+			}
+			Rsave_h[i * Rbuffersize + timeStep] = r;
+		}
+
 		//Earth centric coordinates
 		double xiE = x_h[i] - xTable_h[2];
 		double yiE = y_h[i] - yTable_h[2];
@@ -78,6 +110,7 @@ inline void asteroid::leapfrog_step(){
 		z_h[i] += 0.5 * dt * vz_h[i];
 	}
 	time += dt * 0.5;
+	++timeStep;
 //printf("tb %.20g %.20g\n", time, dt); 
 }
 
@@ -141,6 +174,13 @@ inline void asteroid::RK_step(){
 			double rsq = xih * xih + yih * yih + zih * zih;
 			double r = sqrt(rsq);
 
+			if(cometFlag == 0 && S == 0){
+				if(i == 0){
+					Tsave_h[timeStep] = time;
+				}
+				Rsave_h[i * Rbuffersize + timeStep] = r;
+			}
+
 			//Earth centric coordinates
 			double xiE = xt_h[i] - xTable_h[2];
 			double yiE = yt_h[i] - yTable_h[2];
@@ -201,6 +241,7 @@ inline void asteroid::RK_step(){
 
 	}
 	time += dt;
+	++timeStep;
 }
 
 //Runge Kutta Fehlberg step with adaptive time step
@@ -261,6 +302,13 @@ inline void asteroid::RKF_step(){
 			//r is used in multiple forces, so reuse it
 			double rsq = xih * xih + yih * yih + zih * zih;
 			double r = sqrt(rsq);
+
+			if(cometFlag == 0 && S == 0){
+				if(i == 0){
+					Tsave_h[timeStep] = time;
+				}
+				Rsave_h[i * Rbuffersize + timeStep] = r;
+			}
 
 			//Earth centric coordinates
 			double xiE = xt_h[i] - xTable_h[2];
@@ -389,6 +437,7 @@ inline void asteroid::RKF_step(){
 			vz_h[i] += dvz_h[i];
 		}
 		time += dt;
+		++timeStep;
 		if(stop != 1){
 			//only increase time step when stop == 0
 			dt *= snew;
@@ -432,6 +481,7 @@ int asteroid::loop(){
 //printf("integrate %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1);
 
 
+		//integrate until the next output interval
 		for(int ttt = 0; ttt < 1000000; ++ttt){
 
 			//refine last time step of interval to match output time
@@ -469,6 +519,7 @@ int asteroid::loop(){
 				RKF_step();
 				snew = snew_h[0];
 			}
+			
 
 			if(stop == 0){
 				dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;

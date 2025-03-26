@@ -26,8 +26,13 @@ public:
 	char infoFilename[160];
 
 	int ICformat = 0;			//Format of the initial conditions file, 0 = "text" or 1 = "binary"
-	int N;
-	int Nperturbers;
+	int ICorbital = 0;			//Coordinate system of initial conditions, 0 = cartesian, 1 = orbital
+	int ICecliptic = 0;			//Coordinate system of initial conditions, 0 = ecliptic, 1 = equatorial
+	double Obliquity = 84381.448;		//Obliquity of ecliptic IAU76/J2000	in arcsec
+	int ICheliocentric = 0;			//Coordinate system of initial conditions, 0 = heliocentric, 1 = barycentric
+
+	int N;					//Number of bodies to integrate, not including perturbers
+	int Nperturbers;			//Number of perturbers
 	double inputFileVersion = 1;
 	double time_reference = 2451545.0;	//Reference time in JD 
 	double timeStart = 2450800.5;		//Start time of the integration, in JD
@@ -40,6 +45,7 @@ public:
 	double time0;				//start time of the data file
 	double time1;				//end time of the data file
 	double time;				//integration time
+	long long int timeStep = 0ll;
 	int stop;				//used to refine last time step
 
 	double AUtokm;				//AU to km
@@ -56,12 +62,17 @@ public:
 	int outBinary = 0;
 	int cometFlag = 0;
 
-	double nonGrav_alpha = 0.1112620426;
-	double nonGrav_nk = 4.6142;
-	double nonGrav_nm = 2.15;
-	double nonGrav_nn = 5.093;
-	double nonGrav_r0 = 2.808;
-	double nonGrav_tau = 0.0;
+	double nonGrav_alpha = 0.1112620426;	//nongrav normalizing factor ALN
+	double nonGrav_nk = 4.6142;		//nongrav model constant NK
+	double nonGrav_nm = 2.15;		//nongrav model constant NM
+	double nonGrav_nn = 5.093;		//nongrav model constant NN
+	double nonGrav_r0 = 2.808;		//nongrav normalizing distance in AU
+	double nonGrav_tau = 0.0;		//nongrav time delay in days
+
+	int Rbuffersize = 500000;		//array size of Rsave and Tsave
+	double *Rsave_h, *Rsave_d;			//Used for time delay
+	double *Tsave_h, *Tsave_d;			//Used for time delay
+
 
 	int nCm;			//Maximum number of Chebyshev coefficients
 	int datasize;
@@ -107,6 +118,7 @@ public:
 	double *A1_h, *A1_d;
 	double *A2_h, *A2_d;
 	double *A3_h, *A3_d;
+	double *R_h, *R_d;
 
 
 
@@ -157,6 +169,7 @@ public:
 
 	int readParam(int , char*argv[]);
 	int readIC();
+	int readICkeplerian();
 	int readICSize();
 	int readData();
 	int readHeader();
@@ -169,6 +182,12 @@ public:
 	void printInfo();
 	void output(double);
 	
+
+	void KepToCart_M(int, double, double, double, double, double, double);
+	void KepToCart_E(int, double, double, double, double, double, double);
+	void CartToKep(int, double &, double &, double &, double &, double &, double &, double &, double &);
+	void EcpliptictoEquatorial();
+	void HelioToBary();
 
 	inline void update_Chebyshev(double);
 	inline void update_perturbers(double);

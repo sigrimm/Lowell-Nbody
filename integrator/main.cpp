@@ -13,6 +13,7 @@ int main(int argc, char*argv[]){
 
 
 	A.Nperturbers = 27;
+	A.Rbuffersize = 500000;
 
 
 	if(A.Nperturbers > def_NP){
@@ -134,11 +135,28 @@ int main(int argc, char*argv[]){
 	//----------------------------------------------------------
 	printf("Read initial conditions file = %s\n", A.inputFilename);
 	if(A.ICformat == 0){
+		//text format
 		A.inputFile = fopen(A.inputFilename, "r");
-		er = A.readIC();
+		if(A.ICorbital == 0){
+			er = A.readIC();
+		}
+		else if(A.ICorbital == 1){
+			er = A.readICkeplerian();
+		}
+		else{
+			printf("Error, ICorbital not valid\n");
+			return 0;
+		}
 	}
 	else{
-		er = A.readFile();
+		//binary file
+		if(A.ICorbital == 0){
+			er = A.readFile();
+		}
+		else{
+			printf("Error, ICorbital not valid\n");
+			return 0;
+		}
 	}
 
 	if(er <= 0){
@@ -146,9 +164,24 @@ int main(int argc, char*argv[]){
 	}
 	fclose(A.inputFile);
 
+
+	//If needed, convert from ecliptic coordinates to equatorial coordinates
+	if(A.ICecliptic == 1){
+		A.EcpliptictoEquatorial();	
+	}
+
+
+
 	A.timeStart -= A.time_reference;
 	A.timeEnd -= A.time_reference;
 	A.time = A.timeStart;
+
+	//If needed, convert from heliocentric coordinates to barycentric coordinates
+	if(A.ICheliocentric == 1){
+#if USEGPU == 0
+		A.HelioToBary();
+#endif
+	} 
 
 #if USEGPU == 1
 	er = A.copyIC();

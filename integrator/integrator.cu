@@ -23,6 +23,7 @@ __constant__ int useGR_c;
 __constant__ int useJ2_c;
 __constant__ int useNonGrav_c;
 __constant__ int cometFlag_c;
+__constant__ int Rbuffersize_c;
 
 __constant__ double nonGrav_alpha_c;
 __constant__ double nonGrav_nk_c;
@@ -50,10 +51,12 @@ __host__ int asteroid::copyConst(){
 	cudaMemcpyToSymbol(REAU_c, &REAU, sizeof(double), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(J2E_c, &J2E, sizeof(double), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(c2_c, &c2, sizeof(double), 0, cudaMemcpyHostToDevice);
+
 	cudaMemcpyToSymbol(useGR_c, &useGR, sizeof(int), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(useJ2_c, &useJ2, sizeof(int), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(useNonGrav_c, &useNonGrav, sizeof(int), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(cometFlag_c, &cometFlag, sizeof(int), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(Rbuffersize_c, &Rbuffersize, sizeof(int), 0, cudaMemcpyHostToDevice);
 
 	cudaMemcpyToSymbol(nonGrav_alpha_c, &nonGrav_alpha, sizeof(double), 0, cudaMemcpyHostToDevice);
 	cudaMemcpyToSymbol(nonGrav_nk_c, &nonGrav_nk, sizeof(double), 0, cudaMemcpyHostToDevice);
@@ -74,6 +77,32 @@ __host__ int asteroid::copyConst(){
 }
 
 
+
+/*
+__global__ void HelioToBary_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, const int N){
+
+	int id = blockIdx.x * blockDim.x + threadIdx.x;
+
+	//Update the Chebyshev coefficients if necessary
+	update_Chebyshev(time);
+	update_perturbers(time);
+
+	//heliocentric coordinates
+	if(id < N){
+		x_d[id] += xTable_d[10];
+		y_d[id] += yTable_d[10];
+		z_d[id] += zTable_d[10];
+
+		vx_d[id] += vxTable_d[10];
+		vy_d[id] += vyTable_d[10];
+		vz_d[id] += vzTable_d[10];
+
+	}
+}
+*/
+
+
+
 //Leapfrog step with fixed time step
 //Every body runs on a thread
 __global__ void leapfrog_stepA_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, const int N, const double dt){
@@ -92,7 +121,7 @@ __global__ void leapfrog_stepA_kernel(double *x_d, double *y_d, double *z_d, dou
 //Leapfrog step with fixed time step
 //Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
 //Every body runs on a thread
-__global__ void leapfrog_stepB_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *A1_d, double *A2_d, double *A3_d, double *GM_d, const int Nperturbers, const int N, const int RKFn, const double dt){
+__global__ void leapfrog_stepB_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double time, long long timeStep, double *GM_d, const int Nperturbers, const int N, const int RKFn, const double dt){
 
 	int itx = threadIdx.x;
 	int id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -160,6 +189,13 @@ __global__ void leapfrog_stepB_kernel(double *xTable_d, double *yTable_d, double
 		double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 		double r = sqrt(rsq);
 
+		if(cometFlag_c == 0){
+			if(id == 0){
+				Tsave_d[timeStep] = time;
+			}
+			Rsave_d[id * Rbuffersize_c + timeStep] = r;
+		}
+
 		//Earth centric coordinates
 		double xiE = xi - xTable_s[2];
 		double yiE = yi - yTable_s[2];
@@ -200,7 +236,7 @@ __global__ void leapfrog_stepB_kernel(double *xTable_d, double *yTable_d, double
 // Runge Kutta step with fixed time step
 // Every body runs on a thread
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void RK_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double time, const double dt, const int RKFn, const int Nperturbers, const int N){
+__global__ void RK_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double time, long long int timeStep, const double dt, const int RKFn, const int Nperturbers, const int N){
 
 
 	int itx = threadIdx.x;
@@ -326,6 +362,13 @@ __global__ void RK_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 			double r = sqrt(rsq);
 
+			if(cometFlag_c == 0 && S == 0){
+				if(id == 0){
+					Tsave_d[timeStep] = time;
+				}
+				Rsave_d[id * Rbuffersize_c + timeStep] = r;
+			}
+
 			//Earth centric coordinates
 			double xiE = xti - xTable_s[2];
 			double yiE = yti - yTable_s[2];
@@ -390,7 +433,7 @@ __global__ void RK_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 // Runge Kutta step with fixed time step
 // Every body runs on a sepparate thread block. Gravity calculation is spread along threads in the block and reuced in registers
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void RK_step2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double time, const double dt, const int RKFn, const int Nperturbers, const int N){
+__global__ void RK_step2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double time, long long int timeStep, const double dt, const int RKFn, const int Nperturbers, const int N){
 
 
 	int itx = threadIdx.x;
@@ -525,6 +568,13 @@ __global__ void RK_step2_kernel(double *xTable_d, double *yTable_d, double *zTab
 				double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 				double r = sqrt(rsq);
 
+				if(cometFlag_c == 0 && S == 0){
+					if(id == 0){
+						Tsave_d[timeStep] = time;
+					}
+					Rsave_d[id * Rbuffersize_c + timeStep] = r;
+				}
+
 				//Earth centric coordinates
 				double xiE = xti - xTable_s[2];
 				double yiE = yti - yTable_s[2];
@@ -601,7 +651,7 @@ __global__ void RK_step2_kernel(double *xTable_d, double *yTable_d, double *zTab
 // Runge Kutta step with fixed time step
 // Every body runs on a sepparate thread block. Gravity calculation is spread along threads in the block and reuced in registers
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void RK_stage_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *ax_d, double *ay_d, double *az_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double time, const double dt, const int RKFn, const int Nperturbers, const int N, const int S){
+__global__ void RK_stage_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *ax_d, double *ay_d, double *az_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double time, long long int timeStep, const double dt, const int RKFn, const int Nperturbers, const int N, const int S){
 
 	int id = blockIdx.x;	//particle index
 
@@ -653,6 +703,13 @@ __global__ void RK_stage_kernel(double *xTable_d, double *yTable_d, double *zTab
 		double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 		double r = sqrt(rsq);
 
+		if(cometFlag_c == 0 && S == 0){
+			if(id == 0){
+				Tsave_d[timeStep] = time;
+			}
+			Rsave_d[id * Rbuffersize_c + timeStep] = r;
+		}
+
 		//Earth centric coordinates
 		int iE = 2 * RKFn + S;
 		double xiE = xti - xTable_d[iE];
@@ -680,7 +737,7 @@ __global__ void RK_stage_kernel(double *xTable_d, double *yTable_d, double *zTab
 //Runge Kutta Fehlberg step with adaptive time step
 // Every body runs on a thread
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *snew_d, double time, const double dt, const int dts, const int RKFn, const int Nperturbers, const int N, const int stop){
+__global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int RKFn, const int Nperturbers, const int N, const int stop){
 
 
 	int itx = threadIdx.x;
@@ -807,6 +864,13 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 			//r is used in multiple forces, so reuse it
 			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 			double r = sqrt(rsq);
+
+			if(cometFlag_c == 0 && S == 0){
+				if(id == 0){
+					Tsave_d[timeStep] = time;
+				}
+				Rsave_d[id * Rbuffersize_c + timeStep] = r;
+			}
 
 			//Earth centric coordinates
 			double xiE = xti - xTable_s[2];
@@ -949,7 +1013,7 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 // Runge Kutta Fehlberg step with adaptive time step
 // Every body runs on a thread
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d,double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *snew_d, double time, const double dt, const int dts, const int RKFn, const int Nperturbers, const int N, const int stop){
+__global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d,double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int RKFn, const int Nperturbers, const int N, const int stop){
 
 
 	int itx = threadIdx.x;
@@ -1085,6 +1149,13 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 				//r is used in multiple forces, so reuse it
 				double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 				double r = sqrt(rsq);
+
+				if(cometFlag_c == 0 && S == 0){
+					if(id == 0){
+						Tsave_d[timeStep] = time;
+					}
+					Rsave_d[id * Rbuffersize_c + timeStep] = r;
+				}
 
 				//Earth centric coordinates
 				double xiE = xti - xTable_s[2];
@@ -1401,7 +1472,7 @@ int asteroid::loop(){
 
 //printf("integrate %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1);
 
-
+		//integrate until the next output interval
 		for(int ttt = 0; ttt < 1000000; ++ttt){
 
 			//refine last time step of interval to match output time
@@ -1430,8 +1501,9 @@ int asteroid::loop(){
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 
 				//Needs at least Nperturbers threads per block
-				leapfrog_stepB_kernel <<< (N + 255) / 256 , 256 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, GM_d, Nperturbers, N, RKFn, dt);
+				leapfrog_stepB_kernel <<< (N + 255) / 256 , 256 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, time, timeStep, GM_d, Nperturbers, N, RKFn, dt);
 				time += dt * 0.5;
+				++timeStep;
 			}
 			if(RKFn == 4){
 				//Needs at least Nperturbers threads per block
@@ -1439,29 +1511,30 @@ int asteroid::loop(){
 	
 				//Needs at least Nperturbers threads per block
 				if(GPUMode == 0){
-					RK_step_kernel <<< (N + 63) / 64 , dim3(64, 1, 1) >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, time, dt, RKFn, Nperturbers, N);
+					RK_step_kernel <<< (N + 63) / 64 , dim3(64, 1, 1) >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, time, timeStep, dt, RKFn, Nperturbers, N);
 				}
 				else{
-					RK_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, GM_d, A1_d, A2_d, A3_d, time, dt, RKFn, Nperturbers, N);
+					RK_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, time, timeStep, dt, RKFn, Nperturbers, N);
 				}
 
 //				for(int S = 0; S < RKFn; ++S){
 
-//					RK_stage_kernel <<< (N + 255) / 256 , 256 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d,vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, ax_d, ay_d, az_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, time, dt, RKFn, Nperturbers, N, S);
+//					RK_stage_kernel <<< (N + 255) / 256 , 256 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d,vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, ax_d, ay_d, az_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, time, dt, RKFn, Nperturbers, N, S);
 //				}
 
 
 				time += dt;
+				++timeStep;
 			}
 			if(RKFn == 6 || RKFn == 7 || RKFn == 13){
 				//Needs at least Nperturbers threads per block
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 
 				if(GPUMode == 0){
-					RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
+					RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, RKFn, Nperturbers, N, stop);
 				}
 				else{
-					RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, snew_d, time, dt, dts, RKFn, Nperturbers, N, stop);
+					RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, RKFn, Nperturbers, N, stop);
 				}
 
 
@@ -1482,6 +1555,7 @@ int asteroid::loop(){
 					//accept step
 					update_kernel <<< (N + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, N);
 					time += dt;
+					++timeStep;
 					if(stop != 1){
 						 //only increase time step when stop == 0
 						dt *= snew;

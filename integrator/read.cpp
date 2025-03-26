@@ -42,6 +42,7 @@ int asteroid::readICSize(){
 }
 
 //Read the initial conditions file in text format
+//Cartesian coordinates
 int asteroid::readIC(){
 
 	for(int i = 0; i < N; ++i){
@@ -61,6 +62,57 @@ int asteroid::readIC(){
 			return 0;
 		}
 	//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+	}
+
+	return 1;
+
+}
+
+//Read the initial conditions file in text format
+//Keplerian coordinates
+int asteroid::readICkeplerian(){
+
+	double a, e, inc, Omega, w, M;
+
+
+	for(int i = 0; i < N; ++i){
+		int er = 0;
+		er = fscanf(inputFile, "%lld", &id_h[i]);
+		er = fscanf(inputFile, "%lf", &a);
+		er = fscanf(inputFile, "%lf", &e);
+		er = fscanf(inputFile, "%lf", &inc);
+		er = fscanf(inputFile, "%lf", &Omega);
+		er = fscanf(inputFile, "%lf", &w);
+		er = fscanf(inputFile, "%lf", &M);
+		er = fscanf(inputFile, "%lf", &A1_h[i]);
+		er = fscanf(inputFile, "%lf", &A2_h[i]);
+		er = fscanf(inputFile, "%lf", &A3_h[i]);
+		if(er < 0){
+			printf("Error, reading initial conditions file failed.\n");
+			return 0;
+		}
+
+		inc = inc / 180.0 * M_PI;	//convert deg to rad
+		Omega = Omega / 180.0 * M_PI;	//convert deg to rad
+		w = w / 180.0 * M_PI;		//convert deg to rad
+		M = M / 180.0 * M_PI;		//convert deg to rad
+
+		//Orbital elements are in heliocentric IAU76/J2000 ecliptic
+
+
+		//convert to heliocentric ecliptic cartesian coordinates
+		KepToCart_M(i, a, e, inc, Omega, w, M);
+/*
+		//need to convert to barycentric coordinates
+		x_h[i] += xTable_h[10];
+		y_h[i] += yTable_h[10];
+		z_h[i] += zTable_h[10];
+		vx_h[i] += vxTable_h[10];
+		vy_h[i] += vyTable_h[10];
+		vz_h[i] += vzTable_h[10];
+*/
+
+	printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}
 
 	return 1;
