@@ -175,7 +175,7 @@ public:
 	int readHeader();
 	int readFile();
 	int copyIC();
-	void allocate();
+	int allocate();
 	int allocateGPU();
 	void copyOutput();
 	int copyConst();

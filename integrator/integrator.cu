@@ -67,7 +67,7 @@ __host__ int asteroid::copyConst(){
 
 	cudaDeviceSynchronize();
 	cudaError_t error = cudaGetLastError();
-	printf("copy error = %d = %s\n",error, cudaGetErrorString(error));
+	printf("copy const error = %d = %s\n",error, cudaGetErrorString(error));
 	if(error != 0.0){
 		return 0;
 	}
@@ -78,28 +78,26 @@ __host__ int asteroid::copyConst(){
 
 
 
-/*
-__global__ void HelioToBary_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, const int N){
+
+__global__ void HelioToBary_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, const int N, const int RKFn){
 
 	int id = blockIdx.x * blockDim.x + threadIdx.x;
 
-	//Update the Chebyshev coefficients if necessary
-	update_Chebyshev(time);
-	update_perturbers(time);
-
-	//heliocentric coordinates
 	if(id < N){
-		x_d[id] += xTable_d[10];
-		y_d[id] += yTable_d[10];
-		z_d[id] += zTable_d[10];
+		int ii = 10 * RKFn;
 
-		vx_d[id] += vxTable_d[10];
-		vy_d[id] += vyTable_d[10];
-		vz_d[id] += vzTable_d[10];
+		x_d[id] += xTable_d[ii];
+		y_d[id] += yTable_d[ii];
+		z_d[id] += zTable_d[ii];
 
+		vx_d[id] += vxTable_d[ii];
+		vy_d[id] += vyTable_d[ii];
+		vz_d[id] += vzTable_d[ii];
+
+//printf("xyz bary GPU %.40g %.40g %.40g %.40g %.40g %.40g\n", x_d[id], y_d[id], z_d[id], vx_d[id], vy_d[id], vz_d[id]);
 	}
 }
-*/
+
 
 
 
@@ -1449,6 +1447,12 @@ __global__ void update_kernel(double *x_d, double *y_d, double *z_d, double *vx_
 	
 int asteroid::loop(){
 
+	//If needed, convert from heliocentric coordinates to barycentric coordinates
+	if(ICheliocentric == 1){
+		update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, timeStart, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
+		HelioToBary_kernel <<< (N + 255) / 256 , 256 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, N, RKFn);
+
+	}
 
 	if(outBinary == 0){
 		outputFile = fopen(outputFilename, "w");

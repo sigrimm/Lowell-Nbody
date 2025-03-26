@@ -61,6 +61,8 @@ int asteroid::allocateGPU(){
 	cudaMalloc((void **) &A2_d, N * sizeof(double));
 	cudaMalloc((void **) &A3_d, N * sizeof(double));
 
+	cudaMalloc((void **) &id_d, N * sizeof(long long int));
+
 	cudaMalloc((void **) &Rsave_d, N * Rbuffersize * sizeof(double));
 	cudaMalloc((void **) &Tsave_d, Rbuffersize * sizeof(double));
 
@@ -104,6 +106,7 @@ int asteroid::readData(){
 
 
 int asteroid::copyIC(){
+
 
 	cudaMemcpy(startTime_d, startTime_h, Nperturbers * RKFn * sizeof(double), cudaMemcpyHostToDevice);
 	cudaMemcpy(endTime_d, endTime_h, Nperturbers * RKFn * sizeof(double), cudaMemcpyHostToDevice);

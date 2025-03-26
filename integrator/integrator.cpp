@@ -10,8 +10,6 @@ void asteroid::HelioToBary(){
 	update_perturbers(timeStart);
 
 
-printf("%.20g %.20g %.20g %.20g %.20g %.20g\n", xTable_h[10], yTable_h[10], zTable_h[10], vxTable_h[10], vyTable_h[10], vzTable_h[10]);
-
 	//heliocentric coordinates
 	for(int i = 0; i < N; ++i){
 		x_h[i] += xTable_h[10];
@@ -23,7 +21,7 @@ printf("%.20g %.20g %.20g %.20g %.20g %.20g\n", xTable_h[10], yTable_h[10], zTab
 		vz_h[i] += vzTable_h[10];
 
 
-		printf("xyz bary %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+		//printf("xyz bary %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}
 }
 
@@ -459,6 +457,12 @@ inline void asteroid::RKF_step(){
 
 	
 int asteroid::loop(){
+
+	//If needed, convert from heliocentric coordinates to barycentric coordinates
+	if(ICheliocentric == 1){
+		HelioToBary();
+	} 
+
 
 	if(outBinary == 0){
 		outputFile = fopen(outputFilename, "w");

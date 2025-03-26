@@ -14,7 +14,7 @@ inline void asteroid::update_Chebyshev(double time){
 				er = fread(&endTime_h[p], sizeof(double), 1, perturbersFile);
 
 
-//printf(" ++ %d %d %d %d %.20g %.20g\n", p, idp_h[p], offset0_h[p], nChebyshev_h[p], startTime_h[p], endTime_h[p]);
+//printf(" ++ %d %d %d %d %.20g %.20g | %.20g %d\n", p, idp_h[p], offset0_h[p], nChebyshev_h[p], startTime_h[p], endTime_h[p], time + time_reference, er);
 
 				er = fread(cdata_h + pp, sizeof(double), nChebyshev_h[p] * 3, perturbersFile);
 
@@ -34,7 +34,7 @@ inline void asteroid::update_Chebyshev(double time){
 				er = fread(&endTime_h[p], sizeof(double), 1, perturbersFile);
 
 
-//printf(" -- %d %d %d %d %.20g %.20g\n", p, idp_h[p], offset0_h[p], nChebyshev_h[p], startTime_h[p], endTime_h[p]);
+//printf(" -- %d %d %d %d %.20g %.20g | %.20g %d\n", p, idp_h[p], offset0_h[p], nChebyshev_h[p], startTime_h[p], endTime_h[p], time + time_reference, er);
 
 				er = fread(cdata_h + pp, sizeof(double), nChebyshev_h[p] * 3, perturbersFile);
 

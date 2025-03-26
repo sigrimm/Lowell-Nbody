@@ -372,7 +372,7 @@ void asteroid::printInfo(){
 
 
 
-void asteroid::allocate(){
+int asteroid::allocate(){
 	nCm = 0;
 	dts = (dt > 0.0) ? 1.0 : -1.0;      //sign of time step
 	dt1 = dt;
@@ -406,6 +406,18 @@ void asteroid::allocate(){
 	er = fread(&CLIGHT, sizeof(double), 1, perturbersFile); 
 	er = fread(&RE, sizeof(double), 1, perturbersFile);
 	er = fread(&J2E, sizeof(double), 1, perturbersFile);
+
+
+	//Check if perturbers file time span is OK
+	if(timeStart > time1 || timeEnd > time1 || timeStart < time0 || timeEnd < time0){
+		printf("Error, the integration time is longer than the data in the perturbers file\n");
+		printf("Integration time: %.20g %.20g\n", timeStart, timeEnd);
+		printf("Time in perturbers file: %.20g %.20g\n", time0, time1);
+		return 0;
+
+	}
+	
+
 
 #if USEGPU == 0
 	for(int i = 0; i < Nperturbers; ++i){
@@ -532,6 +544,7 @@ void asteroid::allocate(){
 	Rsave_h = (double*)malloc(Rbuffersize * N * sizeof(double));
 	Tsave_h = (double*)malloc(Rbuffersize * sizeof(double));
 
+	return 1;
 }
 
 void asteroid::output(double dtmin){

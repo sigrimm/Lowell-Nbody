@@ -94,7 +94,10 @@ int main(int argc, char*argv[]){
 
 
 	printf("Allocate memory\n");
-	A.allocate();
+	er = A.allocate();
+	if(er <= 0){
+		return 0;
+	}
 #if USEGPU == 1
 	er = A.allocateGPU();
 	if(er <= 0){
@@ -171,17 +174,10 @@ int main(int argc, char*argv[]){
 	}
 
 
-
 	A.timeStart -= A.time_reference;
 	A.timeEnd -= A.time_reference;
 	A.time = A.timeStart;
 
-	//If needed, convert from heliocentric coordinates to barycentric coordinates
-	if(A.ICheliocentric == 1){
-#if USEGPU == 0
-		A.HelioToBary();
-#endif
-	} 
 
 #if USEGPU == 1
 	er = A.copyIC();
