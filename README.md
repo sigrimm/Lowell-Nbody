@@ -72,6 +72,12 @@ Every record contains
     - orbital heliocentric ecliptic
   - Initial condition file: name of the initial conditions file, string.
   - Output file name: name of the output files, string.
+  - Output Interval: Frequency of writing outputs, days
+  - Output coordinates: format of the output coordinate system:
+    - cartesian heliocentric ecliptic
+    - cartesian heliocentric equatorial
+    - cartesian barycentric ecliptic
+    - cartesian barycentric equatorial
   - Path to perturbers file, string
   - 
 allowed integrators are:

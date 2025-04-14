@@ -278,12 +278,17 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 	fseek(infile, DE_blocksize8, SEEK_SET);
 	double dd;
 
-	double AU, EMRAT, CLIGHT, RE, J2E;
+	double AU, EMRAT, CENTER, CLIGHT, RE, J2E;
 	for(int i = 0; i < Nc; ++i){
 		fread(&dd, sizeof(double), 1, infile);
 		//Number of kilometers per astronomical unit
 		if(strcmp(cname[i], "AU") == 0){
 			AU = dd;
+			printf("%s %.20e\n", cname[i], dd);
+		}
+		//coordinate center, Sun = 11, Bary Center = 12
+		if(strcmp(cname[i], "CENTER") == 0){
+			CENTER = dd;
 			printf("%s %.20e\n", cname[i], dd);
 		}
 		//speed of light

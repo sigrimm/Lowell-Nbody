@@ -233,7 +233,6 @@ __device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double 
 	}
 	__syncthreads();
 	//Translate asteroid orbits from Heliocentric to Barycentric coordinates
-	//This is done so in Assist, but probably this is not correct, check!
 	if(p >= 11 && p < Nperturbers){
 		xTable_s[p] += xTable_s[10];
 		yTable_s[p] += yTable_s[10];

@@ -4,25 +4,78 @@
 #include "Chebyshev.h"
 #include "force.h"
 
-void asteroid::HelioToBary(){
+void asteroid::HelioToBary(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
 	//Update the Chebyshev coefficients if necessary
 	update_Chebyshev(timeStart);
 	update_perturbers(timeStart);
 
 
+	//for(int i = 0; i < Nperturbers; ++i){
+	//	printf("%d %.20g %.20g %.20g %.20g %.20g %.20g\n", i, xTable_h[i], yTable_h[i], zTable_h[i], vxTable_h[i], vyTable_h[i], vzTable_h[i]);
+	//}
+
 	//heliocentric coordinates
 	for(int i = 0; i < N; ++i){
-		x_h[i] += xTable_h[10];
-		y_h[i] += yTable_h[10];
-		z_h[i] += zTable_h[10];
+		xx_h[i] += xTable_h[10];
+		yy_h[i] += yTable_h[10];
+		zz_h[i] += zTable_h[10];
 
-		vx_h[i] += vxTable_h[10];
-		vy_h[i] += vyTable_h[10];
-		vz_h[i] += vzTable_h[10];
+		vxx_h[i] += vxTable_h[10];
+		vyy_h[i] += vyTable_h[10];
+		vzz_h[i] += vzTable_h[10];
 
 
 		//printf("xyz bary %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}
+}
+
+void asteroid::BaryToHelio(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
+	//Update the Chebyshev coefficients if necessary
+	update_Chebyshev(time);
+	update_perturbers(time);
+
+
+	//for(int i = 0; i < Nperturbers; ++i){
+	//	printf("%d %.20g %.20g %.20g %.20g %.20g %.20g\n", i, xTable_h[i], yTable_h[i], zTable_h[i], vxTable_h[i], vyTable_h[i], vzTable_h[i]);
+	//}
+
+	//heliocentric coordinates
+	for(int i = 0; i < N; ++i){
+		xx_h[i] -= xTable_h[10];
+		yy_h[i] -= yTable_h[10];
+		zz_h[i] -= zTable_h[10];
+
+		vxx_h[i] -= vxTable_h[10];
+		vyy_h[i] -= vyTable_h[10];
+		vzz_h[i] -= vzTable_h[10];
+
+
+		//printf("xyz bary %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+	}
+}
+
+void asteroid::convertOutput(){
+
+	for(int i = 0; i < N; ++i){
+		xout_h[i] = x_h[i];
+		yout_h[i] = y_h[i];
+		zout_h[i] = z_h[i];
+
+		vxout_h[i] = vx_h[i];
+		vyout_h[i] = vy_h[i];
+		vzout_h[i] = vz_h[i];
+	}
+
+	if(Outheliocentric == 1){
+		BaryToHelio(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);
+	} 
+
+
+	//If needed, convert from equatorial coordinates to ecliptic coordinates
+	if(Outecliptic == 1){
+		EquatorialtoEcliptic(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);        
+	}
+
 }
 
 
@@ -458,11 +511,14 @@ inline void asteroid::RKF_step(){
 	
 int asteroid::loop(){
 
-	//If needed, convert from heliocentric coordinates to barycentric coordinates
+	//If needed, convert from heliocentric equatorial coordinates to barycentric equatorial coordinates
 	if(ICheliocentric == 1){
-		HelioToBary();
+		HelioToBary(x_h, y_h, z_h, vx_h, vy_h, vz_h);
 	} 
 
+
+	//At this point, the initial conditions coordinates are cartesian barycentric equatorial
+	//The integration is also done in cartesian barycentric equatorial coordinates
 
 	if(outBinary == 0){
 		outputFile = fopen(outputFilename, "w");
@@ -472,7 +528,10 @@ int asteroid::loop(){
 	}
 	printf("Start integration %.20g\n", timeStart + time_reference);
 
-	output(dt);
+	if(time_reference + time >= outStart){
+		convertOutput();
+		printOutput(dt);
+	}
 
 	//for(int tt = 0; tt < 2; ++tt){
 	for(int tt = 0; tt < 1000000; ++tt){
@@ -560,7 +619,10 @@ int asteroid::loop(){
 
 		}//end of ttt loop
 
-		output(dtmin);
+		if(time_reference + time >= outStart){
+			convertOutput();
+			printOutput(dtmin);
+		}
 
 	}//end of tt loop
 	fclose(outputFile);

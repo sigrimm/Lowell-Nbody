@@ -430,38 +430,69 @@ void asteroid::CartToKep(int i, double &a, double &e, double &inc, double &Omega
 	}
 }
 
-
-void asteroid::EcpliptictoEquatorial(){
+//https://en.wikipedia.org/wiki/Ecliptic_coordinate_system
+void asteroid::EcpliptictoEquatorial(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
 
 	//Rotate around obliquity angle eps
 	double eps = Obliquity / 3600.0 / 180.0 * M_PI;	// convert arcseconds to radians
 
 	for(int i = 0; i < N; ++i){
 
-		double x = x_h[i];
-		double y = y_h[i];
-		double z = z_h[i];
-		double vx = vx_h[i];
-		double vy = vy_h[i];
-		double vz = vz_h[i];
+		double x = xx_h[i];
+		double y = yy_h[i];
+		double z = zz_h[i];
+		double vx = vxx_h[i];
+		double vy = vyy_h[i];
+		double vz = vzz_h[i];
 
 
 		double ceps = cos(eps);
 		double seps = sin(eps);
 
-		x_h[i] = x;
-		y_h[i] = ceps * y - seps * z;
-		z_h[i] = seps * y + ceps * z;
+		xx_h[i] = x;
+		yy_h[i] = ceps * y - seps * z;
+		zz_h[i] = seps * y + ceps * z;
 
-		vx_h[i] = vx;
-		vy_h[i] = ceps * vy - seps * vz;
-		vz_h[i] = seps * vy + ceps * vz;
+		vxx_h[i] = vx;
+		vyy_h[i] = ceps * vy - seps * vz;
+		vzz_h[i] = seps * vy + ceps * vz;
 
 		//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 
 	}
 }
 
+//https://en.wikipedia.org/wiki/Ecliptic_coordinate_system
+void asteroid::EquatorialtoEcliptic(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
+
+	//Rotate around obliquity angle eps
+	double eps = Obliquity / 3600.0 / 180.0 * M_PI;	// convert arcseconds to radians
+
+	for(int i = 0; i < N; ++i){
+
+		double x = xx_h[i];
+		double y = yy_h[i];
+		double z = zz_h[i];
+		double vx = vxx_h[i];
+		double vy = vyy_h[i];
+		double vz = vzz_h[i];
+
+
+		double ceps = cos(eps);
+		double seps = sin(eps);
+
+		xx_h[i] = x;
+		yy_h[i] =  ceps * y + seps * z;
+		zz_h[i] = -seps * y + ceps * z;
+
+		vxx_h[i] = vx;
+		vyy_h[i] =  ceps * vy + seps * vz;
+		vzz_h[i] = -seps * vy + ceps * vz;
+
+		//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+
+	}
+}
 
 
 

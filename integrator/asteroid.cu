@@ -37,6 +37,14 @@ int asteroid::allocateGPU(){
 	cudaMalloc((void **) &vy_d, N * sizeof(double));
 	cudaMalloc((void **) &vz_d, N * sizeof(double));
 
+	cudaMalloc((void **) &xout_d, N * sizeof(double));
+	cudaMalloc((void **) &yout_d, N * sizeof(double));
+	cudaMalloc((void **) &zout_d, N * sizeof(double));
+
+	cudaMalloc((void **) &vxout_d, N * sizeof(double));
+	cudaMalloc((void **) &vyout_d, N * sizeof(double));
+	cudaMalloc((void **) &vzout_d, N * sizeof(double));
+
 	cudaMalloc((void **) &dx_d, N * sizeof(double));
 	cudaMalloc((void **) &dy_d, N * sizeof(double));
 	cudaMalloc((void **) &dz_d, N * sizeof(double));
@@ -144,13 +152,13 @@ int asteroid::copyIC(){
 
 void asteroid::copyOutput(){
 
-	cudaMemcpy(x_h, x_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-	cudaMemcpy(y_h, y_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-	cudaMemcpy(z_h, z_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(xout_h, xout_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(yout_h, yout_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(zout_h, zout_d, N * sizeof(double), cudaMemcpyDeviceToHost);
 
-	cudaMemcpy(vx_h, vx_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-	cudaMemcpy(vy_h, vy_d, N * sizeof(double), cudaMemcpyDeviceToHost);
-	cudaMemcpy(vz_h, vz_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vxout_h, vxout_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vyout_h, vyout_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+	cudaMemcpy(vzout_h, vzout_d, N * sizeof(double), cudaMemcpyDeviceToHost);
 
 }
 

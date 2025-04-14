@@ -194,6 +194,13 @@ inline void asteroid::update_perturbers(double time){
 
 	}
 
+//Planets Coordinates are now Barycentric equatorial
+//Asteroids Coordinates are now Heliocentric equatorial
+//Jupiter = 4
+//Vesta = 26
+//printf("%.20g %.20g %.20g %.20g\n", time + time_reference, xTable_h[26], yTable_h[26], zTable_h[26]);
+
+
 	/*
 	//print in the order of asssit
 	for(int pp = 0; pp < Nperturbers; ++pp){
@@ -219,7 +226,6 @@ inline void asteroid::update_perturbers(double time){
 	*/
 
 	//Translate asteroid orbits from Heliocentric to Barycentric coordinates
-	//This is done so in Assist, but probably this is not correct, check!
 	for(int p = 11; p < Nperturbers; ++p){
 		xTable_h[p] += xTable_h[10];
 		yTable_h[p] += yTable_h[10];
@@ -229,5 +235,9 @@ inline void asteroid::update_perturbers(double time){
 		vyTable_h[p] += vyTable_h[10];
 		vzTable_h[p] += vzTable_h[10];
 	}
+
+//All Coordinates are now Barycentric equatorial
+
+//printf("%.20g %.20g %.20g %.20g\n", time + time_reference, xTable_h[26], yTable_h[26], zTable_h[26]);
 
 }

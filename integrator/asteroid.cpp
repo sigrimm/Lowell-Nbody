@@ -90,6 +90,45 @@ int asteroid::readParam(int argc, char*argv[]){
 			}
 			str = fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "Output coordinates =") == 0){
+			char format[160];
+			er = fscanf (paramfile, " %[^\n]s", format);
+			if(er <= 0){
+				printf("Error: Output coordinates is not valid!\n");
+				return 0;
+			}
+			if(strcmp(format, "cartesian heliocentric ecliptic") == 0){
+				Outorbital = 0;
+				Outecliptic = 1;
+				Outheliocentric = 1;
+			}
+			else if(strcmp(format, "cartesian heliocentric equatorial") == 0){
+				Outorbital = 0;
+				Outecliptic = 0;
+				Outheliocentric = 1;
+			}
+			else if(strcmp(format, "cartesian barycentric ecliptic") == 0){
+				Outorbital = 0;
+				Outecliptic = 1;
+				Outheliocentric = 0;
+			}
+			else if(strcmp(format, "cartesian barycentric equatorial") == 0){
+				Outorbital = 0;
+				Outecliptic = 0;
+				Outheliocentric = 0;
+			}
+			else if(strcmp(format, "orbital heliocentric ecliptic") == 0){
+				Outorbital = 1;
+				Outecliptic = 1;
+				Outheliocentric = 1;
+			}
+			else{
+				printf("Error: Output coordinates is not valid!\n");
+				return 0;
+
+			}
+			str = fgets(sp, 3, paramfile);
+		}
 		else if(strcmp(sp, "Initial condition file =") == 0){
 			er = fscanf (paramfile, "%s", inputFilename);
 			if(er <= 0){
@@ -490,6 +529,14 @@ int asteroid::allocate(){
 	vy_h = (double*)malloc(N * sizeof(double));
 	vz_h = (double*)malloc(N * sizeof(double));
 
+	xout_h = (double*)malloc(N * sizeof(double));
+	yout_h = (double*)malloc(N * sizeof(double));
+	zout_h = (double*)malloc(N * sizeof(double));
+
+	vxout_h = (double*)malloc(N * sizeof(double));
+	vyout_h = (double*)malloc(N * sizeof(double));
+	vzout_h = (double*)malloc(N * sizeof(double));
+
 	xt_h = (double*)malloc(N * sizeof(double));
 	yt_h = (double*)malloc(N * sizeof(double));
 	zt_h = (double*)malloc(N * sizeof(double));
@@ -547,37 +594,36 @@ int asteroid::allocate(){
 	return 1;
 }
 
-void asteroid::output(double dtmin){
+
+void asteroid::printOutput(double dtmin){
 	printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dtmin);
 
-	if(time_reference + time >= outStart){
-		for(int i = 0; i < N; ++i){
-			if(outBinary == 0){
-				fprintf(outputFile, "%.20g %lld %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, id_h[i], x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], dtmin);
-			}
-			else{
-				long long int id = id_h[i];
-				//unsigned long long int id = __builtin_bswap64 (id_h[i]);
-				double tt = time_reference + time;
-				double xx = x_h[i];
-				double yy = y_h[i];
-				double zz = z_h[i];
-				double vxx = vx_h[i];
-				double vyy = vy_h[i];
-				double vzz = vz_h[i];
+	for(int i = 0; i < N; ++i){
+		if(outBinary == 0){
+			fprintf(outputFile, "%.20g %lld %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, id_h[i], xout_h[i], yout_h[i], zout_h[i], vxout_h[i], vyout_h[i], vzout_h[i], dtmin);
+		}
+		else{
+			long long int id = id_h[i];
+			//unsigned long long int id = __builtin_bswap64 (id_h[i]);
+			double tt = time_reference + time;
+			double xx = xout_h[i];
+			double yy = yout_h[i];
+			double zz = zout_h[i];
+			double vxx = vxout_h[i];
+			double vyy = vyout_h[i];
+			double vzz = vzout_h[i];
 
-				fwrite(&tt, sizeof(double), 1, outputFile);
-				fwrite(&id, sizeof(long long int), 1, outputFile);
-				fwrite(&xx, sizeof(double), 1, outputFile);
-				fwrite(&yy, sizeof(double), 1, outputFile);
-				fwrite(&zz, sizeof(double), 1, outputFile);
-				fwrite(&vxx, sizeof(double), 1, outputFile);
-				fwrite(&vyy, sizeof(double), 1, outputFile);
-				fwrite(&vzz, sizeof(double), 1, outputFile);
-				fwrite(&dtmin, sizeof(double), 1, outputFile);
+			fwrite(&tt, sizeof(double), 1, outputFile);
+			fwrite(&id, sizeof(long long int), 1, outputFile);
+			fwrite(&xx, sizeof(double), 1, outputFile);
+			fwrite(&yy, sizeof(double), 1, outputFile);
+			fwrite(&zz, sizeof(double), 1, outputFile);
+			fwrite(&vxx, sizeof(double), 1, outputFile);
+			fwrite(&vyy, sizeof(double), 1, outputFile);
+			fwrite(&vzz, sizeof(double), 1, outputFile);
+			fwrite(&dtmin, sizeof(double), 1, outputFile);
 
 
-			}
 		}
 	}
 }

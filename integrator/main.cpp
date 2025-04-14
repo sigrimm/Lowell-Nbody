@@ -170,9 +170,8 @@ int main(int argc, char*argv[]){
 
 	//If needed, convert from ecliptic coordinates to equatorial coordinates
 	if(A.ICecliptic == 1){
-		A.EcpliptictoEquatorial();	
+		A.EcpliptictoEquatorial(A.x_h, A.y_h, A.z_h, A.vx_h, A.vy_h, A.vz_h);	
 	}
-
 
 	A.timeStart -= A.time_reference;
 	A.timeEnd -= A.time_reference;

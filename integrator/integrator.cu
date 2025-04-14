@@ -79,26 +79,24 @@ __host__ int asteroid::copyConst(){
 
 
 
-__global__ void HelioToBary_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, const int N, const int RKFn){
+__global__ void HelioToBary_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *xx_d, double *yy_d, double *zz_d, double *vxx_d, double *vyy_d, double *vzz_d, const int N, const int RKFn){
 
 	int id = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if(id < N){
 		int ii = 10 * RKFn;
 
-		x_d[id] += xTable_d[ii];
-		y_d[id] += yTable_d[ii];
-		z_d[id] += zTable_d[ii];
+		xx_d[id] += xTable_d[ii];
+		yy_d[id] += yTable_d[ii];
+		zz_d[id] += zTable_d[ii];
 
-		vx_d[id] += vxTable_d[ii];
-		vy_d[id] += vyTable_d[ii];
-		vz_d[id] += vzTable_d[ii];
+		vxx_d[id] += vxTable_d[ii];
+		vyy_d[id] += vyTable_d[ii];
+		vzz_d[id] += vzTable_d[ii];
 
 //printf("xyz bary GPU %.40g %.40g %.40g %.40g %.40g %.40g\n", x_d[id], y_d[id], z_d[id], vx_d[id], vy_d[id], vz_d[id]);
 	}
 }
-
-
 
 
 //Leapfrog step with fixed time step
@@ -1444,6 +1442,67 @@ __global__ void update_kernel(double *x_d, double *y_d, double *z_d, double *vx_
 //	}
 }
 
+
+__global__ void convertOutput_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xout_d, double *yout_d, double *zout_d, double *vxout_d, double *vyout_d, double *vzout_d, double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, const int RKFn, const int N, const int Outecliptic, const int Outheliocentric, const double Obliquity){
+
+	int id = blockIdx.x * blockDim.x + threadIdx.x;
+
+	if(id < N){
+		xout_d[id] = x_d[id];
+		yout_d[id] = y_d[id];
+		zout_d[id] = z_d[id];
+
+		vxout_d[id] = vx_d[id];
+		vyout_d[id] = vy_d[id];
+		vzout_d[id] = vz_d[id];
+	}
+
+	//If needed, convert from barycentric equatorial coordinates to barycentric ecliptic coordinates
+	//if(Outecliptic == 1){
+	//	EquatorialtoEcliptic(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);
+	//}
+
+	if(Outheliocentric == 1){
+		//Convert Barycentric coordinates to HelioCentric coordinates
+		if(id < N){
+			int ii = 10 * RKFn;
+			xout_d[id] -= xTable_d[ii];
+			yout_d[id] -= yTable_d[ii];
+			zout_d[id] -= zTable_d[ii];
+
+			vxout_d[id] -= vxTable_d[ii];
+			vyout_d[id] -= vyTable_d[ii];
+			vzout_d[id] -= vzTable_d[ii];
+		}
+	}
+	if(Outecliptic == 1){
+		if(id < N){
+			double eps = Obliquity / 3600.0 / 180.0 * M_PI; // convert arcseconds to radians
+
+			double ceps = cos(eps);
+			double seps = sin(eps);
+
+
+			double x = xout_d[id];
+			double y = yout_d[id];
+			double z = zout_d[id];
+			double vx = vxout_d[id];
+			double vy = vyout_d[id];
+			double vz = vzout_d[id];
+
+
+			xout_d[id] = x;
+			yout_d[id] =  ceps * y + seps * z;
+			zout_d[id] = -seps * y + ceps * z;
+
+			vxout_d[id] = vx;
+			vyout_d[id] =  ceps * vy + seps * vz;
+			vzout_d[id] = -seps * vy + ceps * vz;
+		}
+	}
+}
+
+
 	
 int asteroid::loop(){
 
@@ -1460,11 +1519,18 @@ int asteroid::loop(){
 	else{
 		outputFile = fopen(outputFilename, "wb");
 	}
-	copyOutput();
 
 	printf("Start integration\n");
 
-	output(dt);
+	if(time_reference + time >= outStart){
+		if(Outheliocentric == 1){
+			update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
+
+		}
+		convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Obliquity);
+		copyOutput();
+		printOutput(dt);
+	}
 
 	//for(int tt = 0; tt < 2; ++tt){
 	for(int tt = 0; tt < 1000000; ++tt){
@@ -1610,8 +1676,14 @@ int asteroid::loop(){
 
 		}//end of ttt loop
 		cudaDeviceSynchronize();
-		copyOutput();
-		output(dtmin);
+		if(time_reference + time >= outStart){
+			if(Outheliocentric == 1){
+				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
+			}
+			convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Obliquity);
+			copyOutput();
+			printOutput(dtmin);
+		}
 
 	}//end of tt loop
 	fclose(outputFile);

@@ -27,9 +27,12 @@ public:
 
 	int ICformat = 0;			//Format of the initial conditions file, 0 = "text" or 1 = "binary"
 	int ICorbital = 0;			//Coordinate system of initial conditions, 0 = cartesian, 1 = orbital
-	int ICecliptic = 0;			//Coordinate system of initial conditions, 0 = ecliptic, 1 = equatorial
+	int ICecliptic = 0;			//Coordinate system of initial conditions, 1 = ecliptic, 0 = equatorial
+	int ICheliocentric = 0;			//Coordinate system of initial conditions, 1 = heliocentric, 0 = barycentric
+	int Outorbital = 0;			//Coordinate system of output, 0 = cartesian, 1 = orbital
+	int Outecliptic = 0;			//Coordinate system of output, 1 = ecliptic, 0 = equatorial
+	int Outheliocentric = 0;		//Coordinate system of output, 1 = heliocentric, 0 = barycentric
 	double Obliquity = 84381.448;		//Obliquity of ecliptic IAU76/J2000	in arcsec
-	int ICheliocentric = 0;			//Coordinate system of initial conditions, 0 = heliocentric, 1 = barycentric
 
 	int N;					//Number of bodies to integrate, not including perturbers
 	int Nperturbers;			//Number of perturbers
@@ -110,6 +113,15 @@ public:
 	double *vy_h, *vy_d;
 	double *vz_h, *vz_d;
 
+	double *xout_h, *xout_d;			//Contains only integration bodies, not perturbers
+	double *yout_h, *yout_d;
+	double *zout_h, *zout_d;
+
+	double *vxout_h, *vxout_d;
+	double *vyout_h, *vyout_d;
+	double *vzout_h, *vzout_d;
+
+
 	double *ax_h, *ax_d;
 	double *ay_h, *ay_d;
 	double *az_h, *az_d;
@@ -180,14 +192,17 @@ public:
 	void copyOutput();
 	int copyConst();
 	void printInfo();
-	void output(double);
+	void printOutput(double);
 	
 
 	void KepToCart_M(int, double, double, double, double, double, double);
 	void KepToCart_E(int, double, double, double, double, double, double);
 	void CartToKep(int, double &, double &, double &, double &, double &, double &, double &, double &);
-	void EcpliptictoEquatorial();
-	void HelioToBary();
+	void convertOutput();
+	void EcpliptictoEquatorial(double *, double *, double *, double *, double *, double *);
+	void EquatorialtoEcliptic(double *, double *, double *, double *, double *, double *);
+	void HelioToBary(double *, double *, double *, double *, double *, double *);
+	void BaryToHelio(double *, double *, double *, double *, double *, double *);
 
 	inline void update_Chebyshev(double);
 	inline void update_perturbers(double);
