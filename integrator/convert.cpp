@@ -47,7 +47,7 @@ void EccentricAnomaly(double M, double e, double &E){
 
 //input a e inc Omega w M
 //i is the index of the body
-void asteroid::KepToCart_M(int i, double a, double e, double inc, double Omega, double w, double M){
+void asteroid::KepToCart_M(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h, int i, double a, double e, double inc, double Omega, double w, double M){
 
 
 	double mu = GM_h[10]; //Msun
@@ -141,9 +141,9 @@ void asteroid::KepToCart_M(int i, double a, double e, double inc, double Omega, 
 		t2 = r * sin(Theta);
 	}
 
-	x_h[i] =  t1 * Px + t2 * Qx;
-	y_h[i] =  t1 * Py + t2 * Qy;
-	z_h[i] =  t1 * Pz + t2 * Qz;
+	xx_h[i] =  t1 * Px + t2 * Qx;
+	yy_h[i] =  t1 * Py + t2 * Qy;
+	zz_h[i] =  t1 * Pz + t2 * Qz;
 
 	if(e < 1.0 - 1.0e-10){
 		//elliptic
@@ -167,9 +167,9 @@ void asteroid::KepToCart_M(int i, double a, double e, double inc, double Omega, 
 		t2 = 1.0 +  cos(Theta);
 	}
 
-	vx_h[i] = t0 * (t1 * Px + t2 * Qx);
-	vy_h[i] = t0 * (t1 * Py + t2 * Qy);
-	vz_h[i] = t0 * (t1 * Pz + t2 * Qz);
+	vxx_h[i] = t0 * (t1 * Px + t2 * Qx);
+	vyy_h[i] = t0 * (t1 * Py + t2 * Qy);
+	vzz_h[i] = t0 * (t1 * Pz + t2 * Qz);
 }
 
 // *************************************
@@ -177,7 +177,7 @@ void asteroid::KepToCart_M(int i, double a, double e, double inc, double Omega, 
 
 //input a e inc Omega w E
 //i is the index of the body
-void asteroid::KepToCart_E(int i, double a, double e, double inc, double Omega, double w, double E){
+void asteroid::KepToCart_E(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h, int i, double a, double e, double inc, double Omega, double w, double E){
 
 	double mu = GM_h[10]; //Msun
 
@@ -230,9 +230,9 @@ void asteroid::KepToCart_E(int i, double a, double e, double inc, double Omega, 
 		t2 = r * sin(Theta);
 	}
 
-	x_h[i] = t1 * Px + t2 * Qx;
-	y_h[i] = t1 * Py + t2 * Qy;
-	z_h[i] = t1 * Pz + t2 * Qz;
+	xx_h[i] = t1 * Px + t2 * Qx;
+	yy_h[i] = t1 * Py + t2 * Qy;
+	zz_h[i] = t1 * Pz + t2 * Qz;
 
 	if(e < 1.0 - 1.0e-10){
 		//elliptic
@@ -256,22 +256,22 @@ void asteroid::KepToCart_E(int i, double a, double e, double inc, double Omega, 
 		t2 = 1.0 +  cos(Theta);
 	}
 
-	vx_h[i] = t0 * (t1 * Px + t2 * Qx);
-	vy_h[i] = t0 * (t1 * Py + t2 * Qy);
-	vz_h[i] = t0 * (t1 * Pz + t2 * Qz);
+	vxx_h[i] = t0 * (t1 * Px + t2 * Qx);
+	vyy_h[i] = t0 * (t1 * Py + t2 * Qy);
+	vzz_h[i] = t0 * (t1 * Pz + t2 * Qz);
 //printf("B KtoC m:%g r:%g x:%g y:%g z:%g vx:%g vy:%g vz:%g\n", x.w, v.w, x.x, x.y, x.z, v.x ,v.y, v.z);
 }
 
-void asteroid::CartToKep(int i, double &a, double &e, double &inc, double &Omega, double &w, double &Theta, double &M, double &E){
+void asteroid::CartToKep(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h, int i, double &a, double &e, double &inc, double &Omega, double &w, double &Theta, double &M, double &E){
 
 	double mu = GM_h[10]; //Msun
 
-	double x = x_h[i];
-	double y = y_h[i];
-	double z = z_h[i];
-	double vx = vx_h[i];
-	double vy = vy_h[i];
-	double vz = vz_h[i];
+	double x = xx_h[i];
+	double y = yy_h[i];
+	double z = zz_h[i];
+	double vx = vxx_h[i];
+	double vy = vyy_h[i];
+	double vz = vzz_h[i];
 
 
 	double rsq = x * x + y * y + z * z;

@@ -195,9 +195,9 @@ public:
 	void printOutput(double);
 	
 
-	void KepToCart_M(int, double, double, double, double, double, double);
-	void KepToCart_E(int, double, double, double, double, double, double);
-	void CartToKep(int, double &, double &, double &, double &, double &, double &, double &, double &);
+	void KepToCart_M(double *, double *, double *, double *, double *, double *, int, double, double, double, double, double, double);
+	void KepToCart_E(double *, double *, double *, double *, double *, double *, int, double, double, double, double, double, double);
+	void CartToKep(double *, double *, double *, double *, double *, double *, int, double &, double &, double &, double &, double &, double &, double &, double &);
 	void convertOutput();
 	void EcpliptictoEquatorial(double *, double *, double *, double *, double *, double *);
 	void EquatorialtoEcliptic(double *, double *, double *, double *, double *, double *);

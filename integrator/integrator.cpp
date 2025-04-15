@@ -76,6 +76,28 @@ void asteroid::convertOutput(){
 		EquatorialtoEcliptic(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);        
 	}
 
+	if(Outorbital == 1){
+		for(int i = 0; i < N; ++i){
+			double a, e, inc, Omega, w, Theta, M, E;
+			CartToKep(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h, i, a, e, inc, Omega, w, Theta, M, E);
+
+
+			inc = inc * 180.0 / M_PI;       //convert rad to deg
+			Omega = Omega * 180.0 / M_PI;   //convert rad to deg
+			w = w * 180.0 / M_PI;           //convert rad to deg
+			M = M * 180.0 / M_PI;           //convert rad to deg
+
+			xout_h[i] = a;
+			yout_h[i] = e;
+			zout_h[i] = inc;
+			vxout_h[i] = Omega;
+			vyout_h[i] = w;
+			vzout_h[i] = M;
+
+
+		}
+	}
+
 }
 
 

@@ -1443,7 +1443,177 @@ __global__ void update_kernel(double *x_d, double *y_d, double *z_d, double *vx_
 }
 
 
-__global__ void convertOutput_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xout_d, double *yout_d, double *zout_d, double *vxout_d, double *vyout_d, double *vzout_d, double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, const int RKFn, const int N, const int Outecliptic, const int Outheliocentric, const double Obliquity){
+__device__ void CartToKepGPU(double *xx_d, double *yy_d, double *zz_d, double *vxx_d, double *vyy_d, double *vzz_d, int i, double &a, double &e, double &inc, double &Omega, double &w, double &Theta, double &M, double &E, double Msun){
+
+	double mu = Msun;
+
+	double x = xx_d[i];
+	double y = yy_d[i];
+	double z = zz_d[i];
+	double vx = vxx_d[i];
+	double vy = vyy_d[i];
+	double vz = vzz_d[i];
+
+
+	double rsq = x * x + y * y + z * z;
+	double vsq = vx * vx + vy * vy + vz * vz;
+	double u =  x * vx + y * vy + z * vz;
+	double ir = 1.0 / sqrt(rsq);
+	double ia = 2.0 * ir - vsq / mu;
+
+	a = 1.0 / ia;
+
+	//inclination
+	double hx, hy, hz;
+
+	hx = ( y * vz) - (z * vy);
+	hy = (-x * vz) + (z * vx);
+	hz = ( x * vy) - (y * vx);
+
+	double h2 = hx * hx + hy * hy + hz * hz;
+	double h = sqrt(h2);
+
+	double t = hz / h;
+	if(t < -1.0) t = -1.0;
+	if(t > 1.0) t = 1.0;
+
+	inc = acos(t);
+
+	//longitude of ascending node
+	double n = sqrt(hx * hx + hy * hy);
+	Omega = acos(-hy / n);
+	if(hx < 0.0){
+		Omega = 2.0 * M_PI - Omega;
+	}
+
+	if(inc < 1.0e-10 || n == 0) Omega = 0.0;
+
+	//argument of periapsis
+	double ex, ey, ez;
+
+	ex = ( vy * hz - vz * hy) / mu - x * ir;
+	ey = (-vx * hz + vz * hx) / mu - y * ir;
+	ez = ( vx * hy - vy * hx) / mu - z * ir;
+
+
+	e = sqrt(ex * ex + ey * ey + ez * ez);
+
+	t = (-hy * ex + hx * ey) / (n * e);
+	if(t < -1.0) t = -1.0;
+	if(t > 1.0) t = 1.0;
+	w = acos(t);
+	if(ez < 0.0) w = 2.0 * M_PI - w;
+	if(n == 0) w = 0.0;
+
+	//True Anomaly
+	t = (ex * x + ey * y + ez * z) / e * ir;
+	if(t < -1.0) t = -1.0;
+	if(t > 1.0) t = 1.0;
+	Theta = acos(t);
+
+	if(u < 0.0){
+		if(e < 1.0 - 1.0e-10){
+			//elliptic
+			Theta = 2.0 * M_PI - Theta;
+		}
+		else if(e > 1.0 + 1.0e-10){
+			//hyperbolic
+			Theta = -Theta;
+		}
+		else{
+			//parabolic
+			Theta = - Theta;
+		}
+	}
+
+	//Non circular, equatorial orbit
+	if(e > 1.0e-10 && inc < 1.0e-10){
+		Omega = 0.0;
+		w = acos(ex / e);
+		if(ey < 0.0) w = 2.0 * M_PI - w;
+	}
+
+	//circular, inclinded orbit
+	if(e <= 1.0e-10 && inc > 1.0e-11){
+		w = 0.0;
+	}
+
+	//circular, equatorial orbit
+	if(e <= 1.0e-10 && inc <= 1.0e-11){
+		w = 0.0;
+		Omega = 0.0;
+	}
+
+	if(w == 0 && Omega != 0.0){
+		t = (-hy * x + hx * y) / n * ir;
+		if(t < -1.0) t = -1.0;
+		if(t > 1.0) t = 1.0;
+		Theta = acos(t);
+		if(z < 0.0){
+			if(e < 1.0 - 1.0e-10){
+				//elliptic
+				Theta = 2.0 * M_PI - Theta;
+			}
+			else if(e > 1.0 + 1.0e-10){
+				//hyperbolic
+				Theta = -Theta;
+			}
+			else{
+				//parabolic
+				Theta = -Theta;
+			}
+		}
+	}
+	if(w == 0 && Omega == 0.0){
+		Theta = acos(x * ir);
+		if(y < 0.0){
+			if(e < 1.0 - 1.0e-10){
+				//elliptic
+				Theta = 2.0 * M_PI - Theta;
+			}
+			else if(e > 1.0 + 1.0e-10){
+				//hyperbolic
+				Theta = -Theta;
+			}
+			else{
+				//parabolic
+				Theta = -Theta;
+			}
+		}
+	}
+
+	if(e < 1.0 - 1.0e-10){
+		//Eccentric Anomaly
+		E = acos((e + cos(Theta)) / (1.0 + e * cos(Theta)));
+		if(M_PI < Theta && Theta < 2.0 * M_PI) E = 2.0 * M_PI - E;
+
+		//Mean Anomaly
+		M = E - e * sin(E);
+//printf("%g %g %g %g\n", Theta, E, M, w);
+	}
+	else if(e > 1.0 + 1.0e-10){
+		//Hyperbolic Anomaly
+		//named still E instead of H or F
+		E = acosh((e + t) / (1.0 + e * t));
+		if(Theta < 0.0) E = - E;
+
+		M = e * sinh(E) - E;
+	}
+	else{
+		//Parabolic Anomaly
+		E = tan(Theta * 0.5);
+		if(E > M_PI) E = E - 2.0 * M_PI;
+
+		M = E + E * E * E / 3.0;
+
+		//use a to store q
+		a = h * h / mu * 0.5;
+	}
+
+}
+
+
+__global__ void convertOutput_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xout_d, double *yout_d, double *zout_d, double *vxout_d, double *vyout_d, double *vzout_d, double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, const int RKFn, const int N, const int Outecliptic, const int Outheliocentric, const int Outorbital, const double Obliquity, double Msun){
 
 	int id = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -1500,6 +1670,30 @@ __global__ void convertOutput_kernel(double *x_d, double *y_d, double *z_d, doub
 			vzout_d[id] = -seps * vy + ceps * vz;
 		}
 	}
+
+	if(Outorbital == 1){
+		if(id < N){
+			double a, e, inc, Omega, w, Theta, M, E;
+			CartToKepGPU(xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, id, a, e, inc, Omega, w, Theta, M, E, Msun);
+
+
+			inc = inc * 180.0 / M_PI;       //convert rad to deg
+			Omega = Omega * 180.0 / M_PI;   //convert rad to deg
+			w = w * 180.0 / M_PI;           //convert rad to deg
+			M = M * 180.0 / M_PI;           //convert rad to deg
+
+			xout_d[id] = a;
+			yout_d[id] = e;
+			zout_d[id] = inc;
+			vxout_d[id] = Omega;
+			vyout_d[id] = w;
+			vzout_d[id] = M;
+
+
+		}
+	}
+
+
 }
 
 
@@ -1527,7 +1721,7 @@ int asteroid::loop(){
 			update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 
 		}
-		convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Obliquity);
+		convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Outorbital, Obliquity, GM_h[10]);
 		copyOutput();
 		printOutput(dt);
 	}
@@ -1680,7 +1874,7 @@ int asteroid::loop(){
 			if(Outheliocentric == 1){
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 			}
-			convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Obliquity);
+			convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Outorbital, Obliquity, GM_h[10]);
 			copyOutput();
 			printOutput(dtmin);
 		}

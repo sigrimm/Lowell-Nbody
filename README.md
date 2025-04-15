@@ -78,6 +78,7 @@ Every record contains
     - cartesian heliocentric equatorial
     - cartesian barycentric ecliptic
     - cartesian barycentric equatorial
+    - orbital heliocentric ecliptic
   - Path to perturbers file, string
   - 
 allowed integrators are:

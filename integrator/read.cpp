@@ -101,7 +101,7 @@ int asteroid::readICkeplerian(){
 
 
 		//convert to heliocentric ecliptic cartesian coordinates
-		KepToCart_M(i, a, e, inc, Omega, w, M);
+		KepToCart_M(x_h, y_h, z_h, vx_h, vy_h, vz_h, i, a, e, inc, Omega, w, M);
 
 	//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}
