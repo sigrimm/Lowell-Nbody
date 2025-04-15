@@ -185,7 +185,7 @@ __global__ void leapfrog_stepB_kernel(double *xTable_d, double *yTable_d, double
 		double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 		double r = sqrt(rsq);
 
-		if(cometFlag_c == 0){
+		if(cometFlag_c > 0){
 			if(id == 0){
 				Tsave_d[timeStep] = time;
 			}
@@ -358,7 +358,7 @@ __global__ void RK_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 			double r = sqrt(rsq);
 
-			if(cometFlag_c == 0 && S == 0){
+			if(cometFlag_c > 0 && S == 0){
 				if(id == 0){
 					Tsave_d[timeStep] = time;
 				}
@@ -564,7 +564,7 @@ __global__ void RK_step2_kernel(double *xTable_d, double *yTable_d, double *zTab
 				double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 				double r = sqrt(rsq);
 
-				if(cometFlag_c == 0 && S == 0){
+				if(cometFlag_c > 0 && S == 0){
 					if(id == 0){
 						Tsave_d[timeStep] = time;
 					}
@@ -699,7 +699,7 @@ __global__ void RK_stage_kernel(double *xTable_d, double *yTable_d, double *zTab
 		double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 		double r = sqrt(rsq);
 
-		if(cometFlag_c == 0 && S == 0){
+		if(cometFlag_c > 0 && S == 0){
 			if(id == 0){
 				Tsave_d[timeStep] = time;
 			}
@@ -861,7 +861,7 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 			double r = sqrt(rsq);
 
-			if(cometFlag_c == 0 && S == 0){
+			if(cometFlag_c > 0 && S == 0){
 				if(id == 0){
 					Tsave_d[timeStep] = time;
 				}
@@ -1146,7 +1146,7 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 				double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 				double r = sqrt(rsq);
 
-				if(cometFlag_c == 0 && S == 0){
+				if(cometFlag_c > 0 && S == 0){
 					if(id == 0){
 						Tsave_d[timeStep] = time;
 					}

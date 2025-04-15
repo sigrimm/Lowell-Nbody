@@ -588,8 +588,18 @@ int asteroid::allocate(){
 		RKFc_h[i] = 0.0;
 	}
 
-	Rsave_h = (double*)malloc(Rbuffersize * N * sizeof(double));
-	Tsave_h = (double*)malloc(Rbuffersize * sizeof(double));
+	if(cometFlag > 0){
+		Rsave_h = (double*)malloc(Rbuffersize * N * sizeof(double));
+		Tsave_h = (double*)malloc(Rbuffersize * sizeof(double));
+		if(Rsave_h == NULL){
+			printf("Error, not enough memory for Rsave\n");
+			return 0;
+		}
+	}
+	else{
+		Rsave_h = NULL;
+		Tsave_h = NULL;
+	}
 
 	return 1;
 }

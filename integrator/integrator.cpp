@@ -142,14 +142,12 @@ inline void asteroid::leapfrog_step(){
 		//r is used in multiple forces, so reuse it
 		double rsq = xih * xih + yih * yih + zih * zih;
 		double r = sqrt(rsq);
-
-		if(cometFlag == 0){
+		if(cometFlag > 0){
 			if(i == 0){
 				Tsave_h[timeStep] = time;
 			}
 			Rsave_h[i * Rbuffersize + timeStep] = r;
 		}
-
 		//Earth centric coordinates
 		double xiE = x_h[i] - xTable_h[2];
 		double yiE = y_h[i] - yTable_h[2];
@@ -165,6 +163,7 @@ inline void asteroid::leapfrog_step(){
 			J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
 		}
 		Gravity(x_h[i], y_h[i], z_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
+
 	}
 	// ----------------------------------------------------------------------------
 
@@ -247,7 +246,7 @@ inline void asteroid::RK_step(){
 			double rsq = xih * xih + yih * yih + zih * zih;
 			double r = sqrt(rsq);
 
-			if(cometFlag == 0 && S == 0){
+			if(cometFlag > 0 && S == 0){
 				if(i == 0){
 					Tsave_h[timeStep] = time;
 				}
@@ -376,7 +375,7 @@ inline void asteroid::RKF_step(){
 			double rsq = xih * xih + yih * yih + zih * zih;
 			double r = sqrt(rsq);
 
-			if(cometFlag == 0 && S == 0){
+			if(cometFlag > 0 && S == 0){
 				if(i == 0){
 					Tsave_h[timeStep] = time;
 				}
@@ -587,7 +586,6 @@ int asteroid::loop(){
 				}
 
 			}
-
 			if(RKFn == 1){
 				leapfrog_step();
 			}
