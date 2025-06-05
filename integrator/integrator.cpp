@@ -25,7 +25,7 @@ void asteroid::HelioToBary(double *xx_h, double *yy_h, double *zz_h, double *vxx
 		vzz_h[i] += vzTable_h[10];
 
 
-		//printf("xyz bary %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+		//printf("H2B %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", xx_h[i], yy_h[i], zz_h[i], vxx_h[i], vyy_h[i], vzz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}
 }
 
@@ -50,7 +50,7 @@ void asteroid::BaryToHelio(double *xx_h, double *yy_h, double *zz_h, double *vxx
 		vzz_h[i] -= vzTable_h[10];
 
 
-		//printf("xyz bary %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+		//printf("B2H %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", xx_h[i], yy_h[i], zz_h[i], vxx_h[i], vyy_h[i], vzz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}
 }
 
@@ -94,6 +94,7 @@ void asteroid::convertOutput(){
 			vyout_h[i] = w;
 			vzout_h[i] = M;
 
+			//printf("aei %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", a, e, inc, Omega, w, M, A1_h[i], A2_h[i], A3_h[i]);
 
 		}
 	}
@@ -556,10 +557,12 @@ int asteroid::loop(){
 
 	//for(int tt = 0; tt < 2; ++tt){
 	for(int tt = 0; tt < 1000000; ++tt){
+
+		//dtmin is the minimum time step of an output intervall, only used for diagnostics
 		double dtmin = dt;
 
+		//next output time
 		double timett1 = timeStart + dts * (tt + 1) * outputInterval;
-
 
 		double snew = 10.0;
 //printf("integrate %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1);

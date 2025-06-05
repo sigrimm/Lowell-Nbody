@@ -92,16 +92,34 @@ int asteroid::readICkeplerian(){
 			return 0;
 		}
 
+		//printf("aei %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", a, e, inc, Omega, w, M, A1_h[i], A2_h[i], A3_h[i]);
+
 		inc = inc / 180.0 * M_PI;	//convert deg to rad
 		Omega = Omega / 180.0 * M_PI;	//convert deg to rad
 		w = w / 180.0 * M_PI;		//convert deg to rad
 		M = M / 180.0 * M_PI;		//convert deg to rad
 
+
+		inc = fmod(inc, 2.0 * M_PI);
+		Omega = fmod(Omega, 2.0 * M_PI);
+		w = fmod(w, 2.0 * M_PI);
+		M = fmod(M, 2.0 * M_PI);
+
+
+		if(inc < 0.0) inc += 2.0 * M_PI;
+		if(Omega < 0.0) Omega += 2.0 * M_PI;
+		if(w < 0.0) w += 2.0 * M_PI;
+		if(M < 0.0) M += 2.0 * M_PI;
+
 		//Orbital elements are in heliocentric IAU76/J2000 ecliptic
 
 
 		//convert to heliocentric ecliptic cartesian coordinates
-		KepToCart_M(x_h, y_h, z_h, vx_h, vy_h, vz_h, i, a, e, inc, Omega, w, M);
+		er = KepToCart_M(x_h, y_h, z_h, vx_h, vy_h, vz_h, i, a, e, inc, Omega, w, M);
+		if(er <= 0){
+			return 0;
+		}
+
 
 	//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}

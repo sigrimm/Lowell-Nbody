@@ -1728,8 +1728,11 @@ int asteroid::loop(){
 
 	//for(int tt = 0; tt < 2; ++tt){
 	for(int tt = 0; tt < 1000000; ++tt){
+
+		//dtmin is the minimum time step of an output intervall, only used for diagnostics
 		double dtmin = dt;
 
+		//next output time
 		double timett1 = timeStart + dts * (tt + 1) * outputInterval;
 
 		double snew = 10.0;

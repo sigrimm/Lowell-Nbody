@@ -195,7 +195,7 @@ public:
 	void printOutput(double);
 	
 
-	void KepToCart_M(double *, double *, double *, double *, double *, double *, int, double, double, double, double, double, double);
+	int KepToCart_M(double *, double *, double *, double *, double *, double *, int, double, double, double, double, double, double);
 	void KepToCart_E(double *, double *, double *, double *, double *, double *, int, double, double, double, double, double, double);
 	void CartToKep(double *, double *, double *, double *, double *, double *, int, double &, double &, double &, double &, double &, double &, double &, double &);
 	void convertOutput();

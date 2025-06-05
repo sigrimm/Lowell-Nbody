@@ -1,8 +1,8 @@
 Initial condition file format = text
-Initial condition file coordinates = orbital heliocentric ecliptic
-Initial condition file = initialIcarusKep.dat
+Initial condition file coordinates = cartesian heliocentric ecliptic
+Initial condition file = initial.dat
 Output file name = test
-Output Interval = 1.0
+Output Interval = 10.0
 Output coordinates = cartesian barycentric equatorial
 Path to perturbers file = ../readChebyshev/
 Start Time = 2450800.5
