@@ -46,27 +46,14 @@ int main(int argc, char*argv[]){
 	//Read Size of initial conditions file
 	//----------------------------------------------------------
 	if(A.ICformat == 0){
-		A.inputFile = fopen(A.inputFilename, "r");
-		if(A.inputFile == NULL){
-			printf("Error, could not open initial condition file |%s|\n", A.inputFilename);
-			return 0;
-		}
-
 		printf("Read ICsize\n");
 		er = A.readICSize();
 		if(er <= 0){
 			return 0;
 		}
-		fclose(A.inputFile);
 		printf("Read ICSize OK with %d bodies\n", A.N);
 	}
 	else{
-
-		A.inputFile = fopen(A.inputFilename, "rb");
-		if(A.inputFile == NULL){
-			printf("Error, could not open initial condition file |%s|\n", A.inputFilename);
-			return 0;
-		}
 		printf("Read IC file header\n");
 		er = A.readHeader();
 		if(er <= 0){
@@ -122,6 +109,9 @@ int main(int argc, char*argv[]){
 	if(A.RKFn == 4){
 		A.setRK4();
 	}
+	if(A.RKFn == 9){
+		A.setRK7();
+	}
 	if(A.RKFn == 6){
 		A.setRKF45();
 	}
@@ -142,6 +132,7 @@ int main(int argc, char*argv[]){
 		A.inputFile = fopen(A.inputFilename, "r");
 		if(A.ICorbital == 0){
 			er = A.readIC();
+printf("er %d\n", er);
 		}
 		else if(A.ICorbital == 1){
 			er = A.readICkeplerian();
@@ -166,6 +157,7 @@ int main(int argc, char*argv[]){
 		return 0;
 	}
 	fclose(A.inputFile);
+	printf("Read initial conditions file OK\n");
 
 
 	//If needed, convert from ecliptic coordinates to equatorial coordinates
@@ -188,7 +180,6 @@ int main(int argc, char*argv[]){
 		return 0;
 	}
 #endif
-	printf("Read initial conditions file OK\n");
 	//----------------------------------------------------------
 
 	er = A.loop();	

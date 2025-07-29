@@ -102,32 +102,33 @@ inline void asteroid::J2(double xE, double yE, double zE, double &axi, double &a
 
 	double rsq = xE * xE + yE * yE + zE * zE;
 	double r = sqrt(rsq);
-	//double r5 = rsq * rsq * r;
+	double r5 = rsq * rsq * r;
 
-	//double t1 = GMEarth * 3.0 * J2E * REAU * REAU / (2.0 * r5);
-	double t1 = 3.0 * J2E * REAU * REAU / rsq / rsq / r / 2.0;
+	double t1 = GMEarth * 3.0 * J2E * REAU * REAU / (2.0 * r5);
 	double t2 = 5.0 * (zE * zE / rsq) - 1.0;
 
 //printf("%.20g %.20g %.20g\n", GMEarth, t1, t2);
 
-	double tx = GMEarth * t1 * t2 * xE;
-	double ty = GMEarth * t1 * t2 * yE;
-	double tz = GMEarth * t1 * (t2 - 2.0) * zE;
+	double tx = t1 * t2 * xE;
+	double ty = t1 * t2 * yE;
+	double tz = t1 * (t2 - 2.0) * zE;
 
 	axi += tx;
 	ayi += ty;
 	azi += tz;
+//printf("J2      %.20g %.20g %.20g %.20g %.20g\n", GMEarth, xE, yE, zE, r); 
 
 //printf("J2 a %.20g %.20g %.20g\n", tx, ty, tz);
 }
 
 inline void asteroid::Gravity(double xi, double yi, double zi, double *xTable_h, double *yTable_h, double *zTable_h, double &axi, double &ayi, double &azi, int i){
 	for(int pp = 0; pp < Nperturbers; ++pp){
+
 		int p = pp + 11;
 		if(pp == 16) p = 8;	//Pluto
 		if(pp == 17) p = 9;	//Moon
 		if(pp == 18) p = 3;	//Mars
-		if(pp == 19) p = 0;	//Mercur
+		if(pp == 19) p = 0;	//Mercury
 		if(pp == 20) p = 7;	//Neptune
 		if(pp == 21) p = 6;	//Uranus
 		if(pp == 22) p = 2;	//Earth
@@ -136,6 +137,13 @@ inline void asteroid::Gravity(double xi, double yi, double zi, double *xTable_h,
 		if(pp == 25) p = 4;	//Jupiter
 		if(pp == 26) p = 10;	//Sun
 
+/*
+int p = pp;
+if(pp > 8) p = pp + 2;
+if(pp == 25) p = 9;
+if(pp == 26) p = 10;
+*/
+
 		double dx = xi - xTable_h[p];
 		double dy = yi - yTable_h[p];
 		double dz = zi - zTable_h[p];
@@ -143,12 +151,20 @@ inline void asteroid::Gravity(double xi, double yi, double zi, double *xTable_h,
 		double rsq = dx * dx + dy * dy + dz * dz;
 		double r = sqrt(rsq);
 		double s = GM_h[p] / (r * rsq);
+		//double s = GM_h[p] / (r * r * r);
 
 		axi -= s * dx;
 		ayi -= s * dy;
 		azi -= s * dz;
-//printf("%d %d %g %g\n", pp, p, r, s * dx);
 
-//printf("position %d %d %.20g %.20g %.20g %.20g %.20g\n", pp, p, time, x[p], y[p], z[p], GM_h[p]);
+//printf("position %d %d %25.20g %25.20g %25.20g\n", i, p, xTable_h[p], yTable_h[p], zTable_h[p]); 
+
+//printf("distance %d %d %25.20g %25.20g %25.20g %25.20g\n", i, p, dx, dy, dz, r);
+
+//printf("Direct a %d %d %25.20g %25.20g %25.20g\n", i, p,  s * dx, s * dy, s * dz);
+//printf("Direct a %d %d %25.20g %25.20g %25.20g\n", i, p,  axi, ayi, azi);
+
 	}
+//printf("acc %d %.30g %.30g %.30g\n", i, axi, ayi, azi);
+
 }

@@ -14,6 +14,12 @@ int asteroid::readICSize(){
 	double vx, vy, vz;
 	double A1, A2, A3;
 
+	inputFile = fopen(inputFilename, "r");
+	if(inputFile == NULL){
+		printf("Error, could not open initial condition file |%s|\n", inputFilename);
+		return 0;
+	}
+
 	for(int i = 0; i < 1024 * 1024; ++i){
 		int er = 0;
 		er = fscanf(inputFile, "%lld", &id);
@@ -37,6 +43,7 @@ int asteroid::readICSize(){
 	//printf("xyz %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", x_h[i], y_h[i], z_h[i], vx_h[i], vy_h[i], vz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}
 
+	fclose(inputFile);
 	return 1;
 
 }
@@ -44,6 +51,11 @@ int asteroid::readICSize(){
 //Read the initial conditions file in text format
 //Cartesian coordinates
 int asteroid::readIC(){
+	inputFile = fopen(inputFilename, "rb");
+	if(inputFile == NULL){
+		printf("Error, could not open initial condition file |%s|\n", inputFilename);
+		return 0;
+	}
 
 	for(int i = 0; i < N; ++i){
 		int er = 0;

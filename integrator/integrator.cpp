@@ -595,6 +595,9 @@ int asteroid::loop(){
 			if(RKFn == 4){
 				RK_step();
 			}
+			if(RKFn == 9){
+				RK_step();
+			}
 			if(RKFn == 6){
 				RKF_step();
 			}

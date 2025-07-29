@@ -33,6 +33,7 @@ public:
 	int Outecliptic = 0;			//Coordinate system of output, 1 = ecliptic, 0 = equatorial
 	int Outheliocentric = 0;		//Coordinate system of output, 1 = heliocentric, 0 = barycentric
 	double Obliquity = 84381.448;		//Obliquity of ecliptic IAU76/J2000	in arcsec
+	//double Obliquity = 84381.3998;		//Obliquity of ecliptic IAU76/J2000	in arcsec
 
 	int N;					//Number of bodies to integrate, not including perturbers
 	int Nperturbers;			//Number of perturbers
@@ -217,6 +218,7 @@ public:
 	inline void RKF_step();
 
 	void setRK4();
+	void setRK7();
 	void setRKF45();
 	void setDP54();
 	void setRKF78();

@@ -126,7 +126,7 @@ __device__ void Gravity(double xi, double yi, double zi, double *xTable_s, doubl
 	if(pp == 16) p = 8;	//Pluto
 	if(pp == 17) p = 9;	//Moon
 	if(pp == 18) p = 3;	//Mars
-	if(pp == 19) p = 0;	//Mercur
+	if(pp == 19) p = 0;	//Mercury
 	if(pp == 20) p = 7;	//Neptune
 	if(pp == 21) p = 6;	//Uranus
 	if(pp == 22) p = 2;	//Earth

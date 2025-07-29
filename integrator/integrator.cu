@@ -1772,7 +1772,7 @@ int asteroid::loop(){
 				time += dt * 0.5;
 				++timeStep;
 			}
-			if(RKFn == 4){
+			if(RKFn == 4 || RKFn == 9){
 				//Needs at least Nperturbers threads per block
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 	

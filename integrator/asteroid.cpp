@@ -1,5 +1,4 @@
 #include "asteroid.h"
-#include <stdio.h>
 
 
 int asteroid::readParam(int argc, char*argv[]){
@@ -190,6 +189,9 @@ int asteroid::readParam(int argc, char*argv[]){
 			else if(strcmp(integratorName, "RK4") == 0){
 				RKFn = 4;
 			}
+			else if(strcmp(integratorName, "RK7") == 0){
+				RKFn = 9;
+			}
 			else if(strcmp(integratorName, "RKF45") == 0){
 				RKFn = 6;
 			}
@@ -225,7 +227,7 @@ int asteroid::readParam(int argc, char*argv[]){
 		else if(strcmp(sp, "Time Step =") == 0){
 			er = fscanf (paramfile, "%lf", &dt);
 			if(er <= 0){
-				printf("Error: dt value is not valid!\n");
+				printf("Error: Time Step value is not valid!\n");
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
@@ -243,7 +245,7 @@ int asteroid::readParam(int argc, char*argv[]){
 			if(er <= 0){
 				printf("Error: Use GR correction is not valid!\n");
 				return 0;
-		}
+			}
 			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "Use J2 force =") == 0){
@@ -334,7 +336,9 @@ int asteroid::readParam(int argc, char*argv[]){
 	}
 	fclose(paramfile);
 
+	// ----------------------------------
 	//read console arguments
+	// ----------------------------------
 	for(int i = 1; i < argc; i += 2){
 		if(strcmp(argv[i], "-outInterval") == 0){
 			outputInterval = atof(argv[i + 1]);
@@ -356,7 +360,7 @@ int asteroid::readParam(int argc, char*argv[]){
 		return 0;
 		}
 	}
-
+	// ----------------------------------
 
 
 

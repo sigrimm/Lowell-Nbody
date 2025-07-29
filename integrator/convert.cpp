@@ -28,7 +28,6 @@ int asteroid::KepToCart_M(double *xx_h, double *yy_h, double *zz_h, double *vxx_
 		for(int j = 0; j < 128; ++j){
 			E = E + (M - E + e * sin(E)) / (1.0 - e * cos(E));
 			if(fabs(E - Eold) < def_ETOL){
-printf("%g %g %g %d\n", M, e, E, j);
 				break;
 			}
 			Eold = E;

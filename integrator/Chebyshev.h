@@ -50,6 +50,8 @@ inline void asteroid::update_Chebyshev(double time){
 
 inline void asteroid::update_perturbers(double time){
 
+	double fAU = 1.0/AUtokm;
+
 	double Tx[nCm];
 	double Ty[nCm];
 	double Tz[nCm];
@@ -69,10 +71,7 @@ inline void asteroid::update_perturbers(double time){
 		double subTime = (time_reference - startTime_h[p] + time) / sizeSubInterval;   //normalized time in  0 - 1
 		double t = 2.0 * subTime - 1.0;                         //mormalized time in -1 - 1
 
-		//double ct = 2.0 / sizeSubInterval;                    //correction factor for time units
-
-		//This is done so in Assist, remove the time factor later
-		double ct = 2.0 / sizeSubInterval / 86400.0;            //correction factor for time units
+		double ct = 2.0 / sizeSubInterval;                    //correction factor for time units
 
 //if(p > 10) printf("Chebyshev time %d %.20g %.20g %.20g\n", p, subTime, time, t);
 
@@ -108,16 +107,17 @@ inline void asteroid::update_perturbers(double time){
 		double vyp = 0.0;
 		double vzp = 0.0;
 
-		for(int j = 0; j < nC; ++j){
-		//for(int j = nChebyshev_h[p] - 1; j >= 0; --j){    //reduce floating point errors by revert order
+		//for(int j = 0; j < nC; ++j){
+		for(int j = nChebyshev_h[p] - 1; j >= 0; --j){    //reduce floating point errors by revert order
 			xp += Tx[j] * cdata_h[pp + j];
 			yp += Ty[j] * cdata_h[pp + nC + j];
 			zp += Tz[j] * cdata_h[pp + 2 * nC + j];
-//printf("Chebyshev %d %.20g %.20g %.20g %.20g %.20g\n", j, Tx[j], cdata_h[pp + j], xp, yp, zp);                    
+//printf("Chebyshev %d %d %.20g %.20g %.20g %.20g %.20g\n", p, j, Tx[j], cdata_h[pp + j], xp, yp, zp);                    
 
 			vxp += Tvx[j] * cdata_h[pp + j] * ct;
 			vyp += Tvy[j] * cdata_h[pp + nC + j] * ct;
 			vzp += Tvz[j] * cdata_h[pp + 2 * nC + j] * ct;
+//printf("Chebyshev %d %d %.20g %.20g %.20g %.20g %.20g\n", p, j, Tvx[j], cdata_h[pp + j], vxp, vyp, vzp);                    
 		}
 
 		xTable_h[p] = xp;
@@ -127,12 +127,25 @@ inline void asteroid::update_perturbers(double time){
 		vxTable_h[p] = vxp;
 		vyTable_h[p] = vyp;
 		vzTable_h[p] = vzp;
+		//positions are in km
+		//velocities are in km/day
 
-//printf("positionA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p], yTable_h[p], zTable_h[p], t);
+
+//printf("positionA %d %.20g %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p], yTable_h[p], zTable_h[p], t, fAU);
 //printf("positionvA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, vxTable_h[p], vyTable_h[p], vzTable_h[p], t);
 
 
-//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p] / AUtokm, yTable_h[p] / AUtokm, zTable_h[p] / AUtokm, t);
+		xTable_h[p] *= fAU;
+		yTable_h[p] *= fAU;
+		zTable_h[p] *= fAU;
+
+		vxTable_h[p] *= fAU;
+		vyTable_h[p] *= fAU;
+		vzTable_h[p] *= fAU;
+		//positions are in AU
+		//velocities are in AU/day
+
+//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p], yTable_h[p], zTable_h[p], t);
 
 //printf("%d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p], yTable_h[p], zTable_h[p], t);
 
@@ -176,23 +189,10 @@ inline void asteroid::update_perturbers(double time){
 	vyTable_h[9] = vyB + vyM * EM * f;
 	vzTable_h[9] = vzB + vzM * EM * f;
 
-	for(int p = 0; p < Nperturbers; ++p){
-		//positions are in km
-		//velocities are in km/day
-		xTable_h[p] /= AUtokm;
-		yTable_h[p] /= AUtokm;
-		zTable_h[p] /= AUtokm;
-
-		//vxTable_h[p] /= AUtokm;
-		//vyTable_h[p] /= AUtokm;
-		//vzTable_h[p] /= AUtokm;
-		//remove time factor again
-		vxTable_h[p] /= AUtokm / 86400.0;
-		vyTable_h[p] /= AUtokm / 86400.0;
-		vzTable_h[p] /= AUtokm / 86400.0;
-//printf("positionB %d %.20g %.20g %.20g %.20g\n", p, time, xTable_h[p], yTable_h[p], zTable_h[p]);
-
-	}
+//printf("positionC %d %.20g %.20g %.20g %.20g\n", 2, time, xTable_h[2], yTable_h[2], zTable_h[2]);
+//printf("positionC %d %.20g %.20g %.20g %.20g\n", 2, time, vxTable_h[2], vyTable_h[2], vzTable_h[2]);
+//printf("positionC %d %.20g %.20g %.20g %.20g\n", 9, time, xTable_h[9], yTable_h[9], zTable_h[9]);
+//printf("positionC %d %.20g %.20g %.20g %.20g\n", 9, time, vxTable_h[9], vyTable_h[9], vzTable_h[9]);
 
 //Planets Coordinates are now Barycentric equatorial
 //Asteroids Coordinates are now Heliocentric equatorial

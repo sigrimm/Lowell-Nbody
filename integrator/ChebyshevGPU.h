@@ -46,6 +46,8 @@ __device__ void  update_ChebyshevGPU(double *data_d, double *cdata_d, int *idp_d
 
 __device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double *zTable_s, double *vxTable_s, double *vyTable_s, double *vzTable_s, double *cdata_d, double &startTime, double &endTime, const int nChebyshev, double time_reference, double time, const int nCm, const double EM, const double AUtokm, const int Nperturbers, int p){
 
+	double fAU = 1.0/AUtokm;
+
 	if(p < Nperturbers){
 
 		//double Tx[nCm];
@@ -69,10 +71,7 @@ __device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double 
 		double subTime = (time_reference - startTime + time) / sizeSubInterval;   //normalized time in  0 - 1
 		double t = 2.0 * subTime - 1.0;                         //mormalized time in -1 - 1
 
-		//double ct = 2.0 / sizeSubInterval;                    //correction factor for time units
-
-		//This is done so in Assist, remove the time factor later
-		double ct = 2.0 / sizeSubInterval / 86400.0;            //correction factor for time units
+		double ct = 2.0 / sizeSubInterval;                    //correction factor for time units
 
 //if(p > 10) printf("Chebyshev time %d %.20g %.20g %.20g\n", p, subTime, time, t);
 
@@ -110,8 +109,8 @@ __device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double 
 		double vyp = 0.0;
 		double vzp = 0.0;
 
-		for(int j = 0; j < nChebyshev; ++j){
-		//for(int j = nChebyshev - 1; j >= 0; --j){    //reduce floating point errors by revert order
+		//for(int j = 0; j < nChebyshev; ++j){
+		for(int j = nChebyshev - 1; j >= 0; --j){    //reduce floating point errors by revert order
 			double cx = cdata_d[j];
 			double cy = cdata_d[nChebyshev + j];
 			double cz = cdata_d[2 * nChebyshev + j];
@@ -133,12 +132,24 @@ __device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double 
 		vxTable_s[p] = vxp;
 		vyTable_s[p] = vyp;
 		vzTable_s[p] = vzp;
+		//positions are in km
+		//velocities are in km/day
+
 
 //printf("positionA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_s[p], yTable_s[p], zTable_s[p], t);
 //printf("positionvA %d %.20g %.20g %.20g %.20g %.20g\n", p, time, vxTable_s[p], vyTable_s[p], vzTable_s[p], t);
 
+		xTable_s[p] *= fAU;
+		yTable_s[p] *= fAU;
+		zTable_s[p] *= fAU;
 
-//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_s[p] / AUtokm, yTable_s[p] / AUtokm, zTable_s[p] / AUtokm, t);
+		vxTable_s[p] *= fAU;
+		vyTable_s[p] *= fAU;
+		vzTable_s[p] *= fAU;
+		//positions are in AU
+		//velocities are in AU/day
+
+//printf("positionB %d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_s[p], yTable_s[p], zTable_s[p], t);
 
 //printf("%d %.20g %.20g %.20g %.20g %.20g\n", p, time, xTable_s[p], yTable_s[p], zTable_s[p], t);
 
@@ -185,29 +196,15 @@ __device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double 
 		vyTable_s[9] = vyB + vyM * EM * f;
 		vzTable_s[9] = vzB + vzM * EM * f;
 
+//printf("positionC %d %.20g %.20g %.20g %.20g\n", 2, time, xTable_s[2], yTable_s[2], zTable_s[2]);
+//printf("positionC %d %.20g %.20g %.20g %.20g\n", 2, time, vxTable_s[2], vyTable_s[2], vzTable_s[2]);
+//printf("positionC %d %.20g %.20g %.20g %.20g\n", 9, time, xTable_s[9], yTable_s[9], zTable_s[9]);
+//printf("positionC %d %.20g %.20g %.20g %.20g\n", 9, time, vxTable_s[9], vyTable_s[9], vzTable_s[9]);
 	}
 
 	__syncthreads();
 
 	if(p < Nperturbers){
-
-		//positions are in km
-		//velocities are in km/day
-		xTable_s[p] /= AUtokm;
-		yTable_s[p] /= AUtokm;
-		zTable_s[p] /= AUtokm;
-
-		//vxTable_s[p] /= AUtokm;
-		//vyTable_s[p] /= AUtokm;
-		//vzTable_s[p] /= AUtokm;
-		//remove time factor again
-		vxTable_s[p] /= AUtokm / 86400.0;
-		vyTable_s[p] /= AUtokm / 86400.0;
-		vzTable_s[p] /= AUtokm / 86400.0;
-
-//printf("positionB %d %d %.20g %.20g %.20g %.20g\n", blockIdx.x, p, time, xTable_s[p], yTable_s[p], zTable_s[p]);
-
-
 		/*
 		//print in the order of asssit
 		int pp = p + 10;
