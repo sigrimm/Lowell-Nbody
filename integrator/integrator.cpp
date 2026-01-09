@@ -48,9 +48,28 @@ void asteroid::BaryToHelio(double *xx_h, double *yy_h, double *zz_h, double *vxx
 		vxx_h[i] -= vxTable_h[10];
 		vyy_h[i] -= vyTable_h[10];
 		vzz_h[i] -= vzTable_h[10];
+	}
+}
+
+void asteroid::BaryToGeo(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
+	//Update the Chebyshev coefficients if necessary
+	update_Chebyshev(time);
+	update_perturbers(time);
 
 
-		//printf("B2H %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", xx_h[i], yy_h[i], zz_h[i], vxx_h[i], vyy_h[i], vzz_h[i], A1_h[i], A2_h[i], A3_h[i]);
+	//for(int i = 0; i < Nperturbers; ++i){
+	//	printf("%d %.20g %.20g %.20g %.20g %.20g %.20g\n", i, xTable_h[i], yTable_h[i], zTable_h[i], vxTable_h[i], vyTable_h[i], vzTable_h[i]);
+	//}
+
+	//heliocentric coordinates
+	for(int i = 0; i < N; ++i){
+		xx_h[i] -= xTable_h[2];
+		yy_h[i] -= yTable_h[2];
+		zz_h[i] -= zTable_h[2];
+
+		vxx_h[i] -= vxTable_h[2];
+		vyy_h[i] -= vyTable_h[2];
+		vzz_h[i] -= vzTable_h[2];
 	}
 }
 
@@ -69,11 +88,14 @@ void asteroid::convertOutput(){
 	if(Outheliocentric == 1){
 		BaryToHelio(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);
 	} 
+	if(Outgeocentric == 1){
+		BaryToGeo(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);
+	} 
 
 
 	//If needed, convert from equatorial coordinates to ecliptic coordinates
 	if(Outecliptic == 1){
-		EquatorialtoEcliptic(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);        
+		EquatorialtoEcliptic(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);
 	}
 
 	if(Outorbital == 1){
@@ -82,10 +104,10 @@ void asteroid::convertOutput(){
 			CartToKep(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h, i, a, e, inc, Omega, w, Theta, M, E);
 
 
-			inc = inc * 180.0 / M_PI;       //convert rad to deg
-			Omega = Omega * 180.0 / M_PI;   //convert rad to deg
-			w = w * 180.0 / M_PI;           //convert rad to deg
-			M = M * 180.0 / M_PI;           //convert rad to deg
+			inc = inc * 180.0 / M_PI;	//convert rad to deg
+			Omega = Omega * 180.0 / M_PI;	//convert rad to deg
+			w = w * 180.0 / M_PI;		//convert rad to deg
+			M = M * 180.0 / M_PI;		//convert rad to deg
 
 			xout_h[i] = a;
 			yout_h[i] = e;
@@ -343,19 +365,19 @@ inline void asteroid::RKF_step(){
 
 			for(int s = 0; s < S; ++s){
 				double dtaa = dt * RKFa_h[S * RKFn + s];
-				xt_h[i]  += dtaa * kx_h[i + s * N];
-				yt_h[i]  += dtaa * ky_h[i + s * N];
-				zt_h[i]  += dtaa * kz_h[i + s * N];
-				vxt_h[i] += dtaa * kvx_h[i + s * N];
-				vyt_h[i] += dtaa * kvy_h[i + s * N];
-				vzt_h[i] += dtaa * kvz_h[i + s * N];
-//if(i < 2) printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], RKFa_h[S * RKFn + s], kx_h[s], dt);
+				int ii = i + s * N;
+				xt_h[i]  += dtaa * kx_h[ii];
+				yt_h[i]  += dtaa * ky_h[ii];
+				zt_h[i]  += dtaa * kz_h[ii];
+				vxt_h[i] += dtaa * kvx_h[ii];
+				vyt_h[i] += dtaa * kvy_h[ii];
+				vzt_h[i] += dtaa * kvz_h[ii];
 
 			}
-
-			kx_h[i + S * N] = vxt_h[i];
-			ky_h[i + S * N] = vyt_h[i];
-			kz_h[i + S * N] = vzt_h[i];
+			int ii = i + S * N;
+			kx_h[ii] = vxt_h[i];
+			ky_h[ii] = vyt_h[i];
+			kz_h[ii] = vzt_h[i];
 //if(i < 2) printf("K %d %d %.20g %.20g %.20g\n", i, S, kx_h[i + S * N], ky_h[i + S * N], kz_h[i + S * N]);
 		}
 
@@ -401,9 +423,10 @@ inline void asteroid::RKF_step(){
 		}
 		// ----------------------------------------------------------------------------
 		for(int i = 0; i < N; ++i){
-			kvx_h[i + S * N] = ax_h[i];
-			kvy_h[i + S * N] = ay_h[i];
-			kvz_h[i + S * N] = az_h[i];
+			int ii = i + S * N;
+			kvx_h[ii] = ax_h[i];
+			kvy_h[ii] = ay_h[i];
+			kvz_h[ii] = az_h[i];
 		}
 	}
 
@@ -420,13 +443,14 @@ inline void asteroid::RKF_step(){
 
 		for(int S = 0; S < RKFn; ++S){
 			double dtb = dt * RKFb_h[S];
-			dx_h[i] += dtb * kx_h[i + S * N];
-			dy_h[i] += dtb * ky_h[i + S * N];
-			dz_h[i] += dtb * kz_h[i + S * N];
+			int ii = i + S * N;
+			dx_h[i] += dtb * kx_h[ii];
+			dy_h[i] += dtb * ky_h[ii];
+			dz_h[i] += dtb * kz_h[ii];
 
-			dvx_h[i] += dtb * kvx_h[i + S * N];
-			dvy_h[i] += dtb * kvy_h[i + S * N];
-			dvz_h[i] += dtb * kvz_h[i + S * N];
+			dvx_h[i] += dtb * kvx_h[ii];
+			dvy_h[i] += dtb * kvy_h[ii];
+			dvz_h[i] += dtb * kvz_h[ii];
 //if(i < 2) printf("dx %d %d %g %g %g %g %g %g\n", S, i, dx_h[i], dy_h[i], dz_h[i], RKFb_h[S], kx_h[i + S * N], dt);
 		}
 
@@ -437,17 +461,25 @@ inline void asteroid::RKF_step(){
 	double snew = 10.0;
 
 	for(int i = 0; i < N; ++i){
-		double ym = 0.0;
-		ym = (fabs(x_h[i]) > ym) ? fabs(x_h[i]) : ym;
-		ym = (fabs(y_h[i]) > ym) ? fabs(y_h[i]) : ym;
-		ym = (fabs(z_h[i]) > ym) ? fabs(z_h[i]) : ym;
 
-		ym = (fabs(vx_h[i]) > ym) ? fabs(vx_h[i]) : ym;
-		ym = (fabs(vy_h[i]) > ym) ? fabs(vy_h[i]) : ym;
-		ym = (fabs(vz_h[i]) > ym) ? fabs(vz_h[i]) : ym;
+		//Hairer
+/*
+		double scalex  = RKF_atol + fmax(fabs(x_h[i]), fabs(x_h[i] + dx_h[i])) * RKF_rtol;
+		double scaley  = RKF_atol + fmax(fabs(y_h[i]), fabs(y_h[i] + dy_h[i])) * RKF_rtol;
+		double scalez  = RKF_atol + fmax(fabs(z_h[i]), fabs(z_h[i] + dz_h[i])) * RKF_rtol;
 
-		double isc = 1.0 / (RKF_atol + ym * RKF_rtol);
-		isc *= isc;
+		double scalevx = RKF_atol + fmax(fabs(vx_h[i]), fabs(vx_h[i] + dvx_h[i])) * RKF_rtol;
+		double scalevy = RKF_atol + fmax(fabs(vy_h[i]), fabs(vy_h[i] + dvy_h[i])) * RKF_rtol;
+		double scalevz = RKF_atol + fmax(fabs(vz_h[i]), fabs(vz_h[i] + dvz_h[i])) * RKF_rtol;
+*/
+
+		double scalex  = RKF_atol + fabs(x_h[i]) * RKF_rtol;
+		double scaley  = RKF_atol + fabs(y_h[i]) * RKF_rtol;
+		double scalez  = RKF_atol + fabs(z_h[i]) * RKF_rtol;
+
+		double scalevx = RKF_atol + fabs(vx_h[i]) * RKF_rtol;
+		double scalevy = RKF_atol + fabs(vy_h[i]) * RKF_rtol;
+		double scalevz = RKF_atol + fabs(vz_h[i]) * RKF_rtol;
 
 		//error estimation
 		double errorkx = 0.0;
@@ -468,23 +500,29 @@ inline void asteroid::RKF_step(){
 			errorkvx += f * kvx_h[ii];
 			errorkvy += f * kvy_h[ii];
 			errorkvz += f * kvz_h[ii];
-//if(i < 2) printf("error %d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, S, f, errorkx, errorky, errorkz, errorkvx, errorkvy, errorkvz);
 		}
 
 		double errork = 0.0;
-		errork += errorkx * errorkx * isc;
-		errork += errorky * errorky * isc;
-		errork += errorkz * errorkz * isc;
-		errork += errorkvx * errorkvx * isc;
-		errork += errorkvy * errorkvy * isc;
-		errork += errorkvz * errorkvz * isc;
+		errork += errorkx * errorkx / (scalex * scalex);
+		errork += errorky * errorky / (scaley * scaley);
+		errork += errorkz * errorkz / (scalez * scalez);
+		errork += errorkvx * errorkvx / (scalevx * scalevx);
+		errork += errorkvy * errorkvy / (scalevy * scalevy);
+		errork += errorkvz * errorkvz / (scalevz * scalevz);
 
 		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
 
 		double s = pow( 1.0  / errork, RKF_ee);
 
-		s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
-		s = (RKF_facmax < s) ? RKF_facmax : s;
+
+		//s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
+		//s = (RKF_facmax < s) ? RKF_facmax : s;
+
+		//time steps of power of two
+		if(s > 2.0) s = 2.0;
+		else if (s < 1.0) s = 0.5;
+		else s = 1;
+		
 
 		snew = (snew < s) ? snew : s;
 		snew_h[i] = snew;
@@ -548,6 +586,10 @@ int asteroid::loop(){
 	else{
 		outputFile = fopen(outputFilename, "wb");
 	}
+	
+	if(printdt == 1){
+		dtFile = fopen(dtFilename, "w");
+	}
 	printf("Start integration %.20g\n", timeStart + time_reference);
 
 	if(time_reference + time >= outStart){
@@ -556,7 +598,7 @@ int asteroid::loop(){
 	}
 
 	//for(int tt = 0; tt < 2; ++tt){
-	for(int tt = 0; tt < 1000000; ++tt){
+	for(int tt = 0; tt < MaxTimeSteps1; ++tt){
 
 		//dtmin is the minimum time step of an output intervall, only used for diagnostics
 		double dtmin = dt;
@@ -569,49 +611,59 @@ int asteroid::loop(){
 
 
 		//integrate until the next output interval
-		for(int ttt = 0; ttt < 1000000; ++ttt){
+		for(int ttt = 0; ttt < MaxTimeSteps2; ++ttt){
 
 			//refine last time step of interval to match output time
 			if(dts < 0){
 				if(time + dt < timett1){
+//printf("refine %.20g %.20g %.20g\n", time + dt, timett1, timett1 - time);
+//fprintf(dtFile, "refine %.20g %.20g %.20g\n", time + dt, timett1, timett1 - time);
 					dt1 = dt;
 					dt = (timett1 - time);
 					stop = 1;
-//printf("refine %.20g\n", timett1 - time);
 				}
 			}
 			else{
 				if(time + dt > timett1){
+//printf("refine %.20g %.20g %.20g\n", time + dt, timett1, timett1 - time);
+//fprintf(dtFile, "refine %.20g %.20g %.20g\n", time + dt, timett1, timett1 - time);
 					dt1 = dt;
 					dt = (timett1 - time);
 					stop = 1;
-//printf("refine %.20g\n", timett1 - time);
 				}
 
 			}
-			if(RKFn == 1){
+
+			//do a time step of length dt
+			if(strcmp(integratorName, "LF") == 0){
 				leapfrog_step();
+//				time = timeStart + timeStep * dt;
 			}
-			if(RKFn == 4){
+			if(strcmp(integratorName, "RK4") == 0){
 				RK_step();
 			}
-			if(RKFn == 9){
+			if(strcmp(integratorName, "RK7") == 0){
 				RK_step();
 			}
-			if(RKFn == 6){
+			if(strcmp(integratorName, "RKF45") == 0){
 				RKF_step();
+				snew = snew_h[0];
 			}
-			if(RKFn == 7){
+			if(strcmp(integratorName, "DP54") == 0){
 				RKF_step();
+				snew = snew_h[0];
 			}
-			if(RKFn == 13){
+			if(strcmp(integratorName, "RKF78") == 0){
 				RKF_step();
 				snew = snew_h[0];
 			}
 			
-
+	
 			if(stop == 0){
 				dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;
+				if(printdt == 1){
+					fprintf(dtFile, "%.20g %lld %.20g\n", time + time_reference, timeStep, dt);
+				}
 			}
 
 			if(time + time_reference > time1 || time + time_reference < time0){
@@ -633,13 +685,15 @@ int asteroid::loop(){
 				if(snew >= 1.0){
 					//set time step equal to the last accepted full time step
 					dt = dt1;
+//printf("reset %.20g\n", dt);
+//fprintf(dtFile, "reset %.20g\n", dt);
 					break;
 				}
 			}
 
-			if(ttt >= 1000000 - 1){
+			if(ttt >= MaxTimeSteps2 - 1){
 
-				printf("Error, time step loop did not finish\n");
+				printf("Error, time step loop2 did not finish\n");
 				return 0;
 			}
 
@@ -650,7 +704,15 @@ int asteroid::loop(){
 			printOutput(dtmin);
 		}
 
+		if(tt >= MaxTimeSteps1 - 1){
+
+			printf("Error, time step loop1 did not finish\n");
+			return 0;
+		}
 	}//end of tt loop
 	fclose(outputFile);
+	if(printdt == 1){
+		fclose(dtFile);
+	}
 	return 1;
 }

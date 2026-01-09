@@ -97,24 +97,26 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			if(strcmp(format, "cartesian heliocentric ecliptic") == 0){
-				Outorbital = 0;
 				Outecliptic = 1;
 				Outheliocentric = 1;
 			}
 			else if(strcmp(format, "cartesian heliocentric equatorial") == 0){
-				Outorbital = 0;
 				Outecliptic = 0;
 				Outheliocentric = 1;
 			}
 			else if(strcmp(format, "cartesian barycentric ecliptic") == 0){
-				Outorbital = 0;
 				Outecliptic = 1;
-				Outheliocentric = 0;
 			}
 			else if(strcmp(format, "cartesian barycentric equatorial") == 0){
-				Outorbital = 0;
 				Outecliptic = 0;
-				Outheliocentric = 0;
+			}
+			else if(strcmp(format, "cartesian geocentric ecliptic") == 0){
+				Outecliptic = 1;
+				Outgeocentric = 1;
+			}
+			else if(strcmp(format, "cartesian geocentric equatorial") == 0){
+				Outecliptic = 0;
+				Outgeocentric = 1;
 			}
 			else if(strcmp(format, "orbital heliocentric ecliptic") == 0){
 				Outorbital = 1;
@@ -177,7 +179,6 @@ int asteroid::readParam(int argc, char*argv[]){
 			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "Integrator =") == 0){
-			char integratorName[160];
 			er = fscanf (paramfile, "%s", integratorName);
 			if(er <= 0){
 				printf("Error: Integrator Name is not valid!\n");
@@ -200,6 +201,9 @@ int asteroid::readParam(int argc, char*argv[]){
 			}
 			else if(strcmp(integratorName, "RKF78") == 0){
 				RKFn = 13;
+			}
+			else if(strcmp(integratorName, "BS") == 0){
+				RKFn = 0;
 			}
 			else{
 				printf("Errof, Integrator not valid\n");
@@ -328,6 +332,14 @@ int asteroid::readParam(int argc, char*argv[]){
 			}
 			str = fgets(sp, 3, paramfile);
 		}
+		else if(strcmp(sp, "Print time steps =") == 0){
+			er = fscanf (paramfile, "%d", &printdt);
+			if(er <= 0){
+				printf("Error: Print time steps is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+		}
 
 		else{
 			printf("Error: param.dat file is not valid! %s\n", sp);
@@ -373,6 +385,7 @@ int asteroid::readParam(int argc, char*argv[]){
 	}
 
 	sprintf(infoFilename, "Info_%s.dat", name);
+	sprintf(dtFilename, "dt_%s.dat", name);
 
 
 
@@ -395,13 +408,13 @@ void asteroid::printInfo(){
 	fprintf(infoFile, "End Time = %.20g\n", timeEnd);
 	fprintf(infoFile, "Time Step = %.20g\n", dt);
 	fprintf(infoFile, "Output Interval = %g\n", outputInterval);
-	fprintf(infoFile, "Integrator RKFn = %d\n", RKFn);
+	fprintf(infoFile, "Integrator name = %s\n", integratorName);
 	fprintf(infoFile, "RKF absolute tolerance = %.20g\n", RKF_atol);
 	fprintf(infoFile, "RKF relative tolerance = %.20g\n", RKF_rtol);
 
-	fprintf(infoFile, "useGR correction = %d\n", useGR);
-	fprintf(infoFile, "useJ2 force = %d\n", useJ2);
-	fprintf(infoFile, "use non-gravitational force = %d\n", useNonGrav);
+	fprintf(infoFile, "Use GR correction = %d\n", useGR);
+	fprintf(infoFile, "Use J2 force = %d\n", useJ2);
+	fprintf(infoFile, "Use non-gravitational force = %d\n", useNonGrav);
 	fprintf(infoFile, "Use GPU = %d\n", USEGPU);
 	fprintf(infoFile, "Use binary output format = %d\n", outBinary);
 	//fprintf(infoFile, "useFIFO = %d\n", useFIFO);
@@ -615,6 +628,10 @@ void asteroid::printOutput(double dtmin){
 	for(int i = 0; i < N; ++i){
 		if(outBinary == 0){
 			fprintf(outputFile, "%.20g %lld %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, id_h[i], xout_h[i], yout_h[i], zout_h[i], vxout_h[i], vyout_h[i], vzout_h[i], dtmin);
+
+
+//fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, 2, xTable_h[2], yTable_h[2], zTable_h[2], vxTable_h[2], vyTable_h[2], vzTable_h[2], dtmin);
+//fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, 9, xTable_h[9], yTable_h[9], zTable_h[9], vxTable_h[9], vyTable_h[9], vzTable_h[9], dtmin);
 		}
 		else{
 			long long int id = id_h[i];

@@ -17,6 +17,7 @@ public:
 	FILE *perturbersFile;
 	FILE *outputFile;
 	FILE *infoFile;
+	FILE *dtFile;
 
 	char name[140];
 	char inputFilename[160];
@@ -24,6 +25,10 @@ public:
 	char perturbersFileName[240]; // 160 + 80
 	char outputFilename[160];
 	char infoFilename[160];
+	char dtFilename[160];
+
+	char integratorName[160];
+
 
 	int ICformat = 0;			//Format of the initial conditions file, 0 = "text" or 1 = "binary"
 	int ICorbital = 0;			//Coordinate system of initial conditions, 0 = cartesian, 1 = orbital
@@ -32,6 +37,7 @@ public:
 	int Outorbital = 0;			//Coordinate system of output, 0 = cartesian, 1 = orbital
 	int Outecliptic = 0;			//Coordinate system of output, 1 = ecliptic, 0 = equatorial
 	int Outheliocentric = 0;		//Coordinate system of output, 1 = heliocentric, 0 = barycentric
+	int Outgeocentric = 0;			//Coordinate system of output, 1 = geocentric, 0 = barycentric
 	double Obliquity = 84381.448;		//Obliquity of ecliptic IAU76/J2000	in arcsec
 	//double Obliquity = 84381.3998;		//Obliquity of ecliptic IAU76/J2000	in arcsec
 
@@ -51,6 +57,8 @@ public:
 	double time;				//integration time
 	long long int timeStep = 0ll;
 	int stop;				//used to refine last time step
+	int MaxTimeSteps1 = 1e7;		//Maximum number of time steps in output interval loop
+	int MaxTimeSteps2 = 1e8;		//Maximum number of time steps per integration loop
 
 	double AUtokm;				//AU to km
 	double EM;				//Earth to moon mass ratio
@@ -65,6 +73,7 @@ public:
 	int useNonGrav = 1;
 	int outBinary = 0;
 	int cometFlag = 0;
+	int printdt = 0;
 
 	double nonGrav_alpha = 0.1112620426;	//nongrav normalizing factor ALN
 	double nonGrav_nk = 4.6142;		//nongrav model constant NK
@@ -204,6 +213,7 @@ public:
 	void EquatorialtoEcliptic(double *, double *, double *, double *, double *, double *);
 	void HelioToBary(double *, double *, double *, double *, double *, double *);
 	void BaryToHelio(double *, double *, double *, double *, double *, double *);
+	void BaryToGeo(double *, double *, double *, double *, double *, double *);
 
 	inline void update_Chebyshev(double);
 	inline void update_perturbers(double);

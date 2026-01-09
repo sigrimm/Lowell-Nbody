@@ -27,6 +27,7 @@ int main(int argc, char*argv[]){
 	//----------------------------------------------------------
 	sprintf(A.perturbersFilePath, "%s", "../readChebyshev/");
 	sprintf(A.name, "%s", "test");
+	sprintf(A.integratorName, "%s", "RK4");
 	//----------------------------------------------------------
 
 	int er = 0;
@@ -106,19 +107,19 @@ int main(int argc, char*argv[]){
 #endif
 	
 	//set integrator properties
-	if(A.RKFn == 4){
+	if(strcmp(A.integratorName, "RK4") == 0){
 		A.setRK4();
 	}
-	if(A.RKFn == 9){
+	if(strcmp(A.integratorName, "RK7") == 0){
 		A.setRK7();
 	}
-	if(A.RKFn == 6){
+	if(strcmp(A.integratorName, "RKF45") == 0){
 		A.setRKF45();
 	}
-	if(A.RKFn == 7){
+	if(strcmp(A.integratorName, "DP54") == 0){
 		A.setDP54();
 	}
-	if(A.RKFn == 13){
+	if(strcmp(A.integratorName, "RKF78") == 0){
 		A.setRKF78();
 	}
 
@@ -132,7 +133,6 @@ int main(int argc, char*argv[]){
 		A.inputFile = fopen(A.inputFilename, "r");
 		if(A.ICorbital == 0){
 			er = A.readIC();
-printf("er %d\n", er);
 		}
 		else if(A.ICorbital == 1){
 			er = A.readICkeplerian();

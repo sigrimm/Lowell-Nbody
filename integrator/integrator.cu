@@ -644,91 +644,6 @@ __global__ void RK_step2_kernel(double *xTable_d, double *yTable_d, double *zTab
 	}
 }
 
-// Runge Kutta step with fixed time step
-// Every body runs on a sepparate thread block. Gravity calculation is spread along threads in the block and reuced in registers
-// Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void RK_stage_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *ax_d, double *ay_d, double *az_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double time, long long int timeStep, const double dt, const int RKFn, const int Nperturbers, const int N, const int S){
-
-	int id = blockIdx.x;	//particle index
-
-//if(id < Nperturbers){
-//printf("p %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", id, time + RKFc_c[S] * dt, xt_s[id], yt_s[id], zt_s[id], vxt_s[id], vyt_s[id], vzt_s[id]);
-//}
-
-	if(id < N){
-
-		double xti = x_d[id];
-		double yti = y_d[id];
-		double zti = z_d[id];
-
-		double vxti = vx_d[id];
-		double vyti = vy_d[id];
-		double vzti = vz_d[id];
-
-		double ax = 0.0;
-		double ay = 0.0;
-		double az = 0.0;
-
-		for(int s = 0; s < S; ++s){
-			double dtaa = dt * RKFa_c[S * RKFn + s];
-			int ii = id + s * N;
-			xti  += dtaa * kx_d[ii];
-			yti  += dtaa * ky_d[ii];
-			zti  += dtaa * kz_d[ii];
-			vxti += dtaa * kvx_d[ii];
-			vyti += dtaa * kvy_d[ii];
-			vzti += dtaa * kvz_d[ii];
-//printf("update 2 %d %d %g %g %g %g %g %g\n", S, id, xti, yti, zti, RKFa_c[S * RKFn + s], kx_d[s], dt);
-
-		}
-
-		// ----------------------------------------------------------------------------
-		//compute forces
-
-		//heliocentric coordinates
-		int iS = 10 * RKFn + S;
-		double xih = xti - xTable_d[iS];
-		double yih = yti - yTable_d[iS];
-		double zih = zti - zTable_d[iS];
-
-		double vxih = vxti - vxTable_d[iS];
-		double vyih = vyti - vyTable_d[iS];
-		double vzih = vzti - vzTable_d[iS];
-
-		//r is used in multiple forces, so reuse it
-		double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
-		double r = sqrt(rsq);
-
-		if(cometFlag_c > 0 && S == 0){
-			if(id == 0){
-				Tsave_d[timeStep] = time;
-			}
-			Rsave_d[id * Rbuffersize_c + timeStep] = r;
-		}
-
-		//Earth centric coordinates
-		int iE = 2 * RKFn + S;
-		double xiE = xti - xTable_d[iE];
-		double yiE = yti - yTable_d[iE];
-		double ziE = zti - zTable_d[iE];
-
-		if(useNonGrav_c == 1){
-			NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_d[id], A2_d[id], A3_d[id], r, ax, ay, az);
-		}
-		if(useGR_c == 1){
-			GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_d[10]);
-		}
-		if(useJ2_c == 1){
-			J2(xiE, yiE, ziE, ax, ay, az, GM_d[2]);
-		}
-		ax_d[id] = ax;
-		ay_d[id] = ay;
-		az_d[id] = az;
-
-	}
-
-}
-
 
 //Runge Kutta Fehlberg step with adaptive time step
 // Every body runs on a thread
@@ -794,7 +709,6 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 	for(int S = 0; S < RKFn; ++S){
 
 		// ----------------------------------------------------------------------------
-		//Update the Chebyshev coefficients if necessary
                 //Read the perturbers position
 		if(itx < Nperturbers){
 			int ii = itx * RKFn + S;
@@ -930,17 +844,13 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 
 		//compute integration error
 
-		double ym = 0.0;
-		ym = (fabs(x0) > ym) ? fabs(x0) : ym;
-		ym = (fabs(y0) > ym) ? fabs(y0) : ym;
-		ym = (fabs(z0) > ym) ? fabs(z0) : ym;
+		double scalex  = RKF_atol_c + fabs(xti) * RKF_rtol_c;
+		double scaley  = RKF_atol_c + fabs(yti) * RKF_rtol_c;
+		double scalez  = RKF_atol_c + fabs(zti) * RKF_rtol_c;
 
-		ym = (fabs(vx0) > ym) ? fabs(vx0) : ym;
-		ym = (fabs(vy0) > ym) ? fabs(vy0) : ym;
-		ym = (fabs(vz0) > ym) ? fabs(vz0) : ym;
-
-		double isc = 1.0 / (RKF_atol_c + ym * RKF_rtol_c);
-		isc *= isc;
+		double scalevx = RKF_atol_c + fabs(vxti) * RKF_rtol_c;
+		double scalevy = RKF_atol_c + fabs(vyti) * RKF_rtol_c;
+		double scalevz = RKF_atol_c + fabs(vzti) * RKF_rtol_c;
 
 		//error estimation
 		double errorkx = 0.0;
@@ -967,43 +877,32 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 		}
 
 		double errork = 0.0;
-
-		errork += __dmul_rn(errorkx, errorkx) * isc;
-		errork += __dmul_rn(errorky, errorky) * isc;
-		errork += __dmul_rn(errorkz, errorkz) * isc;
-		errork += __dmul_rn(errorkvx, errorkvx) * isc;
-		errork += __dmul_rn(errorkvy, errorkvy) * isc;
-		errork += __dmul_rn(errorkvz, errorkvz) * isc;
+		errork += errorkx * errorkx / (scalex * scalex);
+		errork += errorky * errorky / (scaley * scaley);
+		errork += errorkz * errorkz / (scalez * scalez);
+		errork += errorkvx * errorkvx / (scalevx * scalevx);
+		errork += errorkvy * errorkvy / (scalevy * scalevy);
+		errork += errorkvz * errorkvz / (scalevz * scalevz);
 
 		errork = sqrt(errork / 6.0);    //6 is the number of dimensions
 
 		double s = pow( 1.0  / errork, RKF_ee_c);
 //printf("%.20g %.20g\n", errork, s);
 
-		s = (RKF_fac_c * s > RKF_facmin_c) ? RKF_fac_c * s : RKF_facmin_c;
-		s = (RKF_facmax_c < s) ? RKF_facmax_c : s;
+		//s = (RKF_fac_c * s > RKF_facmin_c) ? RKF_fac_c * s : RKF_facmin_c;
+		//s = (RKF_facmax_c < s) ? RKF_facmax_c : s;
+
+		//time steps of power of two
+		if(s > 2.0) s = 2.0;
+		else if (s < 1.0) s = 0.5;
+		else s = 1;
+
 
 		snew = (snew < s) ? snew : s;
 
 		snew_d[id] = snew;
 //printf("id %d %g %g\n", id, s, snew);
 	}
-/*
-	__syncthreads();
-
-	if(snew >= 1.0){
-		//accept step
-		if(id < N){
-			x_d[id] += dx;
-			y_d[id] += dy;
-			z_d[id] += dz;
-
-			vx_d[id] += dvx;
-			vy_d[id] += dvy;
-			vz_d[id] += dvz;
-		}
-	}
-*/
 }
 
 // Runge Kutta Fehlberg step with adaptive time step
@@ -1079,7 +978,6 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 	for(int S = 0; S < RKFn; ++S){
 
 		// ----------------------------------------------------------------------------
-		//Update the Chebyshev coefficients if necessary
                 //Read the perturbers position
 		if(itx < Nperturbers){
 			int ii = itx * RKFn + S;
@@ -1227,18 +1125,13 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 
 
 		//compute integration error
+		double scalex  = RKF_atol_c + fabs(xti) * RKF_rtol_c;
+		double scaley  = RKF_atol_c + fabs(yti) * RKF_rtol_c;
+		double scalez  = RKF_atol_c + fabs(zti) * RKF_rtol_c;
 
-		double ym = 0.0;
-		ym = (fabs(x0) > ym) ? fabs(x0) : ym;
-		ym = (fabs(y0) > ym) ? fabs(y0) : ym;
-		ym = (fabs(z0) > ym) ? fabs(z0) : ym;
-
-		ym = (fabs(vx0) > ym) ? fabs(vx0) : ym;
-		ym = (fabs(vy0) > ym) ? fabs(vy0) : ym;
-		ym = (fabs(vz0) > ym) ? fabs(vz0) : ym;
-
-		double isc = 1.0 / (RKF_atol_c + ym * RKF_rtol_c);
-		isc *= isc;
+		double scalevx = RKF_atol_c + fabs(vxti) * RKF_rtol_c;
+		double scalevy = RKF_atol_c + fabs(vyti) * RKF_rtol_c;
+		double scalevz = RKF_atol_c + fabs(vzti) * RKF_rtol_c;
 
 		//error estimation
 		double errorkx = 0.0;
@@ -1262,41 +1155,31 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 		}
 
 		double errork = 0.0;
-		errork += __dmul_rn(errorkx, errorkx) * isc;
-		errork += __dmul_rn(errorky, errorky) * isc;
-		errork += __dmul_rn(errorkz, errorkz) * isc;
-		errork += __dmul_rn(errorkvx, errorkvx) * isc;
-		errork += __dmul_rn(errorkvy, errorkvy) * isc;
-		errork += __dmul_rn(errorkvz, errorkvz) * isc;
+		errork += errorkx * errorkx / (scalex * scalex);
+		errork += errorky * errorky / (scaley * scaley);
+		errork += errorkz * errorkz / (scalez * scalez);
+		errork += errorkvx * errorkvx / (scalevx * scalevx);
+		errork += errorkvy * errorkvy / (scalevy * scalevy);
+		errork += errorkvz * errorkvz / (scalevz * scalevz);
 
 		errork = sqrt(errork / 6.0);    //6 is the number of dimensions
 
 		double s = pow( 1.0  / errork, RKF_ee_c);
 
-		s = (RKF_fac_c * s > RKF_facmin_c) ? RKF_fac_c * s : RKF_facmin_c;
-		s = (RKF_facmax_c < s) ? RKF_facmax_c : s;
+		//s = (RKF_fac_c * s > RKF_facmin_c) ? RKF_fac_c * s : RKF_facmin_c;
+		//s = (RKF_facmax_c < s) ? RKF_facmax_c : s;
+
+		//time steps of power of two
+		if(s > 2.0) s = 2.0;
+		else if (s < 1.0) s = 0.5;
+		else s = 1;
+
 
 		snew = (snew < s) ? snew : s;
 
 		snew_d[id] = snew;
 //printf("id %d %g %g\n", id, s, snew);
 	}
-/*
-	__syncthreads();
-
-	if(snew >= 1.0){
-		//accept step
-		if(id < N){
-			x_d[id] += dx;
-			y_d[id] += dy;
-			z_d[id] += dz;
-
-			vx_d[id] += dvx;
-			vy_d[id] += dvy;
-			vz_d[id] += dvz;
-		}
-	}
-*/
 }
 
 __global__ void computeError_d1_kernel(double *snew_d, double *ssum_d, const int N){
@@ -1613,7 +1496,7 @@ __device__ void CartToKepGPU(double *xx_d, double *yy_d, double *zz_d, double *v
 }
 
 
-__global__ void convertOutput_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xout_d, double *yout_d, double *zout_d, double *vxout_d, double *vyout_d, double *vzout_d, double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, const int RKFn, const int N, const int Outecliptic, const int Outheliocentric, const int Outorbital, const double Obliquity, double Msun){
+__global__ void convertOutput_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *xout_d, double *yout_d, double *zout_d, double *vxout_d, double *vyout_d, double *vzout_d, double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, const int RKFn, const int N, const int Outecliptic, const int Outheliocentric, const int Outgeocentric, const int Outorbital, const double Obliquity, double Msun){
 
 	int id = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -1636,6 +1519,19 @@ __global__ void convertOutput_kernel(double *x_d, double *y_d, double *z_d, doub
 		//Convert Barycentric coordinates to HelioCentric coordinates
 		if(id < N){
 			int ii = 10 * RKFn;
+			xout_d[id] -= xTable_d[ii];
+			yout_d[id] -= yTable_d[ii];
+			zout_d[id] -= zTable_d[ii];
+
+			vxout_d[id] -= vxTable_d[ii];
+			vyout_d[id] -= vyTable_d[ii];
+			vzout_d[id] -= vzTable_d[ii];
+		}
+	}
+	if(Outgeocentric == 1){
+		//Convert Barycentric coordinates to geoCentric coordinates
+		if(id < N){
+			int ii = 2 * RKFn;
 			xout_d[id] -= xTable_d[ii];
 			yout_d[id] -= yTable_d[ii];
 			zout_d[id] -= zTable_d[ii];
@@ -1713,7 +1609,9 @@ int asteroid::loop(){
 	else{
 		outputFile = fopen(outputFilename, "wb");
 	}
-
+	if(printdt == 1){
+		dtFile = fopen(dtFilename, "w");
+	}
 	printf("Start integration\n");
 
 	if(time_reference + time >= outStart){
@@ -1721,13 +1619,13 @@ int asteroid::loop(){
 			update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 
 		}
-		convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Outorbital, Obliquity, GM_h[10]);
+		convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Outgeocentric, Outorbital, Obliquity, GM_h[10]);
 		copyOutput();
 		printOutput(dt);
 	}
 
 	//for(int tt = 0; tt < 2; ++tt){
-	for(int tt = 0; tt < 1000000; ++tt){
+	for(int tt = 0; tt < MaxTimeSteps1; ++tt){
 
 		//dtmin is the minimum time step of an output intervall, only used for diagnostics
 		double dtmin = dt;
@@ -1740,7 +1638,7 @@ int asteroid::loop(){
 //printf("integrate %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1);
 
 		//integrate until the next output interval
-		for(int ttt = 0; ttt < 1000000; ++ttt){
+		for(int ttt = 0; ttt < MaxTimeSteps2; ++ttt){
 
 			//refine last time step of interval to match output time
 			if(dts < 0){
@@ -1761,7 +1659,7 @@ int asteroid::loop(){
 
 			}
 
-			if(RKFn == 1){
+			if(strcmp(integratorName, "LF") == 0){
 				leapfrog_stepA_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, N, dt);
 				time += dt * 0.5;
 				//Needs at least Nperturbers threads per block
@@ -1772,7 +1670,7 @@ int asteroid::loop(){
 				time += dt * 0.5;
 				++timeStep;
 			}
-			if(RKFn == 4 || RKFn == 9){
+			if(strcmp(integratorName, "RK4") == 0 || strcmp(integratorName, "RK7") == 0 ){
 				//Needs at least Nperturbers threads per block
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 	
@@ -1784,16 +1682,11 @@ int asteroid::loop(){
 					RK_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, time, timeStep, dt, RKFn, Nperturbers, N);
 				}
 
-//				for(int S = 0; S < RKFn; ++S){
-
-//					RK_stage_kernel <<< (N + 255) / 256 , 256 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d,vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, ax_d, ay_d, az_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, time, dt, RKFn, Nperturbers, N, S);
-//				}
-
 
 				time += dt;
 				++timeStep;
 			}
-			if(RKFn == 6 || RKFn == 7 || RKFn == 13){
+			if(strcmp(integratorName, "RKF45") == 0 || strcmp(integratorName, "DP54") == 0 || strcmp(integratorName, "RKF78") == 0){
 				//Needs at least Nperturbers threads per block
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 
@@ -1835,8 +1728,12 @@ int asteroid::loop(){
 
 			}
 
+
 			if(stop == 0){
 				dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;
+				if(printdt == 1){
+					fprintf(dtFile, "%.20g %lld %g\n", time, timeStep, dt);
+				}
 			}
 
 			if(time + time_reference > time1 || time + time_reference < time0){
@@ -1865,9 +1762,9 @@ int asteroid::loop(){
 				}
 			}
 
-			if(ttt >= 1000000 - 1){
+			if(ttt >= MaxTimeSteps2 - 1){
 
-				printf("Error, time step loop did not finish\n");
+				printf("Error, time step loop2 did not finish\n");
 				return 0;
 			}
 
@@ -1877,12 +1774,21 @@ int asteroid::loop(){
 			if(Outheliocentric == 1){
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 			}
-			convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Outorbital, Obliquity, GM_h[10]);
+			convertOutput_kernel <<< (N + 255) / 256 , 256 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, xout_d, yout_d, zout_d, vxout_d, vyout_d, vzout_d, xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, RKFn, N, Outecliptic, Outheliocentric, Outgeocentric, Outorbital, Obliquity, GM_h[10]);
 			copyOutput();
 			printOutput(dtmin);
 		}
 
+		if(tt >= MaxTimeSteps1 - 1){
+
+			printf("Error, time step loop2 did not finish\n");
+			return 0;
+		}
+
 	}//end of tt loop
 	fclose(outputFile);
+	if(printdt == 1){
+		fclose(dtFile);
+	}
 	return 1;
 }

@@ -1,41 +1,44 @@
+CFLAGS = -O3
+
+
 all: integrator integratorGPU
 
 integrator: main.o asteroid.o RKF.o integrator.o read.o convert.o
-	g++ -g -o integrator main.o asteroid.o RKF.o integrator.o read.o convert.o
+	g++ $(CFLAGS) -o integrator main.o asteroid.o RKF.o integrator.o read.o convert.o
 
 main.o: main.cpp asteroid.h 
-	g++ -g -c -O3 -DUSEGPU=0 -o main.o main.cpp
+	g++ -c $(CFLAGS) -DUSEGPU=0 -o main.o main.cpp
 
 integrator.o: integrator.cpp asteroid.h Chebyshev.h force.h
-	g++ -g -c -O3 -o integrator.o integrator.cpp
+	g++ -c $(CFLAGS) -o integrator.o integrator.cpp
 
 RKF.o: RKF.cpp asteroid.h
-	g++ -g -c -O3 -o RKF.o RKF.cpp
+	g++ -c $(CFLAGS) -o RKF.o RKF.cpp
 
 asteroid.o: asteroid.cpp asteroid.h
-	g++ -g -c -O3 -DUSEGPU=0 -o asteroid.o asteroid.cpp
+	g++ -c $(CFLAGS) -DUSEGPU=0 -o asteroid.o asteroid.cpp
 
 read.o: read.cpp asteroid.h
-	g++ -g -c -O3 -o read.o read.cpp
+	g++ -c $(CFLAGS) -o read.o read.cpp
 
 convert.o: convert.cpp asteroid.h
-	g++ -g -c -O3 -o convert.o convert.cpp
+	g++ -c $(CFLAGS) -o convert.o convert.cpp
 
 
 integratorGPU: mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o read.o convert.o
 	nvcc -o integratorGPU mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o read.o convert.o
 
 asteroid1.o: asteroid.cpp asteroid.h
-	nvcc -g -c -O3 -DUSEGPU=1 -o asteroid1.o asteroid.cpp
+	nvcc -c $(CFLAGS) -DUSEGPU=1 -o asteroid1.o asteroid.cpp
 
 mainGPU.o: main.cpp asteroid.h
-	nvcc -g -c -O3 -DUSEGPU=1 -o mainGPU.o main.cpp
+	nvcc -c $(CFLAGS) -DUSEGPU=1 -o mainGPU.o main.cpp
 
 integratorGPU.o: integrator.cu asteroid.h ChebyshevGPU.h forceGPU.h
-	nvcc -g -c -O3 -o integratorGPU.o integrator.cu
+	nvcc -c $(CFLAGS) -o integratorGPU.o integrator.cu
 
 asteroidGPU.o: asteroid.cu asteroid.h
-	nvcc -c -O3 -o asteroidGPU.o asteroid.cu
+	nvcc -c $(CFLAGS) -o asteroidGPU.o asteroid.cu
 
 clean:
 	rm *.o

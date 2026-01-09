@@ -122,7 +122,46 @@ inline void asteroid::J2(double xE, double yE, double zE, double &axi, double &a
 }
 
 inline void asteroid::Gravity(double xi, double yi, double zi, double *xTable_h, double *yTable_h, double *zTable_h, double &axi, double &ayi, double &azi, int i){
+
+/*
+//double k2 = (0.01720209895 * 0.01720209895);
+double k2 = 0.017202098949957226 * 0.017202098949957226;	//Larrys value
+
+//Masses from Larry:
+GM_h[0] = 0.1660120825458948384934E-06 * k2;
+GM_h[1] = 0.2447838287796943826673E-05 * k2;
+GM_h[2] = 0.3003489615464968403002E-05 * k2;
+GM_h[3] = 0.3227156082932277418834E-06 * k2;
+GM_h[4] = 0.9547919099414246997537E-03 * k2;
+GM_h[5] = 0.2858856700245945544128E-03 * k2;
+GM_h[6] = 0.4366249613222119918066E-04 * k2;
+GM_h[7] = 0.5151383772654273671045E-04 * k2;
+GM_h[8] = 0.7350478973158631145947E-08 * k2;
+GM_h[9] = 0.3694303349765110923667E-07 * k2;
+GM_h[10] = 1.0 * k2;
+
+
+//masses from de440 zip package AST_const.m
+// masse are in m^3/s^2 need to be converted in AU^3/day^2
+double AU = 149597870699.999988; //in m 
+double day = 60 * 60 * 24.0;
+double f = day * day / (AU * AU * AU);
+
+GM_h[2]   = f * 398600.435507e9;
+GM_h[10]  = f * 132712440041.279419e9;
+GM_h[9]   = f * 4902.800118e9;
+GM_h[0]   = f * 22031.868551e9;
+GM_h[1]   = f * 324858.592000e9;
+GM_h[3]   = f * 42828.375816e9;
+GM_h[4]   = f * 126712764.100000e9;
+GM_h[5]   = f * 37940584.841800e9;
+GM_h[6]   = f * 5794556.400000e9;
+GM_h[7]   = f * 6836527.100580e9;
+GM_h[8]   = f * 975.500000e9;
+*/
+
 	for(int pp = 0; pp < Nperturbers; ++pp){
+
 
 		int p = pp + 11;
 		if(pp == 16) p = 8;	//Pluto
@@ -137,11 +176,37 @@ inline void asteroid::Gravity(double xi, double yi, double zi, double *xTable_h,
 		if(pp == 25) p = 4;	//Jupiter
 		if(pp == 26) p = 10;	//Sun
 
+
 /*
 int p = pp;
-if(pp > 8) p = pp + 2;
-if(pp == 25) p = 9;
-if(pp == 26) p = 10;
+//order from Larry
+if(pp ==  0) p = 0;	//Mercury
+if(pp ==  1) p = 1;	//Venus
+if(pp ==  2) p = 2;	//Earth
+if(pp ==  3) p = 3;	//Mars
+if(pp ==  4) p = 4;	//Jupiter
+if(pp ==  5) p = 5;	//Saturn
+if(pp ==  6) p = 6;	//Uranus
+if(pp ==  7) p = 7;	//Neptune
+if(pp ==  8) p = 8;	//Pluto
+if(pp ==  9) p = 11 + 1;	 //Ceres
+if(pp == 10) p = 11 + 11;	 //Pallas
+if(pp == 11) p = 11 + 10;	 //Juno
+if(pp == 12) p = 11 + 15;	 //Vesta
+if(pp == 13) p = 11 + 7;	 //Hygiea
+if(pp == 14) p = 11 + 4;	 //Eunomia
+if(pp == 15) p = 11 + 5;	 //Euphrosyne
+if(pp == 16) p = 11 + 6;	 //Europa
+if(pp == 17) p = 11 + 3;	 //Davida
+if(pp == 18) p = 11 + 8;	 //Interamnia
+if(pp == 19) p = 11 + 12;	 //Psyche
+if(pp == 20) p = 11 + 2;	 //Cybele
+if(pp == 21) p = 11 + 14;	 //Thisbe
+if(pp == 22) p = 11 + 0;	 //Camilla
+if(pp == 23) p = 11 + 9;	 //Iris
+if(pp == 24) p = 11 + 13;	 //Sylvia
+if(pp == 25) p = 9;	//Moon
+if(pp == 26) p = 10;	//Sun
 */
 
 		double dx = xi - xTable_h[p];
@@ -157,11 +222,12 @@ if(pp == 26) p = 10;
 		ayi -= s * dy;
 		azi -= s * dz;
 
-//printf("position %d %d %25.20g %25.20g %25.20g\n", i, p, xTable_h[p], yTable_h[p], zTable_h[p]); 
+//printf("mass %.20g %.20g | %.20g %.20g\n", k2, GM_h[10], GM_h[p], GM_h[p] / GM_h[10]);
+
+// /*if(p == 2)*/ printf("position %.20g %d %d %25.20g %25.20g %25.20g | %25.20g\n", time, i, p, xTable_h[p], yTable_h[p], zTable_h[p], GM_h[10] / GM_h[p]); 
 
 //printf("distance %d %d %25.20g %25.20g %25.20g %25.20g\n", i, p, dx, dy, dz, r);
 
-//printf("Direct a %d %d %25.20g %25.20g %25.20g\n", i, p,  s * dx, s * dy, s * dz);
 //printf("Direct a %d %d %25.20g %25.20g %25.20g\n", i, p,  axi, ayi, azi);
 
 	}
