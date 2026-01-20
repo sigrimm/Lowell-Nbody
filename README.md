@@ -78,16 +78,21 @@ Every record contains
     - cartesian heliocentric equatorial
     - cartesian barycentric ecliptic
     - cartesian barycentric equatorial
+    - cartesian geocentric ecliptic
+    - cartesian geocentric equatorial
     - orbital heliocentric ecliptic
   - Path to perturbers file, string
   - 
 allowed integrators are:
 
-  - LF, leapfrog 
-  - RK4, Runge Kutta 4, fixed time steps
-  - RKF45, Runge Kutta Fehlberg 45, adaptive time steps
-  - DP54, Runge Kutta Fehlberg 54, adaptive time steps
-  - RKF78, Runge Kutta Fehlberg 78, adaptive time steps
+  - LF: leapfrog. Fixed time steps
+  - IMM: Implicit Midpoint Method. Fixed time steps
+  - RK4: Runge Kutta order 4. Fixed time steps
+  - RK7: Runge Kutta order 7. Fixed time steps
+  - RKF45: Runge Kutta Fehlberg order 4,5. Adaptive time steps
+  - DP54: Runge Kutta Fehlberg 5,4. Adaptive time steps
+  - RKF78: Runge Kutta Fehlberg 7,8, Adaptive time steps
+  - BS: Bulirsh Stoer method, Adaptive time steps
 
 ## Step 3, set initial conditions ##
 

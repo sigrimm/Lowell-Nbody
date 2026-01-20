@@ -166,6 +166,14 @@ public:
 	double *vyt_h;
 	double *vzt_h;
 
+	double *xp_h;
+	double *yp_h;
+	double *zp_h;
+
+	double *vxp_h;
+	double *vyp_h;
+	double *vzp_h;
+
 	double *dx_h, *dx_d;
 	double *dy_h, *dy_d;
 	double *dz_h, *dz_d;
@@ -226,6 +234,8 @@ public:
 	inline void leapfrog_step();
 	inline void RK_step();
 	inline void RKF_step();
+	inline void BS_step();
+	inline void IMM_step();
 
 	void setRK4();
 	void setRK7();

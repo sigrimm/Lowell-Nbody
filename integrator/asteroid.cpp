@@ -203,7 +203,10 @@ int asteroid::readParam(int argc, char*argv[]){
 				RKFn = 13;
 			}
 			else if(strcmp(integratorName, "BS") == 0){
-				RKFn = 0;
+				RKFn = 1;
+			}
+			else if(strcmp(integratorName, "IMM") == 0){
+				RKFn = 1;
 			}
 			else{
 				printf("Errof, Integrator not valid\n");
@@ -561,6 +564,14 @@ int asteroid::allocate(){
 	vxt_h = (double*)malloc(N * sizeof(double));
 	vyt_h = (double*)malloc(N * sizeof(double));
 	vzt_h = (double*)malloc(N * sizeof(double));
+
+	xp_h = (double*)malloc(N * sizeof(double));
+	yp_h = (double*)malloc(N * sizeof(double));
+	zp_h = (double*)malloc(N * sizeof(double));
+
+	vxp_h = (double*)malloc(N * sizeof(double));
+	vyp_h = (double*)malloc(N * sizeof(double));
+	vzp_h = (double*)malloc(N * sizeof(double));
 
 	dx_h = (double*)malloc(N * sizeof(double));
 	dy_h = (double*)malloc(N * sizeof(double));
