@@ -260,7 +260,7 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 				p_offset1[i] = dataSize;
 
 #if def_printT == 1
-				fprintf(outfileT, "%d %d %d %d %g\n", id[i], nChebyshev[i], p_offset0[i] + planetoffset, p_offset1[i] + planetoffset, GM[i]);
+				fprintf(outfileT, "%d %d %d %d %.30g\n", id[i], nChebyshev[i], p_offset0[i] + planetoffset, p_offset1[i] + planetoffset, GM[i]);
 #endif
 				fwrite(&id[i], sizeof(int), 1, outfile);
 				fwrite(&nChebyshev[i], sizeof(int), 1, outfile);

@@ -222,15 +222,8 @@ if(pp == 26) p = 10;	//Sun
 		ayi -= s * dy;
 		azi -= s * dz;
 
-//printf("mass %.20g %.20g | %.20g %.20g\n", k2, GM_h[10], GM_h[p], GM_h[p] / GM_h[10]);
 
-// /*if(p == 2)*/ printf("position %.20g %d %d %25.20g %25.20g %25.20g | %25.20g\n", time, i, p, xTable_h[p], yTable_h[p], zTable_h[p], GM_h[10] / GM_h[p]); 
-
-//printf("distance %d %d %25.20g %25.20g %25.20g %25.20g\n", i, p, dx, dy, dz, r);
-
-//printf("Direct a %d %d %25.20g %25.20g %25.20g\n", i, p,  axi, ayi, azi);
+//printf("position %d %d %25.20g %25.20g %25.20g | %25.20g\n", i, p, xTable_h[p], yTable_h[p], zTable_h[p], xi); 
 
 	}
-//printf("acc %d %.30g %.30g %.30g\n", i, axi, ayi, azi);
-
 }

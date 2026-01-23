@@ -145,6 +145,7 @@ int asteroid::copyIC(){
 	cudaMemcpy(A2_d, A2_h, N * sizeof(double), cudaMemcpyHostToDevice);
 	cudaMemcpy(A3_d, A3_h, N * sizeof(double), cudaMemcpyHostToDevice);
 
+	cudaMemcpy(snew_d, snew_h, N * sizeof(double), cudaMemcpyHostToDevice);
 	cudaMemcpy(id_d, id_h, N * sizeof(long long int), cudaMemcpyHostToDevice);
 
 	cudaDeviceSynchronize();

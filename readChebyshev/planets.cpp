@@ -433,7 +433,7 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 		p_offset1[i] = dataSize;
 		printf("planet offset %d %d %d %d %d %d\n", i, nSub[i], nChebyshev[i], p_offset0[i], p_offset1[i], nSub[i] *  (nChebyshev[i] * 3 + 2) * dblock);
 #if def_printT == 1
-		fprintf(outfileT, "%d %d %d %d %g\n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i], GM[i]);
+		fprintf(outfileT, "%d %d %d %d %.30g\n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i], GM[i]);
 #endif
 //printf("%d %d %d %d %.20g\n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i], GM[i]);
 		fwrite(&id[i], sizeof(int), 1, outfile);

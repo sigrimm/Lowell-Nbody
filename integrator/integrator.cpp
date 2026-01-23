@@ -233,15 +233,13 @@ inline void asteroid::IMM_step(){
 
 	for(int k = 0; k < 30; ++k){
 
-		for(int i = 0; i < N; ++i){
-			ax_h[i] = 0.0;
-			ay_h[i] = 0.0;
-			az_h[i] = 0.0;
-		}
-
 		// ----------------------------------------------------------------------------
 		//compute forces
 		for(int i = 0; i < N; ++i){
+
+			ax_h[i] = 0.0;
+			ay_h[i] = 0.0;
+			az_h[i] = 0.0;
 
 			//heliocentric coordinates
 			double xih = xt_h[i] - xTable_h[10];
@@ -314,7 +312,7 @@ inline void asteroid::IMM_step(){
 			break;
 		}
 		if(k >= 29){
-printf("Error, implicit midpoint method did not converge\n");
+			snew_h[0] = -1;
 		}
 
 
@@ -333,7 +331,6 @@ printf("Error, implicit midpoint method did not converge\n");
 //printf("%d %g %g %g\n", i, x_h[i], y_h[i], z_h[i]);
 
 	}
-	snew_h[0] = 1.0;
 
 	time += dt;
 	++timeStep;
@@ -724,24 +721,24 @@ inline void asteroid::BS_step(){
 	double dvz[N][8];
 
 
-        double scalex[N];
-        double scaley[N];
-        double scalez[N];
+	double scalex[N];
+	double scaley[N];
+	double scalez[N];
 
-        double scalevx[N];
-        double scalevy[N];
-        double scalevz[N];
+	double scalevx[N];
+	double scalevy[N];
+	double scalevz[N];
 
-        for(int i = 0; i < N; ++i){
+	for(int i = 0; i < N; ++i){
 
-                scalex[i] = RKF_atol + fabs(x_h[i]) * RKF_rtol;
-                scaley[i] = RKF_atol + fabs(y_h[i]) * RKF_rtol;
-                scalez[i] = RKF_atol + fabs(z_h[i]) * RKF_rtol;
+		scalex[i] = RKF_atol + fabs(x_h[i]) * RKF_rtol;
+		scaley[i] = RKF_atol + fabs(y_h[i]) * RKF_rtol;
+		scalez[i] = RKF_atol + fabs(z_h[i]) * RKF_rtol;
 
-                scalevx[i] = RKF_atol + fabs(vx_h[i]) * RKF_rtol;
-                scalevy[i] = RKF_atol + fabs(vy_h[i]) * RKF_rtol;
-                scalevz[i] = RKF_atol + fabs(vz_h[i]) * RKF_rtol;
-        }
+		scalevx[i] = RKF_atol + fabs(vx_h[i]) * RKF_rtol;
+		scalevy[i] = RKF_atol + fabs(vy_h[i]) * RKF_rtol;
+		scalevz[i] = RKF_atol + fabs(vz_h[i]) * RKF_rtol;
+	}
 
 
 	int f = 1;
@@ -1071,7 +1068,7 @@ inline void asteroid::BS_step(){
 			error += error1 * error1;
 
 
-			error = sqrt(error / 6.0);    //6 is the number of dimensions
+			error = sqrt(error / 6.0);	//6 is the number of dimensions
 
 			errormax = error > errormax ? error: errormax;
 
@@ -1228,7 +1225,10 @@ int asteroid::loop(){
 			}
 			if(strcmp(integratorName, "IMM") == 0){
 				IMM_step();
-				snew = snew_h[0];
+				if(snew_h[0] == -1){
+					printf("Error, implicit midpoint method did not converge\n");
+					return 0;
+				}
 			}
 			
 	

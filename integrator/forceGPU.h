@@ -151,7 +151,7 @@ __device__ void Gravity(double xi, double yi, double zi, double *xTable_s, doubl
 	ayi += aay;
 	azi += aaz;
 
-//printf("position %d %d %.20g %.20g %.20g %.20g %.20g\n", pp, p, time, x[p], y[p], z[p], GM_h[p]);
+//printf("position %d %d %25.20g %25.20g %25.20g | %25.20g\n", threadIdx.x, p, xTable_s[p], yTable_s[p], zTable_s[p], xi); 
 }
 
 __global__ void Gravity_kernel(double xi, double yi, double zi, double *xTable_s, double *yTable_s, double *zTable_s, double &axi, double &ayi, double &azi, double *GM_s, const int Nperturbers){

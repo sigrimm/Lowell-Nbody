@@ -629,6 +629,10 @@ int asteroid::allocate(){
 		Tsave_h = NULL;
 	}
 
+	for(int i = 0; i < N; ++i){
+		snew_h[i] = 0;
+	}
+
 	return 1;
 }
 

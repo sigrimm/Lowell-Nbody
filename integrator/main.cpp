@@ -185,13 +185,15 @@ int main(int argc, char*argv[]){
 	er = A.loop();	
 
 	fclose(A.perturbersFile);
-	fclose(A.infoFile);
 
 	std::chrono::steady_clock::time_point time_end = std::chrono::steady_clock::now();
 
 	int ms = 	std::chrono::duration_cast<std::chrono::milliseconds>(time_end - time_begin).count();
 	//int ns = 	std::chrono::duration_cast<std::chrono::nanoseconds> (time_end - time_begin).count();
 	printf("Run time in seconds:  %g\n", ms / 1000.0);
+	fprintf(A.infoFile, "\n\n");
+	fprintf(A.infoFile, "Run time in seconds:  %g\n", ms / 1000.0);
 	
+	fclose(A.infoFile);
 }
 
