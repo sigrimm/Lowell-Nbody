@@ -419,6 +419,7 @@ void asteroid::printInfo(){
 	fprintf(infoFile, "Use J2 force = %d\n", useJ2);
 	fprintf(infoFile, "Use non-gravitational force = %d\n", useNonGrav);
 	fprintf(infoFile, "Use GPU = %d\n", USEGPU);
+	fprintf(infoFile, "GPU mode = %d\n", GPUMode);
 	fprintf(infoFile, "Use binary output format = %d\n", outBinary);
 	//fprintf(infoFile, "useFIFO = %d\n", useFIFO);
 	//fprintf(infoFile, "InVersion = %g\n", InVersion);

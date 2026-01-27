@@ -227,6 +227,130 @@ __global__ void leapfrog_stepB_kernel(double *xTable_d, double *yTable_d, double
 	}
 
 }
+//Leapfrog step with fixed time step
+// Every body runs on a sepparate thread block. Gravity calculation is spread along threads in the block and reuced in registers
+// Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
+__global__ void leapfrog_stepB2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double time, long long timeStep, double *GM_d, const int Nperturbers, const int N, const int RKFn, const double dt){
+
+	int itx = threadIdx.x;
+	int id = blockIdx.x;    //particle index
+
+	double ax = 0.0;
+	double ay = 0.0;
+	double az = 0.0;
+
+	//compute force
+
+	double xi;
+	double yi;
+	double zi;
+
+	double vxi;
+	double vyi;
+	double vzi;
+
+	__shared__ double xTable_s[def_NP];
+	__shared__ double yTable_s[def_NP];
+	__shared__ double zTable_s[def_NP];
+
+	__shared__ double vxTable_s[def_NP];
+	__shared__ double vyTable_s[def_NP];
+	__shared__ double vzTable_s[def_NP];
+
+	__shared__ double GM_s[def_NP];
+
+	if(itx < Nperturbers){
+		int ii = itx * RKFn;
+		xTable_s[itx] = xTable_d[ii];
+		yTable_s[itx] = yTable_d[ii];
+		zTable_s[itx] = zTable_d[ii];
+
+		vxTable_s[itx] = vxTable_d[ii];
+		vyTable_s[itx] = vyTable_d[ii];
+		vzTable_s[itx] = vzTable_d[ii];
+
+		GM_s[itx] = GM_d[itx];
+	}
+
+	__syncthreads();
+
+
+	if(id < N){
+
+		xi = x_d[id];
+		yi = y_d[id];
+		zi = z_d[id];
+
+		vxi = vx_d[id];
+		vyi = vy_d[id];
+		vzi = vz_d[id];
+
+		if(itx == 0){
+
+			//heliocentric coordinates
+			double xih = xi - xTable_s[10];
+			double yih = yi - yTable_s[10];
+			double zih = zi - zTable_s[10];
+
+			double vxih = vxi - vxTable_s[10];
+			double vyih = vyi - vyTable_s[10];
+			double vzih = vzi - vzTable_s[10];
+
+			//r is used in multiple forces, so reuse it
+			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
+			double r = sqrt(rsq);
+
+			if(cometFlag_c > 0){
+				if(id == 0){
+					Tsave_d[timeStep] = time;
+				}
+				Rsave_d[id * Rbuffersize_c + timeStep] = r;
+			}
+
+			//Earth centric coordinates
+			double xiE = xi - xTable_s[2];
+			double yiE = yi - yTable_s[2];
+			double ziE = zi - zTable_s[2];
+
+			if(useNonGrav_c == 1){
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_d[id], A2_d[id], A3_d[id], r, ax, ay, az);
+			}
+			if(useGR_c == 1){
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+			}
+			if(useJ2_c == 1){
+				J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+			}
+		}
+		__syncthreads();
+		if(itx < Nperturbers){
+			Gravity(xi, yi, zi, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, itx);
+		}
+		__syncthreads();
+		//reduce a
+		// ----------------------------------------------------------------------------
+		for(int i = 1; i < warpSize; i*=2){
+			ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
+			ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
+			az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
+		}
+		__syncthreads();
+
+	}
+	// ----------------------------------------------------------------------------
+
+	if(id < N  && itx == 0){
+		//Kick
+		vx_d[id] += dt * ax;
+		vy_d[id] += dt * ay;
+		vz_d[id] += dt * az;
+
+		//Drift
+		x_d[id] += 0.5 * dt * vx_d[id];
+		y_d[id] += 0.5 * dt * vy_d[id];
+		z_d[id] += 0.5 * dt * vz_d[id];
+	}
+}
 
 //Implicit Midpoint Method
 //Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
@@ -265,6 +389,10 @@ __global__ void IMM_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 	double vxpi;
 	double vypi;
 	double vzpi;
+
+	double A1;
+	double A2;
+	double A3;
 
 	__shared__ double xTable_s[def_NP];
 	__shared__ double yTable_s[def_NP];
@@ -310,6 +438,10 @@ __global__ void IMM_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 			vyti = vyi;
 			vzti = vzi;
 
+			A1 = A1_d[id];
+			A2 = A2_d[id];
+			A3 = A3_d[id];
+
 	}
 
 	__syncthreads();
@@ -352,7 +484,7 @@ __global__ void IMM_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 			double ziE = zti - zTable_s[2];
 
 			if(useNonGrav_c == 1){
-				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_d[id], A2_d[id], A3_d[id], r, ax, ay, az);
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
 			}
 			if(useGR_c == 1){
 				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
@@ -370,6 +502,7 @@ __global__ void IMM_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 		__syncthreads();
 
 		if(id < N){
+//printf("k %d %.20g\n", k, ax);
 			//store old values to check for convergence
 			xpi = xti;
 			ypi = yti;
@@ -419,6 +552,222 @@ __global__ void IMM_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 		vx_d[id] += dt * ax;
 		vy_d[id] += dt * ay;
 		vz_d[id] += dt * az;
+//printf("ax %.20g\n", ax);
+	}
+}
+
+//Implicit Midpoint Method
+// Every body runs on a sepparate thread block. Gravity calculation is spread along threads in the block and reuced in registers
+// Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
+__global__ void IMM_step2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long timeStep, double *GM_d, const int Nperturbers, const int N, const int RKFn, const double dt){
+
+	int itx = threadIdx.x;
+	int id = blockIdx.x;    //particle index
+
+	double ax = 0.0;
+	double ay = 0.0;
+	double az = 0.0;
+
+	//compute force
+
+	double xi;
+	double yi;
+	double zi;
+
+	double vxi;
+	double vyi;
+	double vzi;
+
+	double xti;
+	double yti;
+	double zti;
+
+	double vxti;
+	double vyti;
+	double vzti;
+
+	double xpi;
+	double ypi;
+	double zpi;
+
+	double vxpi;
+	double vypi;
+	double vzpi;
+
+	double A1;
+	double A2;
+	double A3;
+
+	__shared__ double xTable_s[def_NP];
+	__shared__ double yTable_s[def_NP];
+	__shared__ double zTable_s[def_NP];
+
+	__shared__ double vxTable_s[def_NP];
+	__shared__ double vyTable_s[def_NP];
+	__shared__ double vzTable_s[def_NP];
+
+	__shared__ double GM_s[def_NP];
+
+	__shared__ int stop_s[1];
+
+
+	if(itx < Nperturbers){
+		int ii = itx * RKFn;
+		xTable_s[itx] = xTable_d[ii];
+		yTable_s[itx] = yTable_d[ii];
+		zTable_s[itx] = zTable_d[ii];
+
+		vxTable_s[itx] = vxTable_d[ii];
+		vyTable_s[itx] = vyTable_d[ii];
+		vzTable_s[itx] = vzTable_d[ii];
+
+		GM_s[itx] = GM_d[itx];
+	}
+
+
+	if(id < N){
+			xi = x_d[id];
+			yi = y_d[id];
+			zi = z_d[id];
+
+			vxi = vx_d[id];
+			vyi = vy_d[id];
+			vzi = vz_d[id];
+
+			xti = xi;
+			yti = yi;
+			zti = zi;
+
+			vxti = vxi;
+			vyti = vyi;
+			vzti = vzi;
+
+			A1 = A1_d[id];
+			A2 = A2_d[id];
+			A3 = A3_d[id];
+
+	}
+
+	__syncthreads();
+
+	for(int k = 0; k < 30; ++k){
+
+		ax = 0.0;
+		ay = 0.0;
+		az = 0.0;
+
+		// ----------------------------------------------------------------------------
+		//compute forces
+		if(id < N){
+
+			if(itx == 0){
+
+				//heliocentric coordinates
+				double xih = xti - xTable_s[10];
+				double yih = yti - yTable_s[10];
+				double zih = zti - zTable_s[10];
+
+				double vxih = vxti - vxTable_s[10];
+				double vyih = vyti - vyTable_s[10];
+				double vzih = vzti - vzTable_s[10];
+
+				//r is used in multiple forces, so reuse it
+				double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
+				double r = sqrt(rsq);
+
+				if(cometFlag_c > 0 && k == 0){
+					if(id == 0){
+						Tsave_d[timeStep] = time;
+					}
+					Rsave_d[id * Rbuffersize_c + timeStep] = r;
+				}
+
+				//Earth centric coordinates
+				double xiE = xti - xTable_s[2];
+				double yiE = yti - yTable_s[2];
+				double ziE = zti - zTable_s[2];
+
+				if(useNonGrav_c == 1){
+					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+				}
+				if(useGR_c == 1){
+					GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+				}
+				if(useJ2_c == 1){
+					J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+				}
+			}
+			__syncthreads();
+			if(itx < Nperturbers){
+				Gravity(xti, yti, zti, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, itx);
+			}
+			__syncthreads();
+			//reduce a
+			// ----------------------------------------------------------------------------
+			for(int i = 1; i < warpSize; i*=2){
+				ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
+				ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
+				az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
+			}
+			__syncthreads();
+
+			// ----------------------------------------------------------------------------
+
+			//store old values to check for convergence
+			xpi = xti;
+			ypi = yti;
+			zpi = zti;
+
+			vxpi = vxti;
+			vypi = vyti;
+			vzpi = vzti;
+
+			xti = xi + 0.5 * dt * vxti;
+			yti = yi + 0.5 * dt * vyti;
+			zti = zi + 0.5 * dt * vzti;
+
+			vxti = vxi + 0.5 * dt * ax;
+			vyti = vyi + 0.5 * dt * ay;
+			vzti = vzi + 0.5 * dt * az;
+
+
+			if(itx == 0){
+//printf("k %d %.20g\n", k, ax);
+
+				stop_s[0] = 1;
+
+				if(fabs(xpi - xti) >= 1.0e-20) stop_s[0] = 0;
+				if(fabs(ypi - yti) >= 1.0e-20) stop_s[0] = 0;
+				if(fabs(zpi - zti) >= 1.0e-20) stop_s[0] = 0;
+
+				if(fabs(vxpi - vxti) >= 1.0e-20) stop_s[0] = 0;
+				if(fabs(vypi - vyti) >= 1.0e-20) stop_s[0] = 0;
+				if(fabs(vzpi - vzti) >= 1.0e-20) stop_s[0] = 0;
+
+				if(k >= 29){
+					snew_d[0] = -1;
+				}
+			}
+			__syncthreads();
+			if(stop_s[0] == 1){
+//if(k > 1) printf("k %d\n", k);	
+				break;
+			}
+		}
+
+	}//end of k loop
+
+
+	//update
+	if(id < N && itx == 0){
+		x_d[id] += dt * vxti;
+		y_d[id] += dt * vyti;
+		z_d[id] += dt * vzti;
+
+		vx_d[id] += dt * ax;
+		vy_d[id] += dt * ay;
+		vz_d[id] += dt * az;
+//printf("ax %.20g\n", ax);
 	}
 }
 
@@ -1861,7 +2210,12 @@ int asteroid::loop(){
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 
 				//Needs at least Nperturbers threads per block
-				leapfrog_stepB_kernel <<< (N + 255) / 256 , 256 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, time, timeStep, GM_d, Nperturbers, N, RKFn, dt);
+				if(GPUMode == 0){
+					leapfrog_stepB_kernel <<< (N + 255) / 256 , 256 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, time, timeStep, GM_d, Nperturbers, N, RKFn, dt);
+				}
+				else{
+					leapfrog_stepB2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, time, timeStep, GM_d, Nperturbers, N, RKFn, dt);
+				}
 				time += dt * 0.5;
 				++timeStep;
 			}
@@ -1928,7 +2282,13 @@ int asteroid::loop(){
 				update_perturbers_kernel <<< RKFn, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time + dt * 0.5, time_reference, dt, RKFn, nCm, EM, AUtokm, Nperturbers);
 	
 				//Needs at least Nperturbers threads per block
-				IMM_step_kernel <<< (N + 255) / 256 , 256 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, GM_d, Nperturbers, N, RKFn, dt);
+				if(GPUMode == 0){
+					IMM_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, GM_d, Nperturbers, N, RKFn, dt);
+				}
+				else{
+					IMM_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, GM_d, Nperturbers, N, RKFn, dt);
+
+				}
 
 				cudaDeviceSynchronize();
 				cudaMemcpy(snew_h, snew_d, sizeof(double), cudaMemcpyDeviceToHost);

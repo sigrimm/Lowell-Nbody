@@ -151,6 +151,7 @@ __device__ void Gravity(double xi, double yi, double zi, double *xTable_s, doubl
 	ayi += aay;
 	azi += aaz;
 
+//printf("aax %d %.20g\n", p, aax);
 //printf("position %d %d %25.20g %25.20g %25.20g | %25.20g\n", threadIdx.x, p, xTable_s[p], yTable_s[p], zTable_s[p], xi); 
 }
 
