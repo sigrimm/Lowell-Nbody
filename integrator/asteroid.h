@@ -8,6 +8,7 @@
 
 
 #define def_NP 32		//used for shared memory, must be at least the number of perturbers
+#define def_N 64		//used for shared memory, must be a multiple of the warp size
 
 class asteroid{
 
@@ -145,18 +146,27 @@ public:
 
 
 	//RKF arrays
-	int RKFn = 6;
-        double *RKFa_h;
+	int RKFn = 0;
+	double *RKFa_h;
 	double *RKFb_h;
 	double *RKFbb_h;
 	double *RKFc_h;
 
-        double RKF_ee;
-	double RKF_atol = 1.0e-16;
-	double RKF_rtol = 1.0e-16;
+	double atol = 1.0e-16;
+	double rtol = 1.0e-16;
+	double RKF_ee;
 	double RKF_fac = 0.84;
 	double RKF_facmin = 0.8;
 	double RKF_facmax = 1.5;
+
+	//BS arrays
+	int BSn = 0;
+	double *BSddt_h;
+	double *BSt0_h;
+	double *BSc_h;
+
+	int nStage = 1;
+
 
 	double *xt_h;
 	double *yt_h;
@@ -173,6 +183,14 @@ public:
 	double *vxp_h;
 	double *vyp_h;
 	double *vzp_h;
+
+	double *scalex_h;
+	double *scaley_h;
+	double *scalez_h;
+
+	double *scalevx_h;
+	double *scalevy_h;
+	double *scalevz_h;
 
 	double *dx_h, *dx_d;
 	double *dy_h, *dy_d;

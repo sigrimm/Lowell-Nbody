@@ -248,7 +248,7 @@ __device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double 
 // Every perturber runs on a thread.
 // Every stage runs on a different thread block.
 // This way of scheduling is needed because perturbers must be in the same thread block because of the calcualtion of the Earth and Moon.
-__global__ void update_perturbers_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *data_d, double *cdata_d, int *idp_d, double *startTime_d, double *endTime_d, int *nChebyshev_d, int *offset0_d, double time, double time_reference, const double dt, const int RKFn, const int nCm, const double EM, const double AUtokm, const int Nperturbers){
+__global__ void update_perturbers_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *data_d, double *cdata_d, int *idp_d, double *startTime_d, double *endTime_d, int *nChebyshev_d, int *offset0_d, double time, double time_reference, const double dt, const int nStage, const int nCm, const double EM, const double AUtokm, const int Nperturbers){
 
 	int id = threadIdx.x;	//Perturber index
 	int idx = blockIdx.x;	//Stage index
@@ -266,13 +266,13 @@ __global__ void update_perturbers_kernel(double *xTable_d, double *yTable_d, dou
 	double endTime;
 	int nChebyshev;
 
-	const int pp = (id * RKFn + idx) * nCm * 3;
+	const int pp = (id * nStage + idx) * nCm * 3;
 
-	if(id < Nperturbers && idx < RKFn){
+	if(id < Nperturbers && idx < nStage){
 
-		offset0 = offset0_d[id * RKFn + idx];
-		startTime = startTime_d[id * RKFn + idx];
-		endTime = endTime_d[id * RKFn + idx];
+		offset0 = offset0_d[id * nStage + idx];
+		startTime = startTime_d[id * nStage + idx];
+		endTime = endTime_d[id * nStage + idx];
 		nChebyshev = nChebyshev_d[id];
 
 
@@ -282,18 +282,18 @@ __global__ void update_perturbers_kernel(double *xTable_d, double *yTable_d, dou
 	update_perturbersGPU(xTable_s, yTable_s, zTable_s, vxTable_s, vyTable_s, vzTable_s, cdata_d + pp, startTime, endTime, nChebyshev, time_reference, time + RKFc_c[idx] * dt, nCm, EM, AUtokm, Nperturbers, id);
 
 	__syncthreads();
-	if(id < Nperturbers && idx < RKFn){
+	if(id < Nperturbers && idx < nStage){
 
-		offset0_d[id * RKFn + idx] = offset0;
-		startTime_d[id * RKFn + idx] = startTime;
-		endTime_d[id * RKFn + idx] = endTime;
+		offset0_d[id * nStage + idx] = offset0;
+		startTime_d[id * nStage + idx] = startTime;
+		endTime_d[id * nStage + idx] = endTime;
 
-		xTable_d[id * RKFn + idx] = xTable_s[id];
-		yTable_d[id * RKFn + idx] = yTable_s[id];
-		zTable_d[id * RKFn + idx] = zTable_s[id];
+		xTable_d[id * nStage + idx] = xTable_s[id];
+		yTable_d[id * nStage + idx] = yTable_s[id];
+		zTable_d[id * nStage + idx] = zTable_s[id];
 
-		vxTable_d[id * RKFn + idx] = vxTable_s[id];
-		vyTable_d[id * RKFn + idx] = vyTable_s[id];
-		vzTable_d[id * RKFn + idx] = vzTable_s[id];
+		vxTable_d[id * nStage + idx] = vxTable_s[id];
+		vyTable_d[id * nStage + idx] = vyTable_s[id];
+		vzTable_d[id * nStage + idx] = vzTable_s[id];
 	}
 }

@@ -10,24 +10,24 @@ int asteroid::allocateGPU(){
 	WarpSize = devProp.warpSize;
 
 
-	cudaMalloc((void **) &startTime_d, Nperturbers * RKFn * sizeof(double));
-	cudaMalloc((void **) &endTime_d, Nperturbers * RKFn * sizeof(double));
+	cudaMalloc((void **) &startTime_d, Nperturbers * nStage * sizeof(double));
+	cudaMalloc((void **) &endTime_d, Nperturbers * nStage * sizeof(double));
 	cudaMalloc((void **) &idp_d, Nperturbers * sizeof(int));
 	cudaMalloc((void **) &nChebyshev_d, Nperturbers * sizeof(int));
-	cudaMalloc((void **) &offset0_d, Nperturbers * RKFn * sizeof(int));
-	cudaMalloc((void **) &offset1_d, Nperturbers * RKFn * sizeof(int));
+	cudaMalloc((void **) &offset0_d, Nperturbers * nStage * sizeof(int));
+	cudaMalloc((void **) &offset1_d, Nperturbers * nStage * sizeof(int));
 	cudaMalloc((void **) &GM_d, Nperturbers * sizeof(double));
 
-	cudaMalloc((void **) &cdata_d, Nperturbers * RKFn * nCm * 3 * sizeof(double));
+	cudaMalloc((void **) &cdata_d, Nperturbers * nStage * nCm * 3 * sizeof(double));
 	cudaMalloc((void **) &data_d, datasize * sizeof(double));
 
-	cudaMalloc((void **) &xTable_d, Nperturbers * RKFn * sizeof(double));
-	cudaMalloc((void **) &yTable_d, Nperturbers * RKFn * sizeof(double));
-	cudaMalloc((void **) &zTable_d, Nperturbers * RKFn * sizeof(double));
+	cudaMalloc((void **) &xTable_d, Nperturbers * nStage * sizeof(double));
+	cudaMalloc((void **) &yTable_d, Nperturbers * nStage * sizeof(double));
+	cudaMalloc((void **) &zTable_d, Nperturbers * nStage * sizeof(double));
 
-	cudaMalloc((void **) &vxTable_d, Nperturbers * RKFn * sizeof(double));
-	cudaMalloc((void **) &vyTable_d, Nperturbers * RKFn * sizeof(double));
-	cudaMalloc((void **) &vzTable_d, Nperturbers * RKFn * sizeof(double));
+	cudaMalloc((void **) &vxTable_d, Nperturbers * nStage * sizeof(double));
+	cudaMalloc((void **) &vyTable_d, Nperturbers * nStage * sizeof(double));
+	cudaMalloc((void **) &vzTable_d, Nperturbers * nStage * sizeof(double));
 
 	cudaMalloc((void **) &x_d, N * sizeof(double));
 	cudaMalloc((void **) &y_d, N * sizeof(double));
@@ -53,13 +53,25 @@ int asteroid::allocateGPU(){
 	cudaMalloc((void **) &dvy_d, N * sizeof(double));
 	cudaMalloc((void **) &dvz_d, N * sizeof(double));
 
-	cudaMalloc((void **) &kx_d, N * RKFn * sizeof(double));
-	cudaMalloc((void **) &ky_d, N * RKFn * sizeof(double));
-	cudaMalloc((void **) &kz_d, N * RKFn * sizeof(double));
 
-	cudaMalloc((void **) &kvx_d, N * RKFn * sizeof(double));
-	cudaMalloc((void **) &kvy_d, N * RKFn * sizeof(double));
-	cudaMalloc((void **) &kvz_d, N * RKFn * sizeof(double));
+	if(RKFn > 0){
+		cudaMalloc((void **) &kx_d, N * RKFn * sizeof(double));
+		cudaMalloc((void **) &ky_d, N * RKFn * sizeof(double));
+		cudaMalloc((void **) &kz_d, N * RKFn * sizeof(double));
+
+		cudaMalloc((void **) &kvx_d, N * RKFn * sizeof(double));
+		cudaMalloc((void **) &kvy_d, N * RKFn * sizeof(double));
+		cudaMalloc((void **) &kvz_d, N * RKFn * sizeof(double));
+	}
+	else{
+		kx_d = NULL;
+		ky_d = NULL;
+		kz_d = NULL;
+
+		kvx_d = NULL;
+		kvy_d = NULL;
+		kvz_d = NULL;
+	}
 
 	cudaMalloc((void **) &ax_d, N * sizeof(double));
 	cudaMalloc((void **) &ay_d, N * sizeof(double));
@@ -123,12 +135,12 @@ int asteroid::readData(){
 int asteroid::copyIC(){
 
 
-	cudaMemcpy(startTime_d, startTime_h, Nperturbers * RKFn * sizeof(double), cudaMemcpyHostToDevice);
-	cudaMemcpy(endTime_d, endTime_h, Nperturbers * RKFn * sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(startTime_d, startTime_h, Nperturbers * nStage * sizeof(double), cudaMemcpyHostToDevice);
+	cudaMemcpy(endTime_d, endTime_h, Nperturbers * nStage * sizeof(double), cudaMemcpyHostToDevice);
 	cudaMemcpy(idp_d, idp_h, Nperturbers * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(nChebyshev_d, nChebyshev_h, Nperturbers * sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(offset0_d, offset0_h, Nperturbers * RKFn * sizeof(int), cudaMemcpyHostToDevice);
-	cudaMemcpy(offset1_d, offset1_h, Nperturbers * RKFn * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(offset0_d, offset0_h, Nperturbers * nStage * sizeof(int), cudaMemcpyHostToDevice);
+	cudaMemcpy(offset1_d, offset1_h, Nperturbers * nStage * sizeof(int), cudaMemcpyHostToDevice);
 	cudaMemcpy(GM_d, GM_h, Nperturbers * sizeof(double), cudaMemcpyHostToDevice);
 
 	cudaMemcpy(data_d, data_h, datasize * sizeof(double), cudaMemcpyHostToDevice);

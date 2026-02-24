@@ -185,28 +185,34 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			if(strcmp(integratorName, "LF") == 0){
-				RKFn = 1;
+				nStage = 1;
 			}
 			else if(strcmp(integratorName, "RK4") == 0){
 				RKFn = 4;
+				nStage = 4;
 			}
 			else if(strcmp(integratorName, "RK7") == 0){
 				RKFn = 9;
+				nStage = 9;
 			}
 			else if(strcmp(integratorName, "RKF45") == 0){
 				RKFn = 6;
+				nStage = 6;
 			}
 			else if(strcmp(integratorName, "DP54") == 0){
 				RKFn = 7;
+				nStage = 7;
 			}
 			else if(strcmp(integratorName, "RKF78") == 0){
 				RKFn = 13;
+				nStage = 13;
 			}
 			else if(strcmp(integratorName, "BS") == 0){
-				RKFn = 1;
+				BSn = 80;
+				nStage = 80;
 			}
 			else if(strcmp(integratorName, "IMM") == 0){
-				RKFn = 1;
+				nStage = 1;
 			}
 			else{
 				printf("Errof, Integrator not valid\n");
@@ -216,7 +222,7 @@ int asteroid::readParam(int argc, char*argv[]){
 			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "RKF absolute tolerance =") == 0){
-			er = fscanf (paramfile, "%lf", &RKF_atol);
+			er = fscanf (paramfile, "%lf", &atol);
 			if(er <= 0){
 				printf("Error: RKF absolute tolerance value is not valid!\n");
 				return 0;
@@ -224,7 +230,7 @@ int asteroid::readParam(int argc, char*argv[]){
 			str = fgets(sp, 3, paramfile);
 		}
 		else if(strcmp(sp, "RKF relative tolerance =") == 0){
-			er = fscanf (paramfile, "%lf", &RKF_rtol);
+			er = fscanf (paramfile, "%lf", &rtol);
 			if(er <= 0){
 				printf("Error: RKF relative tolerance value is not valid!\n");
 				return 0;
@@ -412,8 +418,8 @@ void asteroid::printInfo(){
 	fprintf(infoFile, "Time Step = %.20g\n", dt);
 	fprintf(infoFile, "Output Interval = %g\n", outputInterval);
 	fprintf(infoFile, "Integrator name = %s\n", integratorName);
-	fprintf(infoFile, "RKF absolute tolerance = %.20g\n", RKF_atol);
-	fprintf(infoFile, "RKF relative tolerance = %.20g\n", RKF_rtol);
+	fprintf(infoFile, "RKF absolute tolerance = %.20g\n", atol);
+	fprintf(infoFile, "RKF relative tolerance = %.20g\n", rtol);
 
 	fprintf(infoFile, "Use GR correction = %d\n", useGR);
 	fprintf(infoFile, "Use J2 force = %d\n", useJ2);
@@ -450,10 +456,10 @@ int asteroid::allocate(){
 	//parallelized also along the number of stages in the Runge-Kutta integrator
 	//Therefore we need for every perturber and every stage the offset,
 	//Start time and End time of the current record
-	startTime_h = (double*)malloc(Nperturbers * RKFn * sizeof(double));
-	endTime_h = (double*)malloc(Nperturbers * RKFn * sizeof(double));
-	offset0_h = (int*)malloc(Nperturbers * RKFn * sizeof(int));
-	offset1_h = (int*)malloc(Nperturbers * RKFn * sizeof(int));
+	startTime_h = (double*)malloc(Nperturbers * nStage * sizeof(double));
+	endTime_h = (double*)malloc(Nperturbers * nStage * sizeof(double));
+	offset0_h = (int*)malloc(Nperturbers * nStage * sizeof(int));
+	offset1_h = (int*)malloc(Nperturbers * nStage * sizeof(int));
 #endif
 	GM_h = (double*)malloc(Nperturbers * sizeof(double));
 
@@ -500,21 +506,21 @@ int asteroid::allocate(){
 	for(int i = 0; i < Nperturbers; ++i){
 		er = fread(&idp_h[i], sizeof(int), 1, perturbersFile);
 		er = fread(&nChebyshev_h[i], sizeof(int), 1, perturbersFile);
-		er = fread(&offset0_h[i * RKFn], sizeof(int), 1, perturbersFile);
-		er = fread(&offset1_h[i * RKFn], sizeof(int), 1, perturbersFile);
+		er = fread(&offset0_h[i * nStage], sizeof(int), 1, perturbersFile);
+		er = fread(&offset1_h[i * nStage], sizeof(int), 1, perturbersFile);
 		er = fread(&GM_h[i], sizeof(double), 1, perturbersFile);
 
 		nCm = (nCm > nChebyshev_h[i]) ? nCm : nChebyshev_h[i];
 
-		startTime_h[i * RKFn] = 100000000.0;     //large number
-		endTime_h[i * RKFn] = 0.0; 
+		startTime_h[i * nStage] = 100000000.0;     //large number
+		endTime_h[i * nStage] = 0.0; 
 
-		for(int j = 0; j < RKFn; ++j){
+		for(int j = 0; j < nStage; ++j){
 			//copy values from stage 0 to all other stages
-			offset0_h[i * RKFn + j] = offset0_h[i * RKFn];
-			offset1_h[i * RKFn + j] = offset1_h[i * RKFn];
-			startTime_h[i * RKFn + j] = startTime_h[i * RKFn];
-			endTime_h[i * RKFn + j] = endTime_h[i * RKFn];
+			offset0_h[i * nStage + j] = offset0_h[i * nStage];
+			offset1_h[i * nStage + j] = offset1_h[i * nStage];
+			startTime_h[i * nStage + j] = startTime_h[i * nStage];
+			endTime_h[i * nStage + j] = endTime_h[i * nStage];
 		}
 
 //printf("%d %d %d %d %.20g\n", idp_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
@@ -526,7 +532,7 @@ int asteroid::allocate(){
 
 	cdata_h = (double*)malloc(Nperturbers * nCm * 3 * sizeof(double));
 #if USEGPU == 1
-	datasize = offset1_h[(Nperturbers - 1) * RKFn] - offset0_h[0 * RKFn];
+	datasize = offset1_h[(Nperturbers - 1) * nStage] - offset0_h[0 * nStage];
 	printf("size of perturbers data table %d\n", datasize);
 	data_h = (double*)malloc(datasize * sizeof(double));
 #endif
@@ -538,9 +544,9 @@ int asteroid::allocate(){
 	yTable_h = (double*)malloc(Nperturbers * sizeof(double));
 	zTable_h = (double*)malloc(Nperturbers * sizeof(double));
 
-	vxTable_h = (double*)malloc(Nperturbers * RKFn * sizeof(double));
-	vyTable_h = (double*)malloc(Nperturbers * RKFn * sizeof(double));
-	vzTable_h = (double*)malloc(Nperturbers * RKFn * sizeof(double));
+	vxTable_h = (double*)malloc(Nperturbers * sizeof(double));
+	vyTable_h = (double*)malloc(Nperturbers * sizeof(double));
+	vzTable_h = (double*)malloc(Nperturbers * sizeof(double));
 
 	x_h = (double*)malloc(N * sizeof(double));
 	y_h = (double*)malloc(N * sizeof(double));
@@ -574,21 +580,35 @@ int asteroid::allocate(){
 	vyp_h = (double*)malloc(N * sizeof(double));
 	vzp_h = (double*)malloc(N * sizeof(double));
 
-	dx_h = (double*)malloc(N * sizeof(double));
-	dy_h = (double*)malloc(N * sizeof(double));
-	dz_h = (double*)malloc(N * sizeof(double));
+	scalex_h = (double*)malloc(N * sizeof(double));
+	scaley_h = (double*)malloc(N * sizeof(double));
+	scalez_h = (double*)malloc(N * sizeof(double));
 
-	dvx_h = (double*)malloc(N * sizeof(double));
-	dvy_h = (double*)malloc(N * sizeof(double));
-	dvz_h = (double*)malloc(N * sizeof(double));
+	scalevx_h = (double*)malloc(N * sizeof(double));
+	scalevy_h = (double*)malloc(N * sizeof(double));
+	scalevz_h = (double*)malloc(N * sizeof(double));
 
-	kx_h = (double*)malloc(N * RKFn * sizeof(double));
-	ky_h = (double*)malloc(N * RKFn * sizeof(double));
-	kz_h = (double*)malloc(N * RKFn * sizeof(double));
 
-	kvx_h = (double*)malloc(N * RKFn * sizeof(double));
-	kvy_h = (double*)malloc(N * RKFn * sizeof(double));
-	kvz_h = (double*)malloc(N * RKFn * sizeof(double));
+	if(strcmp(integratorName, "BS") == 0){
+		dx_h = (double*)malloc(N * 8 * sizeof(double));
+		dy_h = (double*)malloc(N * 8 * sizeof(double));
+		dz_h = (double*)malloc(N * 8 * sizeof(double));
+
+		dvx_h = (double*)malloc(N * 8 * sizeof(double));
+		dvy_h = (double*)malloc(N * 8 * sizeof(double));
+		dvz_h = (double*)malloc(N * 8 * sizeof(double));
+	}
+	else{
+		dx_h = (double*)malloc(N * sizeof(double));
+		dy_h = (double*)malloc(N * sizeof(double));
+		dz_h = (double*)malloc(N * sizeof(double));
+
+		dvx_h = (double*)malloc(N * sizeof(double));
+		dvy_h = (double*)malloc(N * sizeof(double));
+		dvz_h = (double*)malloc(N * sizeof(double));
+
+	}
+
 
 	ax_h = (double*)malloc(N * sizeof(double));
 	ay_h = (double*)malloc(N * sizeof(double));
@@ -603,19 +623,104 @@ int asteroid::allocate(){
 
 	id_h = (long long int*)malloc(N * sizeof(long long int));
 
-	RKFa_h = (double*)malloc(RKFn * RKFn * sizeof(double));
-	RKFb_h = (double*)malloc(RKFn * sizeof(double));
-	RKFbb_h = (double*)malloc(RKFn * sizeof(double));
-	RKFc_h = (double*)malloc(RKFn * sizeof(double));
+	if(RKFn > 0){
 
-	for(int i = 0; i < RKFn; ++i){
-		for(int j = 0; j < RKFn; ++j){
-			RKFa_h[i * RKFn + j] = 0.0;
+		kx_h = (double*)malloc(N * RKFn * sizeof(double));
+		ky_h = (double*)malloc(N * RKFn * sizeof(double));
+		kz_h = (double*)malloc(N * RKFn * sizeof(double));
+
+		kvx_h = (double*)malloc(N * RKFn * sizeof(double));
+		kvy_h = (double*)malloc(N * RKFn * sizeof(double));
+		kvz_h = (double*)malloc(N * RKFn * sizeof(double));
+
+		RKFa_h = (double*)malloc(RKFn * RKFn * sizeof(double));
+		RKFb_h = (double*)malloc(RKFn * sizeof(double));
+		RKFbb_h = (double*)malloc(RKFn * sizeof(double));
+		RKFc_h = (double*)malloc(RKFn * sizeof(double));
+
+		for(int i = 0; i < RKFn; ++i){
+			for(int j = 0; j < RKFn; ++j){
+				RKFa_h[i * RKFn + j] = 0.0;
+			}
+			RKFb_h[i] = 0.0;
+			RKFbb_h[i] = 0.0;
+			RKFc_h[i] = 0.0;
 		}
-		RKFb_h[i] = 0.0;
-		RKFbb_h[i] = 0.0;
-		RKFc_h[i] = 0.0;
 	}
+	else{
+		kx_h = NULL;
+		ky_h = NULL;
+		kz_h = NULL;
+
+		kvx_h = NULL;
+		kvy_h = NULL;
+		kvz_h = NULL;
+
+		RKFa_h = NULL;
+		RKFb_h = NULL;
+		RKFbb_h = NULL;
+		RKFc_h = NULL;
+	}
+
+
+	if(BSn > 0){
+		BSddt_h = (double*)malloc(8 * sizeof(double));
+		BSt0_h = (double*)malloc(8 * 8 * sizeof(double));
+		BSc_h = (double*)malloc(BSn * sizeof(double));
+
+
+		for(int n = 1; n <= 8; ++n){
+			BSddt_h[n-1] = 0.25 / (n*n);
+		}
+
+		for(int n = 1; n <= 8; ++n){
+			for(int j = n-1; j >=1; --j){
+				BSt0_h[(n-1) * 8 + (j -1)] = 1.0 / (BSddt_h[j-1] - BSddt_h[n-1]);
+			}
+		}
+
+
+		for(int i = 0; i < BSn; ++i){
+			BSc_h[i] = 0.0;
+		}
+
+		int cc = 0;	
+		for(int n = 1; n <= 8; ++n){
+
+			double dt2 = 1.0 / (2.0 * n);
+			double dt22 = dt2 * 2.0;
+
+			BSc_h[cc] = 0.0;
+printf("%d %d %d %g\n", n, 0, cc, BSc_h[cc]);
+			++cc;
+
+			BSc_h[cc] = dt2;
+printf("%d %d %d %g\n", n, 0, cc, BSc_h[cc]);
+			++cc;
+
+			for(int m = 2; m <= n; ++m){
+				BSc_h[cc] = (m-1) * dt22;
+printf("%d %d %d %g\n", n, m, cc, BSc_h[cc]);
+				++cc;
+
+				BSc_h[cc] = (m-1) * dt22 + dt2;
+printf("%d %d %d %g\n", n, m, cc, BSc_h[cc]);
+				++cc;
+			}
+
+			BSc_h[cc] = 1.0;
+printf("%d %d %d %g\n", n, n, cc, BSc_h[cc]);
+			++cc;
+		}
+
+	}
+	else{
+		BSddt_h = NULL;
+		BSt0_h = NULL;
+		BSc_h = NULL;
+	}
+
+
 
 	if(cometFlag > 0){
 		Rsave_h = (double*)malloc(Rbuffersize * N * sizeof(double));

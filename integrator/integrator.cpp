@@ -591,22 +591,22 @@ inline void asteroid::RKF_step(){
 
 		//Hairer
 /*
-		double scalex  = RKF_atol + fmax(fabs(x_h[i]), fabs(x_h[i] + dx_h[i])) * RKF_rtol;
-		double scaley  = RKF_atol + fmax(fabs(y_h[i]), fabs(y_h[i] + dy_h[i])) * RKF_rtol;
-		double scalez  = RKF_atol + fmax(fabs(z_h[i]), fabs(z_h[i] + dz_h[i])) * RKF_rtol;
+		scalex_h[i]  = atol + fmax(fabs(x_h[i]), fabs(x_h[i] + dx_h[i])) * rtol;
+		scaley_h[i]  = atol + fmax(fabs(y_h[i]), fabs(y_h[i] + dy_h[i])) * rtol;
+		scalez_h[i]  = atol + fmax(fabs(z_h[i]), fabs(z_h[i] + dz_h[i])) * rtol;
 
-		double scalevx = RKF_atol + fmax(fabs(vx_h[i]), fabs(vx_h[i] + dvx_h[i])) * RKF_rtol;
-		double scalevy = RKF_atol + fmax(fabs(vy_h[i]), fabs(vy_h[i] + dvy_h[i])) * RKF_rtol;
-		double scalevz = RKF_atol + fmax(fabs(vz_h[i]), fabs(vz_h[i] + dvz_h[i])) * RKF_rtol;
+		scalevx_h[i] = atol + fmax(fabs(vx_h[i]), fabs(vx_h[i] + dvx_h[i])) * rtol;
+		scalevy_h[i] = atol + fmax(fabs(vy_h[i]), fabs(vy_h[i] + dvy_h[i])) * rtol;
+		scalevz_h[i] = atol + fmax(fabs(vz_h[i]), fabs(vz_h[i] + dvz_h[i])) * rtol;
 */
 
-		double scalex  = RKF_atol + fabs(x_h[i]) * RKF_rtol;
-		double scaley  = RKF_atol + fabs(y_h[i]) * RKF_rtol;
-		double scalez  = RKF_atol + fabs(z_h[i]) * RKF_rtol;
+		scalex_h[i]  = atol + fabs(x_h[i]) * rtol;
+		scaley_h[i]  = atol + fabs(y_h[i]) * rtol;
+		scalez_h[i]  = atol + fabs(z_h[i]) * rtol;
 
-		double scalevx = RKF_atol + fabs(vx_h[i]) * RKF_rtol;
-		double scalevy = RKF_atol + fabs(vy_h[i]) * RKF_rtol;
-		double scalevz = RKF_atol + fabs(vz_h[i]) * RKF_rtol;
+		scalevx_h[i] = atol + fabs(vx_h[i]) * rtol;
+		scalevy_h[i] = atol + fabs(vy_h[i]) * rtol;
+		scalevz_h[i] = atol + fabs(vz_h[i]) * rtol;
 
 		//error estimation
 		double errorkx = 0.0;
@@ -630,12 +630,12 @@ inline void asteroid::RKF_step(){
 		}
 
 		double errork = 0.0;
-		errork += errorkx * errorkx / (scalex * scalex);
-		errork += errorky * errorky / (scaley * scaley);
-		errork += errorkz * errorkz / (scalez * scalez);
-		errork += errorkvx * errorkvx / (scalevx * scalevx);
-		errork += errorkvy * errorkvy / (scalevy * scalevy);
-		errork += errorkvz * errorkvz / (scalevz * scalevz);
+		errork += errorkx * errorkx / (scalex_h[i] * scalex_h[i]);
+		errork += errorky * errorky / (scaley_h[i] * scaley_h[i]);
+		errork += errorkz * errorkz / (scalez_h[i] * scalez_h[i]);
+		errork += errorkvx * errorkvx / (scalevx_h[i] * scalevx_h[i]);
+		errork += errorkvy * errorkvy / (scalevy_h[i] * scalevy_h[i]);
+		errork += errorkvz * errorkvz / (scalevz_h[i] * scalevz_h[i]);
 
 		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
 
@@ -694,50 +694,18 @@ inline void asteroid::RKF_step(){
 //printf("dt %.20g %.20g %.20g\n", time, dt, snew);
 }
 
-
+// Bulirsh-Stoer step with adaptive time step
 inline void asteroid::BS_step(){
-
-
-	//move the follwing outside this function
-	double ddt[8];
-	double BSt0[8 * 8];
-
-	for(int n = 1; n <= 8; ++n){
-		ddt[n-1] = 0.25 / (n*n);
-	}
-
-	for(int n = 1; n <= 8; ++n){
-		for(int j = n-1; j >=1; --j){
-			BSt0[(n-1) * 8 + (j -1)] = 1.0 / (ddt[j-1] - ddt[n-1]);
-		}
-	}
-
-	double dx[N][8];
-	double dy[N][8];
-	double dz[N][8];
-
-	double dvx[N][8];
-	double dvy[N][8];
-	double dvz[N][8];
-
-
-	double scalex[N];
-	double scaley[N];
-	double scalez[N];
-
-	double scalevx[N];
-	double scalevy[N];
-	double scalevz[N];
 
 	for(int i = 0; i < N; ++i){
 
-		scalex[i] = RKF_atol + fabs(x_h[i]) * RKF_rtol;
-		scaley[i] = RKF_atol + fabs(y_h[i]) * RKF_rtol;
-		scalez[i] = RKF_atol + fabs(z_h[i]) * RKF_rtol;
+		scalex_h[i] = atol + fabs(x_h[i]) * rtol;
+		scaley_h[i] = atol + fabs(y_h[i]) * rtol;
+		scalez_h[i] = atol + fabs(z_h[i]) * rtol;
 
-		scalevx[i] = RKF_atol + fabs(vx_h[i]) * RKF_rtol;
-		scalevy[i] = RKF_atol + fabs(vy_h[i]) * RKF_rtol;
-		scalevz[i] = RKF_atol + fabs(vz_h[i]) * RKF_rtol;
+		scalevx_h[i] = atol + fabs(vx_h[i]) * rtol;
+		scalevy_h[i] = atol + fabs(vy_h[i]) * rtol;
+		scalevz_h[i] = atol + fabs(vz_h[i]) * rtol;
 	}
 
 
@@ -1018,13 +986,13 @@ inline void asteroid::BS_step(){
 		}
 
 		for(int i = 0; i < N; ++i){
-			dx[i][n-1] = 0.5 * (xt_h[i] + xp_h[i]);
-			dy[i][n-1] = 0.5 * (yt_h[i] + yp_h[i]);
-			dz[i][n-1] = 0.5 * (zt_h[i] + zp_h[i]);
+			dx_h[i * 8 + (n-1)] = 0.5 * (xt_h[i] + xp_h[i]);
+			dy_h[i * 8 + (n-1)] = 0.5 * (yt_h[i] + yp_h[i]);
+			dz_h[i * 8 + (n-1)] = 0.5 * (zt_h[i] + zp_h[i]);
 
-			dvx[i][n-1] = 0.5 * (vxt_h[i] + vxp_h[i]);
-			dvy[i][n-1] = 0.5 * (vyt_h[i] + vyp_h[i]);
-			dvz[i][n-1] = 0.5 * (vzt_h[i] + vzp_h[i]);
+			dvx_h[i * 8 + (n-1)] = 0.5 * (vxt_h[i] + vxp_h[i]);
+			dvy_h[i * 8 + (n-1)] = 0.5 * (vyt_h[i] + vyp_h[i]);
+			dvz_h[i * 8 + (n-1)] = 0.5 * (vzt_h[i] + vzp_h[i]);
 		}
 
 
@@ -1032,39 +1000,39 @@ inline void asteroid::BS_step(){
 		double errormax = 0.0;
 		for(int i = 0; i < N; ++i){
 			for(int j = n - 1; j >= 1; --j){
-				double t0 = BSt0[(n-1) * 8 + (j-1)];
-				double t1 = t0 * ddt[j];
-				double t2 = t0 * ddt[n-1];
+				double t0 = BSt0_h[(n-1) * 8 + (j-1)];
+				double t1 = t0 * BSddt_h[j];
+				double t2 = t0 * BSddt_h[n-1];
 
-				dx[i][j-1] = (t1 * dx[i][j]) - (t2 * dx[i][j-1]);
-				dy[i][j-1] = (t1 * dy[i][j]) - (t2 * dy[i][j-1]);
-				dz[i][j-1] = (t1 * dz[i][j]) - (t2 * dz[i][j-1]);
+				dx_h[i * 8 + (j-1)] = (t1 * dx_h[i * 8 + j]) - (t2 * dx_h[i * 8 + (j-1)]);
+				dy_h[i * 8 + (j-1)] = (t1 * dy_h[i * 8 + j]) - (t2 * dy_h[i * 8 + (j-1)]);
+				dz_h[i * 8 + (j-1)] = (t1 * dz_h[i * 8 + j]) - (t2 * dz_h[i * 8 + (j-1)]);
 
-				dvx[i][j-1] = (t1 * dvx[i][j]) - (t2 * dvx[i][j-1]);
-				dvy[i][j-1] = (t1 * dvy[i][j]) - (t2 * dvy[i][j-1]);
-				dvz[i][j-1] = (t1 * dvz[i][j]) - (t2 * dvz[i][j-1]);
+				dvx_h[i * 8 + (j-1)] = (t1 * dvx_h[i * 8 + j]) - (t2 * dvx_h[i * 8 + (j-1)]);
+				dvy_h[i * 8 + (j-1)] = (t1 * dvy_h[i * 8 + j]) - (t2 * dvy_h[i * 8 + (j-1)]);
+				dvz_h[i * 8 + (j-1)] = (t1 * dvz_h[i * 8 + j]) - (t2 * dvz_h[i * 8 + (j-1)]);
 
 			}
 
 			double error = 0.0;
 			double error1 = 0.0;
 
-			error1 = dx[i][0] / scalex[i];
+			error1 = dx_h[i * 8] / scalex_h[i];
 			error += error1 * error1;
 
-			error1 = dy[i][0] / scaley[i];
+			error1 = dy_h[i * 8] / scaley_h[i];
 			error += error1 * error1;
 
-			error1 = dz[i][0] / scalez[i];
+			error1 = dz_h[i * 8] / scalez_h[i];
 			error += error1 * error1;
 
-			error1 = dvx[i][0] / scalevx[i];
+			error1 = dvx_h[i * 8] / scalevx_h[i];
 			error += error1 * error1;
 
-			error1 = dvy[i][0] / scalevy[i];
+			error1 = dvy_h[i * 8] / scalevy_h[i];
 			error += error1 * error1;
 
-			error1 = dvz[i][0] / scalevz[i];
+			error1 = dvz_h[i * 8] / scalevz_h[i];
 			error += error1 * error1;
 
 
@@ -1075,25 +1043,27 @@ inline void asteroid::BS_step(){
 		}
 //printf("error %d %g\n", n, errormax);
 		if(errormax < 1.0){
+//printf("accept %lld %.20g %g\n", timeStep, time, dt);
+
 			//accept step
 			snew_h[0] = 1.0;
 			for(int i = 0; i < N; ++i){
-				xt_h[i] = dx[i][0];
-				yt_h[i] = dy[i][0];
-				zt_h[i] = dz[i][0];
+				xt_h[i] = dx_h[i * 8];
+				yt_h[i] = dy_h[i * 8];
+				zt_h[i] = dz_h[i * 8];
 
-				vxt_h[i] = dvx[i][0];
-				vyt_h[i] = dvy[i][0];
-				vzt_h[i] = dvz[i][0];
+				vxt_h[i] = dvx_h[i * 8];
+				vyt_h[i] = dvy_h[i * 8];
+				vzt_h[i] = dvz_h[i * 8];
 	
 				for(int j = 1; j < n; ++j){
-					xt_h[i] += dx[i][j];
-					yt_h[i] += dy[i][j];
-					zt_h[i] += dz[i][j];
+					xt_h[i] += dx_h[i * 8 + j];
+					yt_h[i] += dy_h[i * 8 + j];
+					zt_h[i] += dz_h[i * 8 + j];
 
-					vxt_h[i] += dvx[i][j];
-					vyt_h[i] += dvy[i][j];
-					vzt_h[i] += dvz[i][j];
+					vxt_h[i] += dvx_h[i * 8 + j];
+					vyt_h[i] += dvy_h[i * 8 + j];
+					vzt_h[i] += dvz_h[i * 8 + j];
 
 	
 				}
@@ -1277,6 +1247,7 @@ int asteroid::loop(){
 		if(time_reference + time >= outStart){
 			convertOutput();
 			printOutput(dtmin);
+			fflush(outputFile);
 		}
 
 		if(tt >= MaxTimeSteps1 - 1){
