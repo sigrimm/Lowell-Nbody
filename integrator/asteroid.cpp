@@ -16,6 +16,12 @@ int asteroid::readParam(int argc, char*argv[]){
 	int er;
 	char *str;	//Needed for return value of fgest, otherwise a compiler warning is generated
 
+	int count[1000];	//counter to check if the param.dat file contains dublicated entries
+	for(int i = 0; i < 1000; ++i){
+		count[i] = 0;
+	}
+
+
 	for(int j = 0; j < 1000; ++j){ //loop around all lines in the param.dat file
 		int c;
 		for(int i = 0; i < 50; ++i){
@@ -49,10 +55,12 @@ int asteroid::readParam(int argc, char*argv[]){
 
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[0];
 		}
 		else if(strcmp(sp, "Initial condition file coordinates =") == 0){
 			char format[160];
 			er = fscanf (paramfile, " %[^\n]s", format);
+printf("|%s|\n", format);
 			if(er <= 0){
 				printf("Error: Initial condition file coordinates is not valid!\n");
 				return 0;
@@ -88,6 +96,7 @@ int asteroid::readParam(int argc, char*argv[]){
 
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[1];
 		}
 		else if(strcmp(sp, "Output coordinates =") == 0){
 			char format[160];
@@ -129,6 +138,7 @@ int asteroid::readParam(int argc, char*argv[]){
 
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[2];
 		}
 		else if(strcmp(sp, "Initial condition file =") == 0){
 			er = fscanf (paramfile, "%s", inputFilename);
@@ -136,7 +146,8 @@ int asteroid::readParam(int argc, char*argv[]){
 				printf("Error: Initial condition file is not valid!\n");
 				return 0;
 			}
-		str = fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
+			++count[3];
 		}
 		else if(strcmp(sp, "Output file name =") == 0){
 			er = fscanf (paramfile, "%s", name);
@@ -144,7 +155,8 @@ int asteroid::readParam(int argc, char*argv[]){
 				printf("Error: Output file is not valid!\n");
 				return 0;
 			}
-		str = fgets(sp, 3, paramfile);
+			str = fgets(sp, 3, paramfile);
+			++count[4];
 		}
 		else if(strcmp(sp, "Reference Time =") == 0){
 			er = fscanf (paramfile, "%lf", &time_reference);
@@ -153,6 +165,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[5];
 		}
 		else if(strcmp(sp, "Start Time =") == 0){
 			er = fscanf (paramfile, "%lf", &timeStart);
@@ -161,6 +174,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[6];
 		}
 		else if(strcmp(sp, "End Time =") == 0){
 			er = fscanf (paramfile, "%lf", &timeEnd);
@@ -169,6 +183,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[7];
 		}
 		else if(strcmp(sp, "Output Interval =") == 0){
 			er = fscanf (paramfile, "%lf", &outputInterval);
@@ -177,6 +192,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[8];
 		}
 		else if(strcmp(sp, "Integrator =") == 0){
 			er = fscanf (paramfile, "%s", integratorName);
@@ -220,6 +236,7 @@ int asteroid::readParam(int argc, char*argv[]){
 
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[9];
 		}
 		else if(strcmp(sp, "RKF absolute tolerance =") == 0){
 			er = fscanf (paramfile, "%lf", &atol);
@@ -228,6 +245,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[10];
 		}
 		else if(strcmp(sp, "RKF relative tolerance =") == 0){
 			er = fscanf (paramfile, "%lf", &rtol);
@@ -236,6 +254,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[11];
 		}
 		else if(strcmp(sp, "Time Step =") == 0){
 			er = fscanf (paramfile, "%lf", &dt);
@@ -244,6 +263,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[12];
 		}
 		else if(strcmp(sp, "Path to perturbers file =") == 0){
 			er = fscanf (paramfile, "%s", perturbersFilePath);
@@ -252,6 +272,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[13];
 		}
 		else if(strcmp(sp, "Use GR correction =") == 0){
 			er = fscanf (paramfile, "%d", &useGR);
@@ -260,6 +281,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[14];
 		}
 		else if(strcmp(sp, "Use J2 force =") == 0){
 			er = fscanf (paramfile, "%d", &useJ2);
@@ -268,6 +290,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[15];
 		}
 		else if(strcmp(sp, "Use non-gravitational force =") == 0){
 			er = fscanf (paramfile, "%d", &useNonGrav);
@@ -276,6 +299,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[16];
 		}
 		else if(strcmp(sp, "Use comets =") == 0){
 			er = fscanf (paramfile, "%d", &cometFlag);
@@ -284,6 +308,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[17];
 		}
 		else if(strcmp(sp, "comet alpha =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_alpha);
@@ -292,6 +317,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[18];
 		}
 		else if(strcmp(sp, "comet nk =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_nk);
@@ -300,6 +326,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[19];
 		}
 		else if(strcmp(sp, "comet nm =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_nm);
@@ -308,6 +335,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[20];
 		}
 		else if(strcmp(sp, "comet nn =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_nn);
@@ -316,6 +344,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[21];
 		}
 		else if(strcmp(sp, "comet r0 =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_r0);
@@ -324,6 +353,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[22];
 		}
 		else if(strcmp(sp, "comet tau =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_tau);
@@ -332,6 +362,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[23];
 		}
 		else if(strcmp(sp, "Use binary output format =") == 0){
 			er = fscanf (paramfile, "%d", &outBinary);
@@ -340,6 +371,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[24];
 		}
 		else if(strcmp(sp, "Print time steps =") == 0){
 			er = fscanf (paramfile, "%d", &printdt);
@@ -348,6 +380,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
+			++count[25];
 		}
 
 		else{
@@ -356,6 +389,13 @@ int asteroid::readParam(int argc, char*argv[]){
 		}
 	}
 	fclose(paramfile);
+
+	for(int i = 0; i < 1000; ++i){
+		if(count[i] > 1){
+			printf("Error, param.dat file contains multiple entries\n");
+			return 0;
+		}
+	}
 
 	// ----------------------------------
 	//read console arguments
@@ -691,25 +731,25 @@ int asteroid::allocate(){
 			double dt22 = dt2 * 2.0;
 
 			BSc_h[cc] = 0.0;
-printf("%d %d %d %g\n", n, 0, cc, BSc_h[cc]);
+//printf("%d %d %d %g\n", n, 0, cc, BSc_h[cc]);
 			++cc;
 
 			BSc_h[cc] = dt2;
-printf("%d %d %d %g\n", n, 0, cc, BSc_h[cc]);
+//printf("%d %d %d %g\n", n, 0, cc, BSc_h[cc]);
 			++cc;
 
 			for(int m = 2; m <= n; ++m){
 				BSc_h[cc] = (m-1) * dt22;
-printf("%d %d %d %g\n", n, m, cc, BSc_h[cc]);
+//printf("%d %d %d %g\n", n, m, cc, BSc_h[cc]);
 				++cc;
 
 				BSc_h[cc] = (m-1) * dt22 + dt2;
-printf("%d %d %d %g\n", n, m, cc, BSc_h[cc]);
+//printf("%d %d %d %g\n", n, m, cc, BSc_h[cc]);
 				++cc;
 			}
 
 			BSc_h[cc] = 1.0;
-printf("%d %d %d %g\n", n, n, cc, BSc_h[cc]);
+//printf("%d %d %d %g\n", n, n, cc, BSc_h[cc]);
 			++cc;
 		}
 
