@@ -34,6 +34,11 @@ int asteroid::readParam(int argc, char*argv[]){
 				sp[i + 1] = '\0';
 				break;
 			}
+			if(c == '\n'){
+				//blank line
+				i = -1;
+				continue;
+			}
 		}
 		if(c == EOF) break;
 		if(strcmp(sp, "Initial condition file format =") == 0){
@@ -59,8 +64,8 @@ int asteroid::readParam(int argc, char*argv[]){
 		}
 		else if(strcmp(sp, "Initial condition file coordinates =") == 0){
 			char format[160];
-			er = fscanf (paramfile, " %[^\n]s", format);
-printf("|%s|\n", format);
+			er = fscanf (paramfile, " %159[^\n\r]", format);
+
 			if(er <= 0){
 				printf("Error: Initial condition file coordinates is not valid!\n");
 				return 0;
@@ -100,7 +105,7 @@ printf("|%s|\n", format);
 		}
 		else if(strcmp(sp, "Output coordinates =") == 0){
 			char format[160];
-			er = fscanf (paramfile, " %[^\n]s", format);
+			er = fscanf (paramfile, " %159[^\n\r]", format);
 			if(er <= 0){
 				printf("Error: Output coordinates is not valid!\n");
 				return 0;
@@ -646,7 +651,6 @@ int asteroid::allocate(){
 		dvx_h = (double*)malloc(N * sizeof(double));
 		dvy_h = (double*)malloc(N * sizeof(double));
 		dvz_h = (double*)malloc(N * sizeof(double));
-
 	}
 
 
@@ -715,7 +719,7 @@ int asteroid::allocate(){
 
 		for(int n = 1; n <= 8; ++n){
 			for(int j = n-1; j >=1; --j){
-				BSt0_h[(n-1) * 8 + (j -1)] = 1.0 / (BSddt_h[j-1] - BSddt_h[n-1]);
+				BSt0_h[(n-1) * 8 + (j - 1)] = 1.0 / (BSddt_h[j-1] - BSddt_h[n-1]);
 			}
 		}
 
@@ -819,4 +823,122 @@ void asteroid::printOutput(double dtmin){
 		}
 	}
 }
+
+void asteroid::freeMemory(){
+
+	free(idp_h);
+	free(nChebyshev_h);
+	free(startTime_h);
+	free(endTime_h);
+	free(offset0_h);
+	free(offset1_h);
+	free(GM_h);
+	
+	free(cdata_h);
+
+#if USEGPU == 1
+
+	free(data_h);
+#endif
+
+	free(xTable_h);
+	free(yTable_h);
+	free(zTable_h);
+
+	free(vxTable_h);
+	free(vyTable_h);
+	free(vzTable_h);
+
+	free(x_h);
+	free(y_h);
+	free(z_h);
+
+	free(vx_h);
+	free(vy_h);
+	free(vz_h);
+
+	free(xout_h);
+	free(yout_h);
+	free(zout_h);
+
+	free(vxout_h);
+	free(vyout_h);
+	free(vzout_h);
+
+	free(xt_h);
+	free(yt_h);
+	free(zt_h);
+
+	free(vxt_h);
+	free(vyt_h);
+	free(vzt_h);
+
+	free(xp_h);
+	free(yp_h);
+	free(zp_h);
+
+	free(vxp_h);
+	free(vyp_h);
+	free(vzp_h);
+
+
+	free(scalex_h);
+	free(scaley_h);
+	free(scalez_h);
+
+	free(scalevx_h);
+	free(scalevy_h);
+	free(scalevz_h);
+
+	free(dx_h);
+	free(dy_h);
+	free(dz_h);
+
+	free(dvx_h);
+	free(dvy_h);
+	free(dvz_h);
+
+	free(ax_h);
+	free(ay_h);
+	free(az_h);
+
+	free(A1_h);
+	free(A2_h);
+	free(A3_h);
+
+	free(snew_h);
+	free(jd_init_h);
+	free(id_h);
+
+	if(RKFn > 0){
+		free(kx_h);
+		free(ky_h);
+		free(kz_h);
+
+		free(kvx_h);
+		free(kvy_h);
+		free(kvz_h);
+
+		free(RKFa_h);
+		free(RKFb_h);
+		free(RKFbb_h);
+		free(RKFc_h);
+	}
+
+	if(BSn > 0){
+		free(BSddt_h);
+		free(BSt0_h);
+		free(BSc_h);
+	}
+
+	if(cometFlag > 0){
+		free(Rsave_h);
+		free(Tsave_h);
+
+	}
+
+
+}
+
+
 

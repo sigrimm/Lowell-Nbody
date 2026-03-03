@@ -229,6 +229,7 @@ public:
 	int copyConst();
 	void printInfo();
 	void printOutput(double);
+	void freeMemory();
 	
 
 	int KepToCart_M(double *, double *, double *, double *, double *, double *, int, double, double, double, double, double, double);

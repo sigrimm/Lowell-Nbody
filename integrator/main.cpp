@@ -86,6 +86,7 @@ int main(int argc, char*argv[]){
 	if(er <= 0){
 		return 0;
 	}
+
 #if USEGPU == 1
 	er = A.allocateGPU();
 	if(er <= 0){
@@ -122,7 +123,6 @@ int main(int argc, char*argv[]){
 	if(strcmp(A.integratorName, "RKF78") == 0){
 		A.setRKF78();
 	}
-
 
 	//----------------------------------------------------------
 	//Read initial conditions
@@ -195,5 +195,7 @@ int main(int argc, char*argv[]){
 	fprintf(A.infoFile, "Run time in seconds:  %g\n", ms / 1000.0);
 	
 	fclose(A.infoFile);
+	A.freeMemory();
+
 }
 
