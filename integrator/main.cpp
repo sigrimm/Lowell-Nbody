@@ -81,9 +81,10 @@ int main(int argc, char*argv[]){
 	A.printInfo();
 
 
-	printf("Allocate memory\n");
+	printf("Start Allocate memory\n");
 	er = A.allocate();
 	if(er <= 0){
+		printf("Error allocate failed\n");
 		return 0;
 	}
 
@@ -162,7 +163,9 @@ int main(int argc, char*argv[]){
 
 	//If needed, convert from ecliptic coordinates to equatorial coordinates
 	if(A.ICecliptic == 1){
-		A.EcpliptictoEquatorial(A.x_h, A.y_h, A.z_h, A.vx_h, A.vy_h, A.vz_h);	
+		printf("Convert ecliptic to equatorial coordinates\n");
+		A.EcpliptictoEquatorial(A.x_h, A.y_h, A.z_h, A.vx_h, A.vy_h, A.vz_h);
+		printf("Convert ecliptic to equatorial coordinates OK\n");
 	}
 
 	A.timeStart -= A.time_reference;

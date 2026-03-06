@@ -510,13 +510,44 @@ int asteroid::allocate(){
 
 	//read header
 	int er;
+	printf("  Start reading header of perturbers file\n");
+
 	er = fread(&time0, sizeof(double), 1, perturbersFile);
+	if(er <= 0){
+		return 0;
+	}
+
 	er = fread(&time1, sizeof(double), 1, perturbersFile);
+	if(er <= 0){
+		return 0;
+	}
+
 	er = fread(&AUtokm, sizeof(double), 1, perturbersFile);
+	if(er <= 0){
+		return 0;
+	}
+
 	er = fread(&EM, sizeof(double), 1, perturbersFile);
+	if(er <= 0){
+		return 0;
+	}
+
 	er = fread(&CLIGHT, sizeof(double), 1, perturbersFile); 
+	if(er <= 0){
+		return 0;
+	}
+
 	er = fread(&RE, sizeof(double), 1, perturbersFile);
+	if(er <= 0){
+		return 0;
+	}
+
 	er = fread(&J2E, sizeof(double), 1, perturbersFile);
+	if(er <= 0){
+		return 0;
+	}
+
+	printf("  Reading header of perturbers file OK\n");
 
 
 	//Check if perturbers file time span is OK
@@ -533,10 +564,34 @@ int asteroid::allocate(){
 #if USEGPU == 0
 	for(int i = 0; i < Nperturbers; ++i){
 		er = fread(&idp_h[i], sizeof(int), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
+
 		er = fread(&nChebyshev_h[i], sizeof(int), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
+
 		er = fread(&offset0_h[i], sizeof(int), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
+
 		er = fread(&offset1_h[i], sizeof(int), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
+
 		er = fread(&GM_h[i], sizeof(double), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
 
 		nCm = (nCm > nChebyshev_h[i]) ? nCm : nChebyshev_h[i];
 
@@ -545,15 +600,39 @@ int asteroid::allocate(){
 
 		startTime_h[i] = 100000000.0;     //large number
 		endTime_h[i] = 0.0; 
-//printf("%d %d %d %d %.20g\n", idp_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
+//printf(" %d %d %d %d %d %.20g\n", i, idp_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
 	}
 #else
 	for(int i = 0; i < Nperturbers; ++i){
 		er = fread(&idp_h[i], sizeof(int), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
+
 		er = fread(&nChebyshev_h[i], sizeof(int), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
+
 		er = fread(&offset0_h[i * nStage], sizeof(int), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
+
 		er = fread(&offset1_h[i * nStage], sizeof(int), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
+
 		er = fread(&GM_h[i], sizeof(double), 1, perturbersFile);
+		if(er <= 0){
+			printf("Error, reading perturber %d failed \n", i);
+			return 0;
+		}
 
 		nCm = (nCm > nChebyshev_h[i]) ? nCm : nChebyshev_h[i];
 
@@ -568,7 +647,7 @@ int asteroid::allocate(){
 			endTime_h[i * nStage + j] = endTime_h[i * nStage];
 		}
 
-//printf("%d %d %d %d %.20g\n", idp_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
+//printf("%d %d %d %d %d %.20g\n", i, idp_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
 	}
 #endif
 	//printf("nCm %d\n", nCm);

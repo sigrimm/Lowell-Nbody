@@ -235,14 +235,14 @@ public:
 	int KepToCart_M(double *, double *, double *, double *, double *, double *, int, double, double, double, double, double, double);
 	void KepToCart_E(double *, double *, double *, double *, double *, double *, int, double, double, double, double, double, double);
 	void CartToKep(double *, double *, double *, double *, double *, double *, int, double &, double &, double &, double &, double &, double &, double &, double &);
-	void convertOutput();
+	int convertOutput();
 	void EcpliptictoEquatorial(double *, double *, double *, double *, double *, double *);
 	void EquatorialtoEcliptic(double *, double *, double *, double *, double *, double *);
-	void HelioToBary(double *, double *, double *, double *, double *, double *);
-	void BaryToHelio(double *, double *, double *, double *, double *, double *);
-	void BaryToGeo(double *, double *, double *, double *, double *, double *);
+	int HelioToBary(double *, double *, double *, double *, double *, double *);
+	int BaryToHelio(double *, double *, double *, double *, double *, double *);
+	int BaryToGeo(double *, double *, double *, double *, double *, double *);
 
-	inline void update_Chebyshev(double);
+	inline int update_Chebyshev(double);
 	inline void update_perturbers(double);
 	inline void NonGrav(double, double, double, double, double, double, double, double, double, double, double &, double &, double &);
 	inline void GR(double, double, double, double, double, double, double, double &, double &, double &, double);
@@ -250,11 +250,11 @@ public:
 	inline void Gravity(double, double, double, double *, double *, double *, double &, double &, double &, int);
 	int loop();
 
-	inline void leapfrog_step();
-	inline void RK_step();
-	inline void RKF_step();
-	inline void BS_step();
-	inline void IMM_step();
+	inline int leapfrog_step();
+	inline int RK_step();
+	inline int RKF_step();
+	inline int BS_step();
+	inline int IMM_step();
 
 	void setRK4();
 	void setRK7();

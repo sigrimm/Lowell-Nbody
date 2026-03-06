@@ -19,4 +19,3 @@
 #define DE_blocksize 1018
 #define DE_blocksize8 8144
 
-#define def_printT 0	//flag to print output in text format
