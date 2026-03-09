@@ -6,6 +6,7 @@
 #include <math.h>
 #include <cstring>
 
+#define def_version 1.01
 
 #define def_NP 32		//used for shared memory, must be at least the number of perturbers
 #define def_N 64		//used for shared memory, must be a multiple of the warp size

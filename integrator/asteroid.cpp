@@ -454,6 +454,8 @@ int asteroid::readParam(int argc, char*argv[]){
 }
 
 void asteroid::printInfo(){
+	fprintf(infoFile, "Code version = %g\n", def_version);
+
 	fprintf(infoFile, "Initial condition file format = %d\n", ICformat);
 	fprintf(infoFile, "Initial condition file = %s\n", inputFilename);
 	fprintf(infoFile, "Output file name = %s\n", outputFilename);

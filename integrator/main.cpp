@@ -186,6 +186,11 @@ int main(int argc, char*argv[]){
 	//----------------------------------------------------------
 
 	er = A.loop();	
+printf("End\n");
+	fclose(A.outputFile);
+	if(A.printdt == 1){
+		fclose(A.dtFile);
+	}
 
 	fclose(A.perturbersFile);
 

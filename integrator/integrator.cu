@@ -3027,9 +3027,5 @@ int asteroid::loop(){
 		}
 
 	}//end of tt loop
-	fclose(outputFile);
-	if(printdt == 1){
-		fclose(dtFile);
-	}
 	return 1;
 }
