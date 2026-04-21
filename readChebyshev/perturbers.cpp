@@ -21,10 +21,12 @@ int perturbers::alloc(){
 
 int perturbers::readPerturbers1(FILE *infile){
 
+	printf("Start reading perturbers file 1\n");
+
 	//-------------------------------------------------------
 	//Read the first file record, containing global information
 	//The record size is 1024
-	//The first records contains the information listed below:
+	//The first record contains the information listed below:
 	//See https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/daf.html
 	//-------------------------------------------------------
 	//+1 char
@@ -40,17 +42,63 @@ int perturbers::readPerturbers1(FILE *infile){
 	char FTPSTR[29];		//FTP validation string
 	char PSTNUL[298];		//Block of Nulls
 
-	fread(LOCIDW, 8 * sizeof(char), 1, infile); 
-	fread(&ND, sizeof(int), 1, infile); 
-	fread(&NI, sizeof(int), 1, infile); 
-	fread(LOCIFN, 60 * sizeof(char), 1, infile); 
-	fread(&FWARD, sizeof(int), 1, infile); 
-	fread(&BWARD, sizeof(int), 1, infile); 
-	fread(&FREE, sizeof(int), 1, infile); 
-	fread(LOCFMT, 8 * sizeof(char), 1, infile); 
-	fread(PRENUL, 603 * sizeof(char), 1, infile); 
-	fread(FTPSTR, 28 * sizeof(char), 1, infile); 
-	fread(PSTNUL, 297 * sizeof(char), 1, infile); 
+	int er;
+
+	er = fread(LOCIDW, 8 * sizeof(char), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&ND, sizeof(int), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&NI, sizeof(int), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(LOCIFN, 60 * sizeof(char), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&FWARD, sizeof(int), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&BWARD, sizeof(int), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&FREE, sizeof(int), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(LOCFMT, 8 * sizeof(char), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(PRENUL, 603 * sizeof(char), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(FTPSTR, 28 * sizeof(char), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(PSTNUL, 297 * sizeof(char), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
 
 	printf("LOCIDW %s\n", LOCIDW);
 	printf("ND %d\n", ND);
@@ -74,7 +122,11 @@ int perturbers::readPerturbers1(FILE *infile){
 	//Read comment area
 	//-------------------------------------------------------
 	char CDATA[DE_recordsize + 1];
-	fread(CDATA, DE_recordsize * sizeof(char), 1, infile); 
+	er = fread(CDATA, DE_recordsize * sizeof(char), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
 	printf("START COMMENT\n");
 	for(int i = 0; i < DE_recordsize; ++i){
 		printf("%c", CDATA[i]);
@@ -84,11 +136,15 @@ int perturbers::readPerturbers1(FILE *infile){
 	NEXT = FWARD;
 	PREV = BWARD;
 
+	printf("Reading perturbers file 1 OK\n");
+
 	return 1;
+
 }
 
 
-int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, double time0, double time1, int planetoffset){
+int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, double time0, double time1, int planetoffset, int printT){
+	printf("Start reading perturbers file 2\n");
 
 	int aStart[Npert];	//start of the arrays
 	int aEnd[Npert];	//end
@@ -97,31 +153,43 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 
 	double data[DE_recordsize];
 
-
+	int er; 
 	//-------------------------------------------------------
 	for(int k = 0; k < 100; ++k){
 
 		//-------------------------------------------------------
-		//Read Summary Records
-		//A summary consists of ND = 6 double precision numbers 
-		//and NI = 6 integer numbers.
-		//These are:
-		//1. Initial epoch of the interval in segment
-		//2. Final epoch of the interval in segment
-		//1. NAIF integer code for the target
-		//2. NAIF integer code for the center (10 = Sun)
-		//3. NAIF integer code for the reference frame (1 = J2000.0)
-		//4. Integer code for the representation (data type, 2 = Chebyshev polynomials, position only, x y z components)
-		//5. Initial address of the array
-		//6. Final address of the array
+		// Read Summary Records
+		// A summary consists of:
+		//   ND = 2 double precision numbers 
+		//     These are:
+		//     1. Initial epoch of the interval in segment
+		//     2. Final epoch of the interval in segment
+		//   NI = 6 integer numbers.
+		//     These are:
+		//     1. NAIF integer code for the target
+		//     2. NAIF integer code for the center (10 = Sun)
+		//     3. NAIF integer code for the reference frame (1 = J2000.0)
+		//     4. Integer code for the representation (data type, 2 = Chebyshev polynomials, position only, x y z components)
+		//     5. Initial address of the array
+		//     6. Final address of the array
 
 		//https://naif.jpl.nasa.gov/pub/naif/toolkit_docs/C/req/spk.html
 		//https://www.gb.nrao.edu/ovlbi/spk.req
 
 		//-------------------------------------------------------
-		fseek(infile, (NEXT - 1) * DE_recordsize, SEEK_SET);
+		er = fseek(infile, (NEXT - 1) * DE_recordsize, SEEK_SET);
+
+		if(er != 0){
+			return 0;
+		}
+
 		double ddata[128];
-		fread(ddata, 128 * sizeof(double), 1, infile); 
+		er = fread(ddata, 128 * sizeof(double), 1, infile); 
+
+		if(er <= 0){
+			return 0;
+		}
+	
 
 		int nSummaries = int(ddata[2]);
 		int summarySize = ND + (NI + 1) / 2;
@@ -175,8 +243,13 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 		//-------------------------------------------------------
 		//Read Name Records
 		//-------------------------------------------------------
+		printf("  Read name records %d\n", k);
 		char CDATA[DE_recordsize + 1];
-		fread(CDATA, DE_recordsize * sizeof(char), 1, infile); 
+		er = fread(CDATA, DE_recordsize * sizeof(char), 1, infile); 
+		if(er <= 0){
+			return 0;
+		}
+	
 		int NC = 8 * (ND + (NI + 1) / 2);
 		for(int i = 0; i < nSummaries; ++i){
 			printf("%d ", i);
@@ -185,11 +258,17 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 			}
 			printf("\n");
 		}
+	
 		//-------------------------------------------------------
 
 		if(NEXT == 0){
 			printf("\nReached the end of %s\n\n", "sb441-n16.bsp");
 			break;
+		}
+
+		if(k >= 99){
+			printf("Error, loop in readPerturbers2 did not stop\n");
+			return 0;
 		}
 	}	
 
@@ -225,9 +304,17 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 		//-------------------------------------------------------
 
 		//Read first the information at the end of the segment
-		fseek(infile, (aEnd[i] - 4) * 8, SEEK_SET);
+		er = fseek(infile, (aEnd[i] - 4) * 8, SEEK_SET);
+		if(er != 0){
+			return 0;
+		}
+
 		double ddata[128];
-		fread(ddata, 4 * sizeof(double), 1, infile);
+		er = fread(ddata, 4 * sizeof(double), 1, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
 		double INIT = ddata[0] / 86400.0 + 2451545.0; 
 		double INTLEN = ddata[1] / 86400.0;
 		int RSIZE = int(ddata[2]); 
@@ -237,16 +324,26 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 		int NC = (RSIZE - 2) / 3;
 
 		nChebyshev[i] = (nChebyshev[i] > NC) ? nChebyshev[i] : NC;
+
+		printf("nChebyshev %d %d %d %d\n", i, nChebyshev[i], RSIZE, NC);
+
 		Dtrecord[i] = INTLEN;
 
 		int offset = floor((time0 - INIT) / INTLEN);
 
-		printf("%d %d %.20g %.20g %d %d | %d\n", id[i], aStart[i], INIT, INTLEN, RSIZE, N, offset);
+		printf("%d %d %d %.20g %.20g %d %d | %d\n", i, id[i], aStart[i], INIT, INTLEN, RSIZE, N, offset);
 
-		fseek(infile, (aStart[i] + offset * RSIZE - 1) * 8, SEEK_SET);
+		er = fseek(infile, (aStart[i] + offset * RSIZE - 1) * 8, SEEK_SET);
+		if(er != 0){
+			return 0;
+		}
 
 		for(int j = 0; j < N; ++j){
-			fread(ddata, RSIZE * sizeof(double), 1, infile); 
+			er = fread(ddata, RSIZE * sizeof(double), 1, infile); 
+			if(er <= 0){
+				return 0;
+			}
+	
 
 			double start = (ddata[0] - ddata[1])  / 86400.0 + 2451545.0;
 			double end = (ddata[0] + ddata[1])  / 86400.0 + 2451545.0;
@@ -259,9 +356,10 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 				dataSize += j * RSIZE;
 				p_offset1[i] = dataSize;
 
-#if def_printT == 1
-				fprintf(outfileT, "%d %d %d %d %.30g\n", id[i], nChebyshev[i], p_offset0[i] + planetoffset, p_offset1[i] + planetoffset, GM[i]);
-#endif
+				if(printT == 1){
+					fprintf(outfileT, "%d %d %d %d %.30g\n", id[i], nChebyshev[i], p_offset0[i] + planetoffset, p_offset1[i] + planetoffset, GM[i]);
+				}
+
 				fwrite(&id[i], sizeof(int), 1, outfile);
 				fwrite(&nChebyshev[i], sizeof(int), 1, outfile);
 				int o0 = p_offset0[i] + planetoffset;
@@ -287,9 +385,17 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 
 	for(int i = 0; i < Npert; ++i){
 		//Read first the information at the end of the segment
-		fseek(infile, (aEnd[i] - 4) * 8, SEEK_SET);
+		er = fseek(infile, (aEnd[i] - 4) * 8, SEEK_SET);
+		if(er != 0){
+			return 0;
+		}
+
 		double ddata[128];
-		fread(ddata, 4 * sizeof(double), 1, infile);
+		er = fread(ddata, 4 * sizeof(double), 1, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
 		double INIT = ddata[0] / 86400.0 + 2451545.0; 
 		double INTLEN = ddata[1] / 86400.0;
 		int RSIZE = int(ddata[2]); 
@@ -299,10 +405,17 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 
 		//printf("%d %d %.20g %.20g %d %d | %d\n", id[i], aStart[i], INIT, INTLEN, RSIZE, N, offset);
 
-		fseek(infile, (aStart[i] + offset * RSIZE - 1) * 8, SEEK_SET);
+		er = fseek(infile, (aStart[i] + offset * RSIZE - 1) * 8, SEEK_SET);
+		if(er != 0){
+			return 0;
+		}
 
 		for(int j = 0; j < p_N[i]; ++j){
-			fread(pertdata + p_offset0[i] + j * RSIZE, RSIZE * sizeof(double), 1, infile); 
+			er = fread(pertdata + p_offset0[i] + j * RSIZE, RSIZE * sizeof(double), 1, infile); 
+			if(er <= 0){
+				return 0;
+			}
+	
 			
 			double d0 = pertdata[p_offset0[i] + j * RSIZE];
 			double d1 = pertdata[p_offset0[i] + j * RSIZE + 1];
@@ -317,10 +430,12 @@ int perturbers::readPerturbers2(FILE *infile, FILE *outfileT, FILE *outfile, dou
 			//printf("%d %d %.20g %.20g %d \n", id[i], j, start, end, p_offset0[i] + j * RSIZE);
 		}
 	}
+
+	printf("Reading perturbers file 2 OK\n");
 	return 1;
 }
 
-int perturbers::printPerturbers(FILE *outfileT, FILE *outfile){
+int perturbers::printPerturbers(FILE *outfileT, FILE *outfile, int printT){
 
 	//-------------------------------------------------------
 	//Print all Chebyshev polynomial in a new file
@@ -329,14 +444,14 @@ int perturbers::printPerturbers(FILE *outfileT, FILE *outfile){
 		int RSIZE = nChebyshev[i] * 3 + 2;
 		for(int j = 0; j < p_N[i]; ++j){
 			for(int k = 0; k < RSIZE; ++k){
-#if def_printT == 1
-				fprintf(outfileT, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
-#endif
+				if(printT == 1){
+					fprintf(outfileT, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
+				}
 				fwrite(&pertdata[p_offset0[i] + j * RSIZE + k], sizeof(double), 1, outfile);
 			}
-#if def_printT == 1
-			fprintf(outfileT, "\n");
-#endif
+			if(printT == 1){
+				fprintf(outfileT, "\n");
+			}
 		}
 	}
 	return 1;

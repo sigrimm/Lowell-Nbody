@@ -4,9 +4,13 @@
 #include "Chebyshev.h"
 #include "force.h"
 
-void asteroid::HelioToBary(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
+int asteroid::HelioToBary(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
 	//Update the Chebyshev coefficients if necessary
-	update_Chebyshev(timeStart);
+	int er;
+	er = update_Chebyshev(timeStart);
+	if(er <= 0){
+		return 0;
+	}
 	update_perturbers(timeStart);
 
 
@@ -27,11 +31,16 @@ void asteroid::HelioToBary(double *xx_h, double *yy_h, double *zz_h, double *vxx
 
 		//printf("H2B %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g %.40g\n", xx_h[i], yy_h[i], zz_h[i], vxx_h[i], vyy_h[i], vzz_h[i], A1_h[i], A2_h[i], A3_h[i]);
 	}
+	return 1;
 }
 
-void asteroid::BaryToHelio(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
+int asteroid::BaryToHelio(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
 	//Update the Chebyshev coefficients if necessary
-	update_Chebyshev(time);
+	int er;
+	er = update_Chebyshev(time);
+	if(er <= 0){
+		return 0;
+	}
 	update_perturbers(time);
 
 
@@ -49,11 +58,16 @@ void asteroid::BaryToHelio(double *xx_h, double *yy_h, double *zz_h, double *vxx
 		vyy_h[i] -= vyTable_h[10];
 		vzz_h[i] -= vzTable_h[10];
 	}
+	return 1;
 }
 
-void asteroid::BaryToGeo(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
+int asteroid::BaryToGeo(double *xx_h, double *yy_h, double *zz_h, double *vxx_h, double *vyy_h, double *vzz_h){
 	//Update the Chebyshev coefficients if necessary
-	update_Chebyshev(time);
+	int er;
+	er = update_Chebyshev(time);
+	if(er <= 0){
+		return 0;
+	}
 	update_perturbers(time);
 
 
@@ -72,10 +86,12 @@ void asteroid::BaryToGeo(double *xx_h, double *yy_h, double *zz_h, double *vxx_h
 		vzz_h[i] -= vzTable_h[2];
 //printf("Earth %.20g %.20g %.20g\n", xTable_h[2], yTable_h[2], zTable_h[2]);
 	}
+	return 1;
 }
 
-void asteroid::convertOutput(){
-
+int asteroid::convertOutput(){
+	
+	int er;
 	for(int i = 0; i < N; ++i){
 		xout_h[i] = x_h[i];
 		yout_h[i] = y_h[i];
@@ -87,10 +103,16 @@ void asteroid::convertOutput(){
 	}
 
 	if(Outheliocentric == 1){
-		BaryToHelio(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);
+		er = BaryToHelio(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);
+		if(er <= 0){
+			return 0;
+		}
 	} 
 	if(Outgeocentric == 1){
-		BaryToGeo(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);
+		er = BaryToGeo(xout_h, yout_h, zout_h, vxout_h, vyout_h, vzout_h);
+		if(er <= 0){
+			return 0;
+		}
 	} 
 
 
@@ -121,14 +143,14 @@ void asteroid::convertOutput(){
 
 		}
 	}
-
+	return 1;
 }
 
 
 
 //Leapfrog step with fixed time step
-inline void asteroid::leapfrog_step(){
-
+inline int asteroid::leapfrog_step(){
+	int er;
 	//Drift
 	for(int i = 0; i < N; ++i){
 		x_h[i] += 0.5 * dt * vx_h[i];
@@ -142,7 +164,12 @@ inline void asteroid::leapfrog_step(){
 
 	// ----------------------------------------------------------------------------
 	//Update the Chebyshev coefficients if necessary
-	update_Chebyshev(time);
+
+	er = update_Chebyshev(time);
+	if(er <= 0){
+		return 0;
+	}
+
 	update_perturbers(time);
 	// ----------------------------------------------------------------------------
 
@@ -211,17 +238,21 @@ inline void asteroid::leapfrog_step(){
 	time += dt * 0.5;
 	++timeStep;
 //printf("tb %.20g %.20g\n", time, dt); 
+	return 1;
 }
 
 
 //Implicit Midpoint Method
 // All bodies are integrated individually with an individual, adaptive time step
-inline void asteroid::IMM_step(){
+inline int asteroid::IMM_step(){
 
-
+	int er;
 	// ----------------------------------------------------------------------------
 	//Update the Chebyshev coefficients if necessary
-	update_Chebyshev(time + 0.5 * dt);
+	er = update_Chebyshev(time + 0.5 * dt);
+	if(er <= 0){
+		return 0;
+	}
 	update_perturbers(time + 0.5 * dt);
 	// ----------------------------------------------------------------------------
 
@@ -353,17 +384,22 @@ inline void asteroid::IMM_step(){
 
 	time += dt;
 	++timeStep;
+	return 1;
 }
 
 
 //Runge Kutta step with fixed time step
-inline void asteroid::RK_step(){
+inline int asteroid::RK_step(){
 
+	int er;
 	for(int S = 0; S < RKFn; ++S){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time + RKFc_h[S] * dt);
+		er = update_Chebyshev(time + RKFc_h[S] * dt);
+		if(er <= 0){
+			return 0;
+		}
 		update_perturbers(time + RKFc_h[S] * dt);
 		// ----------------------------------------------------------------------------
 
@@ -483,6 +519,7 @@ inline void asteroid::RK_step(){
 	}
 	time += dt;
 	++timeStep;
+	return 1;
 }
 
 // Runge Kutta Fehlberg step with adaptive time steps
@@ -705,13 +742,17 @@ inline void asteroid::RKF_individual_step(const int i){
 }
 
 //Runge Kutta Fehlberg step with adaptive time step
-inline void asteroid::RKF_step(){
+inline int asteroid::RKF_step(){
 
+	int er;
 	for(int S = 0; S < RKFn; ++S){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time + RKFc_h[S] * dt);
+		er = update_Chebyshev(time + RKFc_h[S] * dt);
+		if(er <= 0){
+			return 0;
+		}
 		update_perturbers(time + RKFc_h[S] * dt);
 		// ----------------------------------------------------------------------------
 
@@ -930,6 +971,7 @@ inline void asteroid::RKF_step(){
 		dt *= snew;
 	}
 //printf("dt %.20g %.20g %.20g\n", time, dt, snew);
+	return 1;
 }
 
 // Bulirsh-Stoer step with adaptive time step
@@ -1349,7 +1391,8 @@ inline void asteroid::BS_individual_step(const int i){
 	
 
 // Bulirsh-Stoer step with adaptive time step
-inline void asteroid::BS_step(){
+inline int asteroid::BS_step(){
+	int er;
 
 	for(int i = 0; i < N; ++i){
 
@@ -1371,7 +1414,10 @@ inline void asteroid::BS_step(){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time);
+		er = update_Chebyshev(time);
+		if(er <= 0){
+			return 0;
+		}
 		update_perturbers(time);
 //printf("%d %d %g %g\n", n, 0, 0.0, dt);
 		// ----------------------------------------------------------------------------
@@ -1431,7 +1477,10 @@ inline void asteroid::BS_step(){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time + dt2);
+		er = update_Chebyshev(time + dt2);
+		if(er <= 0){
+			return 0;
+		}
 		update_perturbers(time + dt2);
 //printf("%d %d %g\n", n, 1, dt2 / dt);
 		// ----------------------------------------------------------------------------
@@ -1485,7 +1534,10 @@ inline void asteroid::BS_step(){
 
 			// ----------------------------------------------------------------------------
 			//Update the Chebyshev coefficients if necessary
-			update_Chebyshev(time + (m-1) * dt22);
+			er = update_Chebyshev(time + (m-1) * dt22);
+			if(er <= 0){
+				return 0;
+			}
 			update_perturbers(time + (m-1) * dt22);
 //printf("%d %d %g\n", n, m, (m-1) * dt22 / dt);
 			// ----------------------------------------------------------------------------
@@ -1536,7 +1588,10 @@ inline void asteroid::BS_step(){
 			}
 			// ----------------------------------------------------------------------------
 			//Update the Chebyshev coefficients if necessary
-			update_Chebyshev(time + (m-1) * dt22 + dt2);
+			er = update_Chebyshev(time + (m-1) * dt22 + dt2);
+			if(er <= 0){
+				return 0;
+			}
 			update_perturbers(time + (m-1) * dt22 + dt2);
 //printf("%d %d %g\n", n, m, ((m-1) * dt22 + dt2) / dt);
 			// ----------------------------------------------------------------------------
@@ -1589,7 +1644,10 @@ inline void asteroid::BS_step(){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time + dt);
+		er = update_Chebyshev(time + dt);
+		if(er <= 0){
+			return 0;
+		}
 		update_perturbers(time + dt);
 //printf("%d %d %g\n", n, n+1, 1.0);
 		// ----------------------------------------------------------------------------
@@ -1758,6 +1816,7 @@ inline void asteroid::BS_step(){
 		snew_h[0] = 0.5;
 //printf("repeat time step %g\n", dt);
 	}
+	return 1;
 }
 	
 int asteroid::loop_individual(){
@@ -1964,10 +2023,16 @@ int asteroid::loop_individual(){
 
 
 int asteroid::loop(){
+	int er;
 
 	//If needed, convert from heliocentric equatorial coordinates to barycentric equatorial coordinates
 	if(ICheliocentric == 1){
-		HelioToBary(x_h, y_h, z_h, vx_h, vy_h, vz_h);
+		printf("Convert heliocentric to barycentric coordinates\n");
+		er = HelioToBary(x_h, y_h, z_h, vx_h, vy_h, vz_h);
+		if(er <= 0){
+			return 0;
+		}
+		printf("Convert heliocentric to barycentric coordinates OK\n");
 	} 
 
 
@@ -1991,7 +2056,10 @@ int asteroid::loop(){
 	}
 
 	if(time_reference + time >= outStart){
-		convertOutput();
+		er = convertOutput();
+		if(er <= 0){
+			return 0;
+		}
 		printOutput(dt);
 	}
 
@@ -2047,39 +2115,42 @@ int asteroid::loop(){
 
 			//do a time step of length dt
 			if(strcmp(integratorName, "LF") == 0){
-				leapfrog_step();
+				er = leapfrog_step();
 //				time = timeStart + timeStep * dt;
 			}
 			if(strcmp(integratorName, "RK4") == 0){
-				RK_step();
+				er = RK_step();
 			}
 			if(strcmp(integratorName, "RK7") == 0){
-				RK_step();
+				er = RK_step();
 			}
 			if(strcmp(integratorName, "RKF45") == 0){
-				RKF_step();
+				er = RKF_step();
 				snew = snew_h[0];
 			}
 			if(strcmp(integratorName, "DP54") == 0){
-				RKF_step();
+				er = RKF_step();
 				snew = snew_h[0];
 			}
 			if(strcmp(integratorName, "RKF78") == 0){
-				RKF_step();
+				er = RKF_step();
 				snew = snew_h[0];
 			}
 			if(strcmp(integratorName, "BS") == 0){
-				BS_step();
+				er = BS_step();
 				snew = snew_h[0];
 			}
 			if(strcmp(integratorName, "IMM") == 0){
-				IMM_step();
+				er = IMM_step();
 				if(snew_h[0] == -1){
 					printf("Error, implicit midpoint method did not converge\n");
 					return 0;
 				}
 			}
-			
+			if(er <= 0 ){
+				return 0;
+			}		
+	
 	
 			if(printdt == 1){
 				fprintf(dtFile, "%-25.20g %lld %-25.20g\n", time + time_reference, timeStep, dt / snew);
@@ -2128,7 +2199,10 @@ int asteroid::loop(){
 		}//end of ttt loop
 
 		if(time_reference + time >= outStart){
-			convertOutput();
+			er = convertOutput();
+			if(er <= 0){
+				return 0;
+			}
 			printOutput(dtmin);
 			fflush(outputFile);
 		}
@@ -2149,9 +2223,5 @@ int asteroid::loop(){
 			return 0;
 		}
 	}//end of tt loop
-	fclose(outputFile);
-	if(printdt == 1){
-		fclose(dtFile);
-	}
 	return 1;
 }

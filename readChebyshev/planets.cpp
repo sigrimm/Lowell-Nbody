@@ -2,29 +2,34 @@
 
 
 int planets::alloc(){
-                
-        nChebyshev = (int*)malloc(Nplanets * sizeof(int));
-        p_offset0 = (int*)malloc(Nplanets * sizeof(int));
-        p_offset1 = (int*)malloc(Nplanets * sizeof(int));
-        p_N = (int*)malloc(Nplanets * sizeof(int));
-        id = (int*)malloc((Nplanets  + Npert)* sizeof(int));
-        GM = (double*)malloc((Nplanets + Npert) * sizeof(double));
-                        
-        for(int i = 0; i < Nplanets; ++i){
-                nChebyshev[i] = 0;
-        }               
-        for(int i = 0; i < Nplanets + Npert; ++i){
+		
+	nChebyshev = (int*)malloc(Nplanets * sizeof(int));
+	p_offset0 = (int*)malloc(Nplanets * sizeof(int));
+	p_offset1 = (int*)malloc(Nplanets * sizeof(int));
+	p_N = (int*)malloc(Nplanets * sizeof(int));
+	id = (int*)malloc((Nplanets  + Npert)* sizeof(int));
+	GM = (double*)malloc((Nplanets + Npert) * sizeof(double));
+			
+	for(int i = 0; i < Nplanets; ++i){
+		nChebyshev[i] = 0;
+	}
+	for(int i = 0; i < Nplanets + Npert; ++i){
 		GM[i] = 0.0;
-        }               
-                
-        return 1;
+	}
+	
+return 1;
 }
 
 
 //search for block index
 int getBlockIndex(FILE *infile, double time, int &blockIndex){
+	int er;
 	for(int i = 2; i < 1000000; ++i){
-		fseek(infile, i * DE_blocksize8, SEEK_SET);
+		er = fseek(infile, i * DE_blocksize8, SEEK_SET);
+		if(er != 0){
+			return 0;
+		}
+
 		//read start and end time of the block
 		double cdata[2];
 		int er = fread(cdata, sizeof(double), 2, infile);
@@ -49,6 +54,7 @@ int getBlockIndex(FILE *infile, double time, int &blockIndex){
 
 int planets::readHeader(FILE *hfile){
 
+	printf("Start reading header file\n");
 
 	if(hfile){
 		char line[256];
@@ -64,14 +70,14 @@ int planets::readHeader(FILE *hfile){
 			}
 
 		}
-		printf("reading group 1040\n");
+		printf("  reading group 1040\n");
 		//read empty line
 		fgets(line, 256, hfile);
 		
 		//read number of constants
 		int nconst = 0;
 		fscanf(hfile, "%d", &nconst);
-		printf("Number of constants: %d\n", nconst);
+		printf("  Number of constants: %d\n", nconst);
 
 
 		cname = (char**)malloc(nconst * sizeof(char *));
@@ -140,7 +146,7 @@ int planets::readHeader(FILE *hfile){
 			}
 
 		}
-		printf("reading group 1050\n");
+		printf("  reading group 1050\n");
 		//read empty line
 		fgets(line, 256, hfile);
 		//read first line and count the number of columns
@@ -155,7 +161,7 @@ int planets::readHeader(FILE *hfile){
 			offset += n;
 			++nc1050;
 		}
-		printf("number of columns in group 1050 %d\n", nc1050);
+		printf("  number of columns in group 1050 %d\n", nc1050);
 
 		c1050 = (int*)malloc(nc1050 * 3 * sizeof(int));
 		
@@ -174,15 +180,22 @@ int planets::readHeader(FILE *hfile){
 		}
 		//------------------------------------------
 		
-		printf("reading header file finished\n");
+		printf("Reading header file OK\n");
+	}
+	else{
+		printf("Error, head file not found\n");
+		return 0;
 	}
 
-	return 0;
+	return 1;
 }	
 
-int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double time0, double time1){
+int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double time0, double time1, int printT){
+
+	printf("Start reading planets file\n");
 
 
+	int er;
 	double startTime, endTime, daysPerBlock;
 	int Nc;
 	double AUtokm, EM;
@@ -191,14 +204,41 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 	//https://www.celestialprogramming.com/jpl-ephemeris-format/jpl-ephemeris-format.html
 
 	printf("seek %d\n", 0x0A5C);	//2652 offset to StartJD
-	fseek(infile, 0x0A5C, SEEK_SET);
+	er = fseek(infile, 0x0A5C, SEEK_SET);
+	if(er != 0){
+		return 0;
+	}
 
-	fread(&startTime, sizeof(double), 1, infile); 
-	fread(&endTime, sizeof(double), 1, infile); 
-	fread(&daysPerBlock, sizeof(double), 1, infile); 
-	fread(&Nc, sizeof(int), 1, infile); 
-	fread(&AUtokm, sizeof(double), 1, infile);		//AU 
-	fread(&EM, sizeof(double), 1, infile);			//EMRAT 
+	er = fread(&startTime, sizeof(double), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&endTime, sizeof(double), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&daysPerBlock, sizeof(double), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&Nc, sizeof(int), 1, infile); 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&AUtokm, sizeof(double), 1, infile);		//AU 
+	if(er <= 0){
+		return 0;
+	}
+	
+	er = fread(&EM, sizeof(double), 1, infile);			//EMRAT 
+	if(er <= 0){
+		return 0;
+	}
+	
 
 
 	printf("Start time %.20g\n", startTime);
@@ -217,9 +257,21 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 
 	for(int i = 0; i < 12; ++i){
 		int c1, c2, c3;
-		fread(&c1, sizeof(int), 1, infile);
-		fread(&c2, sizeof(int), 1, infile);
-		fread(&c3, sizeof(int), 1, infile);
+		er = fread(&c1, sizeof(int), 1, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
+		er = fread(&c2, sizeof(int), 1, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
+		er = fread(&c3, sizeof(int), 1, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
 		body_offset[i] = c1 - 1;	//minus 1 to start at 0
 		if(i < 12){
 			nChebyshev[i] = c2;
@@ -245,7 +297,11 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 
 	//read version number
 	int version;
-	fread(&version, sizeof(int), 1, infile);
+	er = fread(&version, sizeof(int), 1, infile);
+	if(er <= 0){
+		return 0;
+	}
+	
 	printf("Version of data file: %d\n", version);
 
 	if(DE_version != version){
@@ -255,9 +311,21 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 	//read  column 13 of group 1050
 	for(int i = 12; i < 13; ++i){
 		int c1, c2, c3;
-		fread(&c1, sizeof(int), 1, infile);
-		fread(&c2, sizeof(int), 1, infile);
-		fread(&c3, sizeof(int), 1, infile);
+		er = fread(&c1, sizeof(int), 1, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
+		er = fread(&c2, sizeof(int), 1, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
+		er = fread(&c3, sizeof(int), 1, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
 		printf("g1050 column %d %d %d %d\n", i, c1, c2, c3);
 		//printf("%d %d %d %d\n", i, c1050[i + 0 * nc1050], c1050[i + 1 * nc1050], c1050[i + 2 * nc1050]);
 		if(c1 != c1050[i + 0 * nc1050]){
@@ -275,12 +343,20 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 	}
 
 	//read constants
-	fseek(infile, DE_blocksize8, SEEK_SET);
+	er = fseek(infile, DE_blocksize8, SEEK_SET);
+	if(er != 0){
+		return 0;
+	}
+
 	double dd;
 
 	double AU, EMRAT, CENTER, CLIGHT, RE, J2E;
 	for(int i = 0; i < Nc; ++i){
-		fread(&dd, sizeof(double), 1, infile);
+		er = fread(&dd, sizeof(double), 1, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
 		//Number of kilometers per astronomical unit
 		if(strcmp(cname[i], "AU") == 0){
 			AU = dd;
@@ -390,15 +466,15 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 	
 	}
 
-#if def_printT == 1
-	fprintf(outfileT,"time0 %.20g\n", time0);
-	fprintf(outfileT,"time1 %.20g\n", time1);
-	fprintf(outfileT,"AUtokm %.20g\n", AUtokm);
-	fprintf(outfileT,"EM %.20g\n", EM);
-	fprintf(outfileT,"CLIGHT %.20g\n", CLIGHT);
-	fprintf(outfileT,"RE %.20g\n", RE);
-	fprintf(outfileT,"J2E %.20g\n", J2E);
-#endif
+	if(printT == 1){
+		fprintf(outfileT,"time0 %.20g\n", time0);
+		fprintf(outfileT,"time1 %.20g\n", time1);
+		fprintf(outfileT,"AUtokm %.20g\n", AUtokm);
+		fprintf(outfileT,"EM %.20g\n", EM);
+		fprintf(outfileT,"CLIGHT %.20g\n", CLIGHT);
+		fprintf(outfileT,"RE %.20g\n", RE);
+		fprintf(outfileT,"J2E %.20g\n", J2E);
+	}
 
 	fwrite(&time0, sizeof(double), 1, outfile);
 	fwrite(&time1, sizeof(double), 1, outfile);
@@ -410,7 +486,6 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 
 	double *cdata;
 	cdata = (double*)malloc(DE_blocksize * sizeof(double));	
-	int er;
 
 	//search for start block
 	int blockIndex = -1;
@@ -432,9 +507,9 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 		dataSize += nSub[i] *  (nChebyshev[i] * 3 + 2) * dblock;
 		p_offset1[i] = dataSize;
 		printf("planet offset %d %d %d %d %d %d\n", i, nSub[i], nChebyshev[i], p_offset0[i], p_offset1[i], nSub[i] *  (nChebyshev[i] * 3 + 2) * dblock);
-#if def_printT == 1
-		fprintf(outfileT, "%d %d %d %d %.30g\n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i], GM[i]);
-#endif
+		if(printT == 1){
+			fprintf(outfileT, "%d %d %d %d %.30g\n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i], GM[i]);
+		}
 //printf("%d %d %d %d %.20g\n", id[i], nChebyshev[i], p_offset0[i], p_offset1[i], GM[i]);
 		fwrite(&id[i], sizeof(int), 1, outfile);
 		fwrite(&nChebyshev[i], sizeof(int), 1, outfile);
@@ -448,8 +523,16 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 
 	for(int i = 0; i < dblock; ++i){
 		//read data block
-		fseek(infile, blockIndex * DE_blocksize8, SEEK_SET);
+		er = fseek(infile, blockIndex * DE_blocksize8, SEEK_SET);
+		if(er != 0){
+			return 0;
+		}
+
 		er = fread(cdata, sizeof(double), DE_blocksize, infile);
+		if(er <= 0){
+			return 0;
+		}
+	
 		++blockIndex;
 
 		if(er < DE_blocksize){
@@ -496,12 +579,13 @@ int planets::readPlanets(FILE *infile, FILE *outfileT, FILE *outfile, double tim
 	
 	}
 
+	printf("Reading planets file OK\n");
 
-	return 0;
+	return 1;
 }
 
 
-int planets::printPlanets(FILE *outfileT, FILE *outfile){
+int planets::printPlanets(FILE *outfileT, FILE *outfile, int printT){
 
 	//-------------------------------------------------------
 	//Print all Chebyshev polynomial in a new file
@@ -510,14 +594,14 @@ int planets::printPlanets(FILE *outfileT, FILE *outfile){
 		int RSIZE = nChebyshev[i] * 3 + 2;
 		for(int j = 0; j < p_N[i]; ++j){
 			for(int k = 0; k < RSIZE; ++k){
-#if def_printT == 1
-				fprintf(outfileT, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
-#endif
+				if(printT == 1){
+					fprintf(outfileT, "%.20g ", pertdata[p_offset0[i] + j * RSIZE + k]);
+				}
 				fwrite(&pertdata[p_offset0[i] + j * RSIZE + k], sizeof(double), 1, outfile);
 			}
-#if def_printT == 1
-			fprintf(outfileT, "\n");
-#endif
+			if(printT == 1){
+				fprintf(outfileT, "\n");
+			}
 		}
 	}
 	return 1;

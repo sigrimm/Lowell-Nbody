@@ -3,7 +3,24 @@
 #include "perturbers.h"
 
 
-int main(){
+int main(int argc, char*argv[]){
+
+	int printT = 0;	//flag to print output in text format
+
+
+	// ----------------------------------
+	//read console arguments 
+	// ----------------------------------
+	for(int i = 1; i < argc; i += 2){
+		if(strcmp(argv[i], "-printT") == 0){
+			printT = atoi(argv[i + 1]);
+		}       
+		else{   
+			printf("Error, console argument is not valid.\n");
+			return 0;
+		}               
+	}                       
+	// ----------------------------------
 
 
 	double time0 = 2450800.5;
@@ -12,6 +29,7 @@ int main(){
 	
 	// **********************************************
 	//read paramChebyshev.dat file
+	printf("Start read paramChebyshev.dat file\n");
 
 	FILE *paramfile;
 	paramfile = fopen("paramChebyshev.dat", "r");
@@ -136,11 +154,13 @@ int main(){
 	FILE *outFile;
 
 
-#if def_printT == 1
-	outFileT = fopen(outFileNameT, "w");
-#else
-	outFileT = NULL;
-#endif
+	if(printT == 1){
+		outFileT = fopen(outFileNameT, "w");
+	}
+	else{
+		outFileT = NULL;
+	}
+
 	outFile = fopen(outFileName, "wb");
 
 	// **********************************************
@@ -151,7 +171,16 @@ int main(){
 	planetsFile = fopen(planetsFileName, "rb");
 
 	er = pl.readHeader(headerFile);
-	er = pl.readPlanets(planetsFile, outFileT, outFile, time0, time1);
+	if(er <= 0){
+		printf("Error in reading planets header file\n");
+		return 0;
+	}
+
+	er = pl.readPlanets(planetsFile, outFileT, outFile, time0, time1, printT);
+	if(er <= 0){
+		printf("Error in reading planets file\n");
+		return 0;
+	}
 
 	fclose(headerFile);
 	fclose(planetsFile);
@@ -168,18 +197,37 @@ int main(){
 	perturbersFile = fopen(perturbersFileName, "rb");
 
 	er = pert.readPerturbers1(perturbersFile);
-	er = pert.readPerturbers2(perturbersFile, outFileT, outFile, time0, time1, pl.dataSize);
+	if(er <= 0){
+		printf("Error in reading perturbers file\n");
+		return 0;
+	}
+	er = pert.readPerturbers2(perturbersFile, outFileT, outFile, time0, time1, pl.dataSize, printT);
+	if(er <= 0){
+		printf("Error in reading perturbers file\n");
+		return 0;
+	}
 
 	fclose(perturbersFile);
 
+	printf("Print Planets\n");
+	er = pl.printPlanets(outFileT, outFile, printT);
+	if(er <= 0){
+		return 0;
+	}
 
-	er = pl.printPlanets(outFileT, outFile);
-	er = pert.printPerturbers(outFileT, outFile);
+	printf("Print Perturbers\n");
+	er = pert.printPerturbers(outFileT, outFile, printT);
+	if(er <= 0){
+		return 0;
+	}
 
-#if def_printT == 1
-	fclose(outFileT);
-#endif
+	if(printT == 1){
+		fclose(outFileT);
+	}
 	fclose(outFile);
+
+	printf("Write Chebyshev file OK\n");
+
 
 
 	return 0;

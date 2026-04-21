@@ -1,4 +1,4 @@
-inline void asteroid::update_Chebyshev(double time){
+inline int asteroid::update_Chebyshev(double time){
 
 	int er;
 	//Update the Chebyshev coefficients if necessary
@@ -8,15 +8,31 @@ inline void asteroid::update_Chebyshev(double time){
 		if(time + time_reference > endTime_h[p]){
 			for(int k = 0; k < 1000000; ++k){
 
-				fseek(perturbersFile, offset0_h[p] * sizeof(double), SEEK_SET);
+				er = fseek(perturbersFile, offset0_h[p] * sizeof(double), SEEK_SET);
+				if(er != 0){
+					return 0;
+				}
 
 				er = fread(&startTime_h[p], sizeof(double), 1, perturbersFile);
+				if(er <= 0){
+					printf("Error in reading startTime in perturber file, particle %d\n", p);
+					return 0;
+				}
+
 				er = fread(&endTime_h[p], sizeof(double), 1, perturbersFile);
+				if(er <= 0){
+					printf("Error in reading endTime in perturber file, particle %d\n", p);
+					return 0;
+				}
 
 
 //printf(" ++ %d %d %d %d %.20g %.20g | %.20g %d\n", p, idp_h[p], offset0_h[p], nChebyshev_h[p], startTime_h[p], endTime_h[p], time + time_reference, er);
 
 				er = fread(cdata_h + pp, sizeof(double), nChebyshev_h[p] * 3, perturbersFile);
+				if(er <= 0){
+					printf("Error in reading perturber file, particle %d\n", p);
+					return 0;
+				}
 
 				if(time + time_reference <= endTime_h[p]){
 					break;
@@ -28,15 +44,30 @@ inline void asteroid::update_Chebyshev(double time){
 		if(time + time_reference < startTime_h[p]){
 			for(int k = 0; k < 1000000; ++k){
 
-				fseek(perturbersFile, offset0_h[p] * sizeof(double), SEEK_SET);
+				er = fseek(perturbersFile, offset0_h[p] * sizeof(double), SEEK_SET);
+				if(er != 0){
+					return 0;
+				}
 
 				er = fread(&startTime_h[p], sizeof(double), 1, perturbersFile);
+				if(er <= 0){
+					printf("Error in reading startTime in perturber file, particle %d\n", p);
+					return 0;
+				}
 				er = fread(&endTime_h[p], sizeof(double), 1, perturbersFile);
+				if(er <= 0){
+					printf("Error in reading endTime in perturber file, particle %d\n", p);
+					return 0;
+				}
 
 
 //printf(" -- %d %d %d %d %.20g %.20g | %.20g %d\n", p, idp_h[p], offset0_h[p], nChebyshev_h[p], startTime_h[p], endTime_h[p], time + time_reference, er);
 
 				er = fread(cdata_h + pp, sizeof(double), nChebyshev_h[p] * 3, perturbersFile);
+				if(er <= 0){
+					printf("Error in reading perturber file, particle %d\n", p);
+					return 0;
+				}
 
 				if(time + time_reference >= startTime_h[p]){
 					break;
@@ -46,6 +77,7 @@ inline void asteroid::update_Chebyshev(double time){
 			}
 		}
 	}
+	return 1;
 }
 
 inline void asteroid::update_perturbers(double time){
