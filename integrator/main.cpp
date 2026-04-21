@@ -182,7 +182,17 @@ int main(int argc, char*argv[]){
 #endif
 	//----------------------------------------------------------
 
-	er = A.loop();	
+	
+	if(A.individualSteps == 1){
+#if USEGPU == 0
+		er = A.loop_individual();	
+#else
+		er = A.loop();
+#endif
+	}
+	else{
+		er = A.loop();
+	}
 
 	fclose(A.perturbersFile);
 
@@ -195,7 +205,10 @@ int main(int argc, char*argv[]){
 	fprintf(A.infoFile, "Run time in seconds:  %g\n", ms / 1000.0);
 	
 	fclose(A.infoFile);
-	A.freeMemory();
 
+	A.freeMemory();
+#if USEGPU == 1
+	A.freeMemoryGPU();
+#endif
 }
 

@@ -1,4 +1,5 @@
 CFLAGS = -O3
+#CFLAGS = -O3 -g
 
 
 all: integrator integratorGPU

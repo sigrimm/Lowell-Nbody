@@ -1210,7 +1210,7 @@ __global__ void RK_step2_kernel(double *xTable_d, double *yTable_d, double *zTab
 //Runge Kutta Fehlberg step with adaptive time step
 // Every body runs on a thread
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int RKFn, const int Nperturbers, const int N, const int stop){
+__global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int RKFn, const int Nperturbers, const int N){
 
 
 	int itx = threadIdx.x;
@@ -1470,7 +1470,7 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 // Runge Kutta Fehlberg step with adaptive time step
 // Every body runs on a thread
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d,double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int RKFn, const int Nperturbers, const int N, const int stop){
+__global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d,double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int RKFn, const int Nperturbers, const int N){
 
 
 	int itx = threadIdx.x;
@@ -1748,7 +1748,7 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 // Bulirsh-Stoer step with adaptive time step
 // Every body runs on a thread
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int BSn, const int Nperturbers, const int N, const int stop){
+__global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int BSn, const int Nperturbers, const int N){
 
 
 	int itx = threadIdx.x;
@@ -2262,6 +2262,7 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 
 
 			error = sqrt(error / 6.0);      //6 is the number of dimensions
+//printf("error %d %.20g\n", itx, error);
 
 
 			//update
@@ -2294,11 +2295,8 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 			if(error < 1.0){
 				snew_d[id] = 1.0;
 
-				if(stop != 1){
-					if(n < 6){
-						snew_d[id] = 2.0;
-					}
-
+				if(n < 6){
+					snew_d[id] = 2.0;
 				}
 
 				f = 0;
@@ -2759,7 +2757,11 @@ __global__ void convertOutput_kernel(double *x_d, double *y_d, double *z_d, doub
 
 }
 
+int asteroid::loop_individual(){
 
+
+	return 1;
+}
 	
 int asteroid::loop(){
 
@@ -2802,7 +2804,7 @@ int asteroid::loop(){
 
 		double snew = 10.0;
 
-//printf("integrate %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1);
+//printf("integrate %.20g %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1, dt);
 
 		//integrate until the next output interval
 		for(int ttt = 0; ttt < MaxTimeSteps2; ++ttt){
@@ -2810,7 +2812,9 @@ int asteroid::loop(){
 			//refine last time step of interval to match output time
 			if(dts < 0){
 				if(time + dt < timett1){
-					dt1 = dt;
+//printf("refine %.20g %.20g %.20g\n", time + dt, timett1, timett1 - time);
+
+					dtsave = dt;
 					dt = (timett1 - time);
 					stop = 1;
 //printf("refine %.20g\n", timett1 - time);
@@ -2818,10 +2822,10 @@ int asteroid::loop(){
 			}
 			else{
 				if(time + dt > timett1){
-					dt1 = dt;
+//printf("refine %.20g %.20g %.20g\n", time + dt, timett1, timett1 - time);
+					dtsave = dt;
 					dt = (timett1 - time);
 					stop = 1;
-//printf("refine %.20g\n", timett1 - time);
 				}
 
 			}
@@ -2863,10 +2867,10 @@ int asteroid::loop(){
 				update_perturbers_kernel <<< nStage, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, nStage, nCm, EM, AUtokm, Nperturbers);
 
 				if(GPUMode == 0){
-					RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, RKFn, Nperturbers, N, stop);
+					RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, RKFn, Nperturbers, N);
 				}
 				else{
-					RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, RKFn, Nperturbers, N, stop);
+					RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, RKFn, Nperturbers, N);
 				}
 
 
@@ -2904,10 +2908,10 @@ int asteroid::loop(){
 				update_perturbers_kernel <<< nStage, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, nStage, nCm, EM, AUtokm, Nperturbers);
 
 				//if(GPUMode == 0){
-					BS_step_kernel <<< (N + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, BSn, Nperturbers, N, stop);
+					BS_step_kernel <<< (N + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, BSn, Nperturbers, N);
 				//}
 				//else{
-				//	BS_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, BSn, Nperturbers, N, stop);
+				//	BS_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, BSn, Nperturbers, N);
 				//}
 
 
@@ -2923,7 +2927,6 @@ int asteroid::loop(){
 				cudaDeviceSynchronize();
 				cudaMemcpy(snew_h, ssum_d, sizeof(double), cudaMemcpyDeviceToHost);
 				snew = snew_h[0];
-//printf("snew %g\n", snew_h[0]);
 				if(snew >= 1.0){
 					//accept step
 					update_BS_kernel <<< (N + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, N);
@@ -2971,10 +2974,11 @@ int asteroid::loop(){
 
 			if(stop == 0){
 				dtmin = (abs(dt) < abs(dtmin)) ? dt : dtmin;
-				if(printdt == 1){
-					fprintf(dtFile, "%.20g %lld %g\n", time + time_reference, timeStep, dt);
-				}
 			}
+			if(printdt == 1){
+				fprintf(dtFile, "%-25.20g %lld %-25.20g\n", time + time_reference, timeStep, dt / snew);
+			}
+//printf("dt %lld %g %g\n", timeStep, dt / snew, dtsave);
 
 			if(time + time_reference > time1 || time + time_reference < time0){
 				cudaDeviceSynchronize();
@@ -2997,7 +3001,8 @@ int asteroid::loop(){
 				stop = 0;
 				if(snew >= 1.0){
 					//set time step equal to the last accepted full time step
-					dt = dt1;
+					dt = dtsave;
+//printf("reset %.20g\n", dt);
 					break;
 				}
 			}

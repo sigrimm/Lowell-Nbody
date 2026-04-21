@@ -182,3 +182,77 @@ void asteroid::copyOutput(){
 
 }
 
+void asteroid::freeMemoryGPU(){
+
+	cudaFree(idp_d);
+	cudaFree(nChebyshev_d);
+	cudaFree(startTime_d);
+	cudaFree(endTime_d);
+	cudaFree(offset0_d);
+	cudaFree(offset1_d);
+	cudaFree(GM_d);
+	
+	cudaFree(cdata_d);
+
+	cudaFree(data_d);
+
+	cudaFree(xTable_d);
+	cudaFree(yTable_d);
+	cudaFree(zTable_d);
+
+	cudaFree(vxTable_d);
+	cudaFree(vyTable_d);
+	cudaFree(vzTable_d);
+
+	cudaFree(x_d);
+	cudaFree(y_d);
+	cudaFree(z_d);
+
+	cudaFree(vx_d);
+	cudaFree(vy_d);
+	cudaFree(vz_d);
+
+	cudaFree(xout_d);
+	cudaFree(yout_d);
+	cudaFree(zout_d);
+
+	cudaFree(vxout_d);
+	cudaFree(vyout_d);
+	cudaFree(vzout_d);
+
+	cudaFree(dx_d);
+	cudaFree(dy_d);
+	cudaFree(dz_d);
+
+	cudaFree(dvx_d);
+	cudaFree(dvy_d);
+	cudaFree(dvz_d);
+
+	cudaFree(ax_d);
+	cudaFree(ay_d);
+	cudaFree(az_d);
+
+	cudaFree(A1_d);
+	cudaFree(A2_d);
+	cudaFree(A3_d);
+
+	cudaFree(snew_d);
+	cudaFree(ssum_d);
+
+	if(RKFn > 0){
+		cudaFree(kx_d);
+		cudaFree(ky_d);
+		cudaFree(kz_d);
+
+		cudaFree(kvx_d);
+		cudaFree(kvy_d);
+		cudaFree(kvz_d);
+	}
+
+	if(cometFlag > 0){
+		cudaFree(Rsave_d);
+		cudaFree(Tsave_d);
+
+	}
+}
+

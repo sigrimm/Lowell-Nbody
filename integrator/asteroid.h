@@ -50,7 +50,7 @@ public:
 	double timeEnd = 2461000.5;		//End time of the integration, in JD
 	double dt = 1.0;			//time step, in days
 	int dts;				//sign of time step
-	double dt1;
+	double dtsave;
 	double outputInterval = 10;		//outut interval, in days		
 	double outStart = 0.0;			//start time when outputs are written, in JD
 	double time0;				//start time of the data file
@@ -93,6 +93,7 @@ public:
 
 	int WarpSize = 0;
 	int GPUMode = 0;
+	int individualSteps = 0;
 
 	//perturbers data
 	double *startTime_h, *startTime_d;	//Start time of perturbers data block
@@ -208,6 +209,11 @@ public:
 	double *kvy_h, *kvy_d;
 	double *kvz_h, *kvz_d;
 
+	double *dt_h;
+	double *dtsave_h;
+	double *dtmin_h;
+	double *time_h;
+	long long int *timeStep_h;
 
 	long long int *id_h, *id_d;
 
@@ -230,6 +236,7 @@ public:
 	void printInfo();
 	void printOutput(double);
 	void freeMemory();
+	void freeMemoryGPU();
 	
 
 	int KepToCart_M(double *, double *, double *, double *, double *, double *, int, double, double, double, double, double, double);
@@ -249,11 +256,14 @@ public:
 	inline void J2(double, double, double, double &, double &, double &, double);
 	inline void Gravity(double, double, double, double *, double *, double *, double &, double &, double &, int);
 	int loop();
+	int loop_individual();
 
 	inline void leapfrog_step();
 	inline void RK_step();
 	inline void RKF_step();
+	inline void RKF_individual_step(const int);
 	inline void BS_step();
+	inline void BS_individual_step(const int);
 	inline void IMM_step();
 
 	void setRK4();

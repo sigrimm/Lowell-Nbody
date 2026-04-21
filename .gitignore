@@ -21,3 +21,4 @@ readChebyshev/readChebyshev
 integrator/*.o
 integrator/integrator
 integrator/integratorGPU
+integrator/initial*.dat

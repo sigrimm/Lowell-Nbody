@@ -219,24 +219,28 @@ int asteroid::readParam(int argc, char*argv[]){
 			else if(strcmp(integratorName, "RKF45") == 0){
 				RKFn = 6;
 				nStage = 6;
+				individualSteps = 1;
 			}
 			else if(strcmp(integratorName, "DP54") == 0){
 				RKFn = 7;
 				nStage = 7;
+				individualSteps = 1;
 			}
 			else if(strcmp(integratorName, "RKF78") == 0){
 				RKFn = 13;
 				nStage = 13;
+				individualSteps = 1;
 			}
 			else if(strcmp(integratorName, "BS") == 0){
 				BSn = 80;
 				nStage = 80;
+				individualSteps = 1;
 			}
 			else if(strcmp(integratorName, "IMM") == 0){
 				nStage = 1;
 			}
 			else{
-				printf("Errof, Integrator not valid\n");
+				printf("Error, Integrator not valid\n");
 				return 0;
 
 			}
@@ -486,7 +490,7 @@ void asteroid::printInfo(){
 int asteroid::allocate(){
 	nCm = 0;
 	dts = (dt > 0.0) ? 1.0 : -1.0;      //sign of time step
-	dt1 = dt;
+	dtsave = dt;
 	stop = 0;
 
 	idp_h = (int*)malloc(Nperturbers * sizeof(int));
@@ -662,6 +666,11 @@ int asteroid::allocate(){
 	A2_h = (double*)malloc(N * sizeof(double));
 	A3_h = (double*)malloc(N * sizeof(double));
 
+	dt_h = (double*)malloc(N * sizeof(double));
+	dtsave_h = (double*)malloc(N * sizeof(double));
+	dtmin_h = (double*)malloc(N * sizeof(double));
+	time_h = (double*)malloc(N * sizeof(double));
+	timeStep_h = (long long int*)malloc(N * sizeof(long long int));
 	snew_h = (double*)malloc(N * sizeof(double));
 	jd_init_h = (double*)malloc(N * sizeof(double));
 
@@ -792,32 +801,33 @@ void asteroid::printOutput(double dtmin){
 
 	for(int i = 0; i < N; ++i){
 		if(outBinary == 0){
-			fprintf(outputFile, "%.20g %lld %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, id_h[i], xout_h[i], yout_h[i], zout_h[i], vxout_h[i], vyout_h[i], vzout_h[i], dtmin);
+			fprintf(outputFile, "%.20g %lld %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, id_h[i], xout_h[i], yout_h[i], zout_h[i], vxout_h[i], vyout_h[i], vzout_h[i], dtmin_h[i]);
 
 
-//fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, 2, xTable_h[2], yTable_h[2], zTable_h[2], vxTable_h[2], vyTable_h[2], vzTable_h[2], dtmin);
-//fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, 9, xTable_h[9], yTable_h[9], zTable_h[9], vxTable_h[9], vyTable_h[9], vzTable_h[9], dtmin);
+//fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, 2, xTable_h[2], yTable_h[2], zTable_h[2], vxTable_h[2], vyTable_h[2], vzTable_h[2], dtmin_h[i]);
+//fprintf(outputFile, "%.20g %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", time_reference + time, 9, xTable_h[9], yTable_h[9], zTable_h[9], vxTable_h[9], vyTable_h[9], vzTable_h[9], dtmin_h[i]);
 		}
 		else{
-			long long int id = id_h[i];
+			long long int id_ = id_h[i];
 			//unsigned long long int id = __builtin_bswap64 (id_h[i]);
-			double tt = time_reference + time;
-			double xx = xout_h[i];
-			double yy = yout_h[i];
-			double zz = zout_h[i];
-			double vxx = vxout_h[i];
-			double vyy = vyout_h[i];
-			double vzz = vzout_h[i];
+			double t_ = time_reference + time;
+			double x_ = xout_h[i];
+			double y_ = yout_h[i];
+			double z_ = zout_h[i];
+			double vx_ = vxout_h[i];
+			double vy_ = vyout_h[i];
+			double vz_ = vzout_h[i];
+			double dtmin_ = dtmin_h[i];
 
-			fwrite(&tt, sizeof(double), 1, outputFile);
-			fwrite(&id, sizeof(long long int), 1, outputFile);
-			fwrite(&xx, sizeof(double), 1, outputFile);
-			fwrite(&yy, sizeof(double), 1, outputFile);
-			fwrite(&zz, sizeof(double), 1, outputFile);
-			fwrite(&vxx, sizeof(double), 1, outputFile);
-			fwrite(&vyy, sizeof(double), 1, outputFile);
-			fwrite(&vzz, sizeof(double), 1, outputFile);
-			fwrite(&dtmin, sizeof(double), 1, outputFile);
+			fwrite(&t_, sizeof(double), 1, outputFile);
+			fwrite(&id_, sizeof(long long int), 1, outputFile);
+			fwrite(&x_, sizeof(double), 1, outputFile);
+			fwrite(&y_, sizeof(double), 1, outputFile);
+			fwrite(&z_, sizeof(double), 1, outputFile);
+			fwrite(&vx_, sizeof(double), 1, outputFile);
+			fwrite(&vy_, sizeof(double), 1, outputFile);
+			fwrite(&vz_, sizeof(double), 1, outputFile);
+			fwrite(&dtmin_, sizeof(double), 1, outputFile);
 
 
 		}
@@ -905,6 +915,12 @@ void asteroid::freeMemory(){
 	free(A1_h);
 	free(A2_h);
 	free(A3_h);
+
+	free(dt_h);
+	free(dtsave_h);
+	free(dtmin_h);
+	free(time_h);
+	free(timeStep_h);
 
 	free(snew_h);
 	free(jd_init_h);
