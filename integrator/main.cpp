@@ -196,6 +196,7 @@ int main(int argc, char*argv[]){
 	else{
 		er = A.loop();
 	}
+
 	fclose(A.outputFile);
 	if(A.printdt == 1){
 		fclose(A.dtFile);

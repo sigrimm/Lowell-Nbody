@@ -6,7 +6,7 @@
 #include <math.h>
 #include <cstring>
 
-#define def_version 1.01
+#define def_version 1.02
 
 #define def_NP 32		//used for shared memory, must be at least the number of perturbers
 #define def_N 64		//used for shared memory, must be a multiple of the warp size
@@ -259,8 +259,8 @@ public:
 	int loop();
 	int loop_individual();
 
-	inline void RKF_individual_step(const int);
-	inline void BS_individual_step(const int);
+	inline int RKF_individual_step(const int);
+	inline int BS_individual_step(const int);
 	inline int leapfrog_step();
 	inline int RK_step();
 	inline int RKF_step();

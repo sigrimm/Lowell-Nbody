@@ -524,9 +524,10 @@ inline int asteroid::RK_step(){
 
 // Runge Kutta Fehlberg step with adaptive time steps
 // All bodies are integrated individually with an individual, adaptive time steps
-inline void asteroid::RKF_individual_step(const int i){
+inline int asteroid::RKF_individual_step(const int i){
 
 
+	int er;
 	double dt = dt_h[i];
 	double ax;
 	double ay;
@@ -544,8 +545,11 @@ inline void asteroid::RKF_individual_step(const int i){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time_h[i] + RKFc_h[S] * dt);
-		update_perturbers(time_h[i] + RKFc_h[S] * dt);
+		er = update_Chebyshev(time_h[i] + RKFc_h[S] * dt);
+		if(er <= 0){
+			return 0;
+		}
+ 		update_perturbers(time_h[i] + RKFc_h[S] * dt);
 		// ----------------------------------------------------------------------------
 
 		ax = 0.0;
@@ -739,6 +743,8 @@ inline void asteroid::RKF_individual_step(const int i){
 
 
 //printf("dt %.20g %.20g %.20g\n", time_h[i], dt_h[i], snew_h[i]);
+
+	return 1;
 }
 
 //Runge Kutta Fehlberg step with adaptive time step
@@ -975,9 +981,9 @@ inline int asteroid::RKF_step(){
 }
 
 // Bulirsh-Stoer step with adaptive time step
-inline void asteroid::BS_individual_step(const int i){
+inline int asteroid::BS_individual_step(const int i){
 
-
+	int er;
 	double dt = dt_h[i];
 
 	double ax;
@@ -1017,7 +1023,10 @@ inline void asteroid::BS_individual_step(const int i){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time_h[i]);
+		er = update_Chebyshev(time_h[i]);
+		if(er <= 0){
+			return 0;
+		}
 		update_perturbers(time_h[i]);
 //printf("%d %d %g %g\n", n, 0, 0.0, dt);
 		// ----------------------------------------------------------------------------
@@ -1076,7 +1085,10 @@ inline void asteroid::BS_individual_step(const int i){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time_h[i] + dt2);
+		er = update_Chebyshev(time_h[i] + dt2);
+		if(er <= 0){
+			return 0;
+		}
 		update_perturbers(time_h[i] + dt2);
 //printf("%d %d %g\n", n, 1, dt2 / dt);
 		// ----------------------------------------------------------------------------
@@ -1130,7 +1142,10 @@ inline void asteroid::BS_individual_step(const int i){
 
 			// ----------------------------------------------------------------------------
 			//Update the Chebyshev coefficients if necessary
-			update_Chebyshev(time_h[i] + (m-1) * dt22);
+			er = update_Chebyshev (time_h[i] + (m-1) * dt22);
+			if(er <= 0){
+				return 0;
+			}
 			update_perturbers(time_h[i] + (m-1) * dt22);
 //printf("%d %d %g\n", n, m, (m-1) * dt22 / dt);
 			// ----------------------------------------------------------------------------
@@ -1181,7 +1196,10 @@ inline void asteroid::BS_individual_step(const int i){
 
 			// ----------------------------------------------------------------------------
 			//Update the Chebyshev coefficients if necessary
-			update_Chebyshev(time_h[i] + (m-1) * dt22 + dt2);
+			er = update_Chebyshev(time_h[i] + (m-1) * dt22 + dt2);
+			if(er <= 0){
+				return 0;
+			}
 			update_perturbers(time_h[i] + (m-1) * dt22 + dt2);
 //printf("%d %d %g\n", n, m, ((m-1) * dt22 + dt2) / dt);
 			// ----------------------------------------------------------------------------
@@ -1234,7 +1252,10 @@ inline void asteroid::BS_individual_step(const int i){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		update_Chebyshev(time_h[i] + dt);
+		er = update_Chebyshev(time_h[i] + dt);
+		if(er <= 0){
+			return 0;
+		}
 		update_perturbers(time_h[i] + dt);
 //printf("%d %d %g\n", n, n+1, 1.0);
 		// ----------------------------------------------------------------------------
@@ -1387,6 +1408,7 @@ inline void asteroid::BS_individual_step(const int i){
 		snew_h[i] = 0.5;
 //printf("repeat time step %g\n", dt);
 	}
+	return 1;
 }
 	
 
@@ -1820,7 +1842,7 @@ inline int asteroid::BS_step(){
 }
 	
 int asteroid::loop_individual(){
-
+	int er;
 	//If needed, convert from heliocentric equatorial coordinates to barycentric equatorial coordinates
 	if(ICheliocentric == 1){
 		HelioToBary(x_h, y_h, z_h, vx_h, vy_h, vz_h);
@@ -1910,18 +1932,21 @@ int asteroid::loop_individual(){
 
 				//do a time step of length dt_h[i]
 				if(strcmp(integratorName, "RKF45") == 0){
-					RKF_individual_step(i);
+					er = RKF_individual_step(i);
 				}
 				if(strcmp(integratorName, "DP54") == 0){
-					RKF_individual_step(i);
+					er = RKF_individual_step(i);
 				}
 				if(strcmp(integratorName, "RKF78") == 0){
-					RKF_individual_step(i);
+					er = RKF_individual_step(i);
 				}
 				if(strcmp(integratorName, "BS") == 0){
-					BS_individual_step(i);
+					er = BS_individual_step(i);
 				}
 
+				if(er <= 0){
+					return 0;
+				}
 
 				if(printdt == 1){
 					fprintf(dtFile, "%-25.20g %lld %-25.20g %d\n", time_h[i] + time_reference, timeStep_h[i], dt_h[i], i);
@@ -2013,10 +2038,7 @@ int asteroid::loop_individual(){
 			return 0;
 		}
 	}//end of tt loop
-	fclose(outputFile);
-	if(printdt == 1){
-		fclose(dtFile);
-	}
+
 	return 1;
 }
 
