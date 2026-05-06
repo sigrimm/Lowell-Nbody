@@ -78,7 +78,6 @@ inline void asteroid::GR(double xi, double yi, double zi, double vxi, double vyi
 	double t1 = 4.0 * GMSun / r - vsq;
 	double t3 = 4.0 * rv;
 	//printf("GRa %.20g %.20g %.20g %.20g %.20g\n", vsq, r, t1, t3, f1);
-	//printf("a %d %.20g %.20g %.20g\n", i, ax_h, ay_h, az_h);
 
 	//printf("A %.20g %.20g %.20g %.20g %.20g %.20g\n", xi, yi, zi, vxi, vyi, vzi);
 	//printf("B %d %.20g %.20g %.20g\n", i, f1, t1, t3);
@@ -91,7 +90,6 @@ inline void asteroid::GR(double xi, double yi, double zi, double vxi, double vyi
 	axi += aax;
 	ayi += aay;
 	azi += aaz;
-	//printf("GR a %d %.20g %.20g %.20g\n", i, ax_h[i], ay_h[i], az_h[i]);
 }
 
 //Coordinates must be Earth centric

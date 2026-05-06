@@ -739,10 +739,6 @@ int asteroid::allocate(){
 	}
 
 
-	ax_h = (double*)malloc(N * sizeof(double));
-	ay_h = (double*)malloc(N * sizeof(double));
-	az_h = (double*)malloc(N * sizeof(double));
-
 	A1_h = (double*)malloc(N * sizeof(double));
 	A2_h = (double*)malloc(N * sizeof(double));
 	A3_h = (double*)malloc(N * sizeof(double));
@@ -988,10 +984,6 @@ void asteroid::freeMemory(){
 	free(dvx_h);
 	free(dvy_h);
 	free(dvz_h);
-
-	free(ax_h);
-	free(ay_h);
-	free(az_h);
 
 	free(A1_h);
 	free(A2_h);

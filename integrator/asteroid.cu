@@ -73,10 +73,6 @@ int asteroid::allocateGPU(){
 		kvz_d = NULL;
 	}
 
-	cudaMalloc((void **) &ax_d, N * sizeof(double));
-	cudaMalloc((void **) &ay_d, N * sizeof(double));
-	cudaMalloc((void **) &az_d, N * sizeof(double));
-
 	cudaMalloc((void **) &A1_d, N * sizeof(double));
 	cudaMalloc((void **) &A2_d, N * sizeof(double));
 	cudaMalloc((void **) &A3_d, N * sizeof(double));
@@ -227,10 +223,6 @@ void asteroid::freeMemoryGPU(){
 	cudaFree(dvx_d);
 	cudaFree(dvy_d);
 	cudaFree(dvz_d);
-
-	cudaFree(ax_d);
-	cudaFree(ay_d);
-	cudaFree(az_d);
 
 	cudaFree(A1_d);
 	cudaFree(A2_d);

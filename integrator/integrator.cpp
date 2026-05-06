@@ -174,17 +174,13 @@ inline int asteroid::leapfrog_step(){
 	// ----------------------------------------------------------------------------
 
 
-	double ax;
-	double ay;
-	double az;
-
 	// ----------------------------------------------------------------------------
 	for(int i = 0; i < N; ++i){
 
 		//compute force
-		ax = 0.0;
-		ay = 0.0;
-		az = 0.0;
+		double ax = 0.0;
+		double ay = 0.0;
+		double az = 0.0;
 
 		//heliocentric coordinates
 		double xih = x_h[i] - xTable_h[10];
@@ -404,48 +400,47 @@ inline int asteroid::RK_step(){
 		// ----------------------------------------------------------------------------
 
 		for(int i = 0; i < N; ++i){
-			ax_h[i] = 0.0;
-			ay_h[i] = 0.0;
-			az_h[i] = 0.0;
+			double xt = x_h[i];
+			double yt = y_h[i];
+			double zt = z_h[i];
 
-			xt_h[i] = x_h[i];
-			yt_h[i] = y_h[i];
-			zt_h[i] = z_h[i];
-
-			vxt_h[i] = vx_h[i];
-			vyt_h[i] = vy_h[i];
-			vzt_h[i] = vz_h[i];
+			double vxt = vx_h[i];
+			double vyt = vy_h[i];
+			double vzt = vz_h[i];
 
 			for(int s = 0; s < S; ++s){
 				double dtaa = dt * RKFa_h[S * RKFn + s];
-				xt_h[i]  += dtaa * kx_h[i + s * N];
-				yt_h[i]  += dtaa * ky_h[i + s * N];
-				zt_h[i]  += dtaa * kz_h[i + s * N];
-				vxt_h[i] += dtaa * kvx_h[i + s * N];
-				vyt_h[i] += dtaa * kvy_h[i + s * N];
-				vzt_h[i] += dtaa * kvz_h[i + s * N];
-//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt_h[i], yt_h[i], zt_h[i], RKFa_h[S * RKFn + s], kx_h[s], dt);
+				xt  += dtaa * kx_h[i + s * N];
+				yt  += dtaa * ky_h[i + s * N];
+				zt  += dtaa * kz_h[i + s * N];
+				vxt += dtaa * kvx_h[i + s * N];
+				vyt += dtaa * kvy_h[i + s * N];
+				vzt += dtaa * kvz_h[i + s * N];
+//printf("update 2 %d %d %g %g %g %g %g %g\n", S, i, xt, yt, zt, RKFa_h[S * RKFn + s], kx_h[s], dt);
 
 			}
 
-			kx_h[i + S * N] = vxt_h[i];
-			ky_h[i + S * N] = vyt_h[i];
-			kz_h[i + S * N] = vzt_h[i];
+			kx_h[i + S * N] = vxt;
+			ky_h[i + S * N] = vyt;
+			kz_h[i + S * N] = vzt;
 
-		}
 
-		// ----------------------------------------------------------------------------
-		//compute forces
-		for(int i = 0; i < N; ++i){
+			// ----------------------------------------------------------------------------
+			//compute forces
+
+			double ax = 0.0;
+			double ay = 0.0;
+			double az = 0.0;
+
 
 			//heliocentric coordinates
-			double xih = xt_h[i] - xTable_h[10];
-			double yih = yt_h[i] - yTable_h[10];
-			double zih = zt_h[i] - zTable_h[10];
+			double xih = xt - xTable_h[10];
+			double yih = yt - yTable_h[10];
+			double zih = zt - zTable_h[10];
 
-			double vxih = vxt_h[i] - vxTable_h[10];
-			double vyih = vyt_h[i] - vyTable_h[10];
-			double vzih = vzt_h[i] - vzTable_h[10];
+			double vxih = vxt - vxTable_h[10];
+			double vyih = vyt - vyTable_h[10];
+			double vzih = vzt - vzTable_h[10];
 
 			//r is used in multiple forces, so reuse it
 			double rsq = xih * xih + yih * yih + zih * zih;
@@ -459,61 +454,57 @@ inline int asteroid::RK_step(){
 			}
 
 			//Earth centric coordinates
-			double xiE = xt_h[i] - xTable_h[2];
-			double yiE = yt_h[i] - yTable_h[2];
-			double ziE = zt_h[i] - zTable_h[2];
+			double xiE = xt - xTable_h[2];
+			double yiE = yt - yTable_h[2];
+			double ziE = zt - zTable_h[2];
 
 			if(useNonGrav == 1){
-				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax, ay, az);
 			}
 			if(useGR == 1){
-				GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_h[10]);
 			}
 			if(useJ2 == 1){
-				J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+				J2(xiE, yiE, ziE, ax, ay, az, GM_h[2]);
 			}
-			Gravity(xt_h[i], yt_h[i], zt_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
+			Gravity(xt, yt, zt, xTable_h, yTable_h, zTable_h, ax, ay, az, i);
 
-		}
-		// ----------------------------------------------------------------------------
-		for(int i = 0; i < N; ++i){
-			kvx_h[i + S * N] = ax_h[i];
-			kvy_h[i + S * N] = ay_h[i];
-			kvz_h[i + S * N] = az_h[i];
+			kvx_h[i + S * N] = ax;
+			kvy_h[i + S * N] = ay;
+			kvz_h[i + S * N] = az;
+			// ----------------------------------------------------------------------------
 		}
 	}
 
 	//update
 	for(int i = 0; i < N; ++i){
 
-		dx_h[i] = 0.0;
-		dy_h[i] = 0.0;
-		dz_h[i] = 0.0;
+		double dx = 0.0;
+		double dy = 0.0;
+		double dz = 0.0;
 
-		dvx_h[i] = 0.0;
-		dvy_h[i] = 0.0;
-		dvz_h[i] = 0.0;
+		double dvx = 0.0;
+		double dvy = 0.0;
+		double dvz = 0.0;
 
 		for(int S = 0; S < RKFn; ++S){
 			double dtb = dt * RKFb_h[S];
-			dx_h[i] += dtb * kx_h[i + S * N];
-			dy_h[i] += dtb * ky_h[i + S * N];
-			dz_h[i] += dtb * kz_h[i + S * N];
+			dx += dtb * kx_h[i + S * N];
+			dy += dtb * ky_h[i + S * N];
+			dz += dtb * kz_h[i + S * N];
 
-			dvx_h[i] += dtb * kvx_h[i + S * N];
-			dvy_h[i] += dtb * kvy_h[i + S * N];
-			dvz_h[i] += dtb * kvz_h[i + S * N];
+			dvx += dtb * kvx_h[i + S * N];
+			dvy += dtb * kvy_h[i + S * N];
+			dvz += dtb * kvz_h[i + S * N];
 		}
-	}
 
-	for(int i = 0; i < N; ++i){
-		x_h[i] += dx_h[i];
-		y_h[i] += dy_h[i];
-		z_h[i] += dz_h[i];
+		x_h[i] += dx;
+		y_h[i] += dy;
+		z_h[i] += dz;
 
-		vx_h[i] += dvx_h[i];
-		vy_h[i] += dvy_h[i];
-		vz_h[i] += dvz_h[i];
+		vx_h[i] += dvx;
+		vy_h[i] += dvy;
+		vz_h[i] += dvz;
 //printf("%d %g %g %g\n", i, x_h[i], y_h[i], z_h[i]);
 
 	}
@@ -526,8 +517,8 @@ inline int asteroid::RK_step(){
 // All bodies are integrated individually with an individual, adaptive time steps
 inline int asteroid::RKF_individual_step(const int i){
 
-
 	int er;
+
 	double dt = dt_h[i];
 	double ax;
 	double ay;
@@ -715,14 +706,6 @@ inline int asteroid::RKF_individual_step(const int i){
 
 	double s = pow( 1.0  / errork, RKF_ee);
 
-
-	//time steps of power of two
-	//if(s > 2.0) s = 2.0;
-	//else if (s < 1.0) s = 0.5;
-	//else s = 1;
-	
-
-
 	if(s >= 1.0){
 		//accept step
 		x_h[i] += dx_h[i];
@@ -748,97 +731,95 @@ inline int asteroid::RKF_individual_step(const int i){
 }
 
 //Runge Kutta Fehlberg step with adaptive time step
-inline int asteroid::RKF_step(){
+inline int asteroid::RKF_step(const int level){
 
 	int er;
+	double dt = dt_h[level];
+
 	for(int S = 0; S < RKFn; ++S){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		er = update_Chebyshev(time + RKFc_h[S] * dt);
+		er = update_Chebyshev(time_h[level] + RKFc_h[S] * dt);
 		if(er <= 0){
 			return 0;
 		}
-		update_perturbers(time + RKFc_h[S] * dt);
+		update_perturbers(time_h[level] + RKFc_h[S] * dt);
 		// ----------------------------------------------------------------------------
 
 		for(int i = 0; i < N; ++i){
-			ax_h[i] = 0.0;
-			ay_h[i] = 0.0;
-			az_h[i] = 0.0;
+			double xt = x_h[i];
+			double yt = y_h[i];
+			double zt = z_h[i];
 
-			xt_h[i] = x_h[i];
-			yt_h[i] = y_h[i];
-			zt_h[i] = z_h[i];
-
-			vxt_h[i] = vx_h[i];
-			vyt_h[i] = vy_h[i];
-			vzt_h[i] = vz_h[i];
+			double vxt = vx_h[i];
+			double vyt = vy_h[i];
+			double vzt = vz_h[i];
 
 			for(int s = 0; s < S; ++s){
 				double dtaa = dt * RKFa_h[S * RKFn + s];
 				int ii = i + s * N;
-				xt_h[i]  += dtaa * kx_h[ii];
-				yt_h[i]  += dtaa * ky_h[ii];
-				zt_h[i]  += dtaa * kz_h[ii];
-				vxt_h[i] += dtaa * kvx_h[ii];
-				vyt_h[i] += dtaa * kvy_h[ii];
-				vzt_h[i] += dtaa * kvz_h[ii];
+				xt  += dtaa * kx_h[ii];
+				yt  += dtaa * ky_h[ii];
+				zt  += dtaa * kz_h[ii];
+				vxt += dtaa * kvx_h[ii];
+				vyt += dtaa * kvy_h[ii];
+				vzt += dtaa * kvz_h[ii];
 
 			}
 			int ii = i + S * N;
-			kx_h[ii] = vxt_h[i];
-			ky_h[ii] = vyt_h[i];
-			kz_h[ii] = vzt_h[i];
+			kx_h[ii] = vxt;
+			ky_h[ii] = vyt;
+			kz_h[ii] = vzt;
 //if(i < 2) printf("K %d %d %.20g %.20g %.20g\n", i, S, kx_h[i + S * N], ky_h[i + S * N], kz_h[i + S * N]);
-		}
 
-		// ----------------------------------------------------------------------------
-		//compute forces
-		for(int i = 0; i < N; ++i){
+			// ----------------------------------------------------------------------------
+			//compute forces
+
+			double ax = 0.0;
+			double ay = 0.0;
+			double az = 0.0;
 
 			//heliocentric coordinates
-			double xih = xt_h[i] - xTable_h[10];
-			double yih = yt_h[i] - yTable_h[10];
-			double zih = zt_h[i] - zTable_h[10];
+			double xih = xt - xTable_h[10];
+			double yih = yt - yTable_h[10];
+			double zih = zt - zTable_h[10];
 
-			double vxih = vxt_h[i] - vxTable_h[10];
-			double vyih = vyt_h[i] - vyTable_h[10];
-			double vzih = vzt_h[i] - vzTable_h[10];
+			double vxih = vxt - vxTable_h[10];
+			double vyih = vyt - vyTable_h[10];
+			double vzih = vzt - vzTable_h[10];
 
 			//r is used in multiple forces, so reuse it
 			double rsq = xih * xih + yih * yih + zih * zih;
 			double r = sqrt(rsq);
 
-			if(cometFlag > 0 && S == 0){
-				if(i == 0){
-					Tsave_h[timeStep] = time;
-				}
-				Rsave_h[i * Rbuffersize + timeStep] = r;
-			}
+//			if(cometFlag > 0 && S == 0){
+//				if(i == 0){
+//					Tsave_h[timeStep] = time_h[level];
+//				}
+//				Rsave_h[i * Rbuffersize + timeStep] = r;
+//			}
 
 			//Earth centric coordinates
-			double xiE = xt_h[i] - xTable_h[2];
-			double yiE = yt_h[i] - yTable_h[2];
-			double ziE = zt_h[i] - zTable_h[2];
+			double xiE = xt - xTable_h[2];
+			double yiE = yt - yTable_h[2];
+			double ziE = zt - zTable_h[2];
 
 			if(useNonGrav == 1){
-				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax, ay, az);
 			}
 			if(useGR == 1){
-				GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_h[10]);
 			}
 			if(useJ2 == 1){
-				J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+				J2(xiE, yiE, ziE, ax, ay, az, GM_h[2]);
 			}
-			Gravity(xt_h[i], yt_h[i], zt_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
-		}
-		// ----------------------------------------------------------------------------
-		for(int i = 0; i < N; ++i){
-			int ii = i + S * N;
-			kvx_h[ii] = ax_h[i];
-			kvy_h[ii] = ay_h[i];
-			kvz_h[ii] = az_h[i];
+			Gravity(xt, yt, zt, xTable_h, yTable_h, zTable_h, ax, ay, az, i);
+
+			kvx_h[ii] = ax;
+			kvy_h[ii] = ay;
+			kvz_h[ii] = az;
+			// ----------------------------------------------------------------------------
 		}
 	}
 
@@ -866,32 +847,29 @@ inline int asteroid::RKF_step(){
 //if(i < 2) printf("dx %d %d %g %g %g %g %g %g\n", S, i, dx_h[i], dy_h[i], dz_h[i], RKFb_h[S], kx_h[i + S * N], dt);
 		}
 
-	}
 
 
-	//compute integration error
-	double snew = 10.0;
+		//compute integration error
 
-	for(int i = 0; i < N; ++i){
 
 		//Hairer
 /*
-		scalex_h[i]  = atol + fmax(fabs(x_h[i]), fabs(x_h[i] + dx_h[i])) * rtol;
-		scaley_h[i]  = atol + fmax(fabs(y_h[i]), fabs(y_h[i] + dy_h[i])) * rtol;
-		scalez_h[i]  = atol + fmax(fabs(z_h[i]), fabs(z_h[i] + dz_h[i])) * rtol;
+		double scalex  = atol + fmax(fabs(x_h[i]), fabs(x_h[i] + dx_h[i])) * rtol;
+		double scaley  = atol + fmax(fabs(y_h[i]), fabs(y_h[i] + dy_h[i])) * rtol;
+		double scalez  = atol + fmax(fabs(z_h[i]), fabs(z_h[i] + dz_h[i])) * rtol;
 
-		scalevx_h[i] = atol + fmax(fabs(vx_h[i]), fabs(vx_h[i] + dvx_h[i])) * rtol;
-		scalevy_h[i] = atol + fmax(fabs(vy_h[i]), fabs(vy_h[i] + dvy_h[i])) * rtol;
-		scalevz_h[i] = atol + fmax(fabs(vz_h[i]), fabs(vz_h[i] + dvz_h[i])) * rtol;
+		double scalevx = atol + fmax(fabs(vx_h[i]), fabs(vx_h[i] + dvx_h[i])) * rtol;
+		double scalevy = atol + fmax(fabs(vy_h[i]), fabs(vy_h[i] + dvy_h[i])) * rtol;
+		double scalevz = atol + fmax(fabs(vz_h[i]), fabs(vz_h[i] + dvz_h[i])) * rtol;
 */
 
-		scalex_h[i]  = atol + fabs(x_h[i]) * rtol;
-		scaley_h[i]  = atol + fabs(y_h[i]) * rtol;
-		scalez_h[i]  = atol + fabs(z_h[i]) * rtol;
+		double scalex  = atol + fabs(x_h[i]) * rtol;
+		double scaley  = atol + fabs(y_h[i]) * rtol;
+		double scalez  = atol + fabs(z_h[i]) * rtol;
 
-		scalevx_h[i] = atol + fabs(vx_h[i]) * rtol;
-		scalevy_h[i] = atol + fabs(vy_h[i]) * rtol;
-		scalevz_h[i] = atol + fabs(vz_h[i]) * rtol;
+		double scalevx = atol + fabs(vx_h[i]) * rtol;
+		double scalevy = atol + fabs(vy_h[i]) * rtol;
+		double scalevz = atol + fabs(vz_h[i]) * rtol;
 
 		//error estimation
 		double errorkx = 0.0;
@@ -915,39 +893,39 @@ inline int asteroid::RKF_step(){
 		}
 
 		double errork = 0.0;
-		errork += errorkx * errorkx / (scalex_h[i] * scalex_h[i]);
-		errork += errorky * errorky / (scaley_h[i] * scaley_h[i]);
-		errork += errorkz * errorkz / (scalez_h[i] * scalez_h[i]);
-		errork += errorkvx * errorkvx / (scalevx_h[i] * scalevx_h[i]);
-		errork += errorkvy * errorkvy / (scalevy_h[i] * scalevy_h[i]);
-		errork += errorkvz * errorkvz / (scalevz_h[i] * scalevz_h[i]);
+		errork += errorkx * errorkx / (scalex * scalex);
+		errork += errorky * errorky / (scaley * scaley);
+		errork += errorkz * errorkz / (scalez * scalez);
+		errork += errorkvx * errorkvx / (scalevx * scalevx);
+		errork += errorkvy * errorkvy / (scalevy * scalevy);
+		errork += errorkvz * errorkvz / (scalevz * scalevz);
 
 		errork = sqrt(errork / 6.0);	//6 is the number of dimensions
 
 		double s = pow( 1.0  / errork, RKF_ee);
 
-
-		//s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
-		//s = (RKF_facmax < s) ? RKF_facmax : s;
-
-		//time steps of power of two
-		if(s > 2.0) s = 2.0;
-		else if (s < 1.0) s = 0.5;
-		else s = 1;
-		
-
-		snew = (snew < s) ? snew : s;
-		snew_h[i] = snew;
+		snew_h[i] = s;
 	}
 
 
-	snew = 10.0;
+	double snew = 1.0e6;
 	//Find minimum time step
 	for(int i = 0; i < N; ++i){
-		snew = (snew < snew_h[i]) ? snew : snew_h[i];
+
+		double s = snew_h[i];
+		s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
+		s = (RKF_facmax < s) ? RKF_facmax : s;
+
+		if(s * dt > 0.1){
+
+			snew = (snew < s) ? snew : s;
+			
+		}
 
 	}
-	snew_h[0] = snew;
+
+	snew_h[level] = snew;
+
 	if(snew >= 1.0){
 		//accept step
 		for(int i = 0; i < N; ++i){
@@ -959,24 +937,12 @@ inline int asteroid::RKF_step(){
 			vy_h[i] += dvy_h[i];
 			vz_h[i] += dvz_h[i];
 		}
-		time += dt;
-		++timeStep;
-		if(stop != 1){
-			//only increase time step when stop == 0
-			dt *= snew;
-		}
 
-		//set maximum time step to 1
-		//if(abs(dt) > 1.0){
-		//	dt = dts * 1.0;
-		//}
+		time_h[level] += dt;
+		++timeStep[level];
+	}
 
-	}
-	else{
-		//redo step
-		dt *= snew;
-	}
-//printf("dt %.20g %.20g %.20g\n", time, dt, snew);
+
 	return 1;
 }
 
@@ -1445,9 +1411,9 @@ inline int asteroid::BS_step(){
 		// ----------------------------------------------------------------------------
 
 		for(int i = 0; i < N; ++i){
-			ax_h[i] = 0.0;
-			ay_h[i] = 0.0;
-			az_h[i] = 0.0;
+			double ax = 0.0;
+			double ay = 0.0;
+			double az = 0.0;
 
 			//compute forces
 			// ----------------------------------------------------------------------------
@@ -1477,24 +1443,24 @@ inline int asteroid::BS_step(){
 			double ziE = z_h[i] - zTable_h[2];
 
 			if(useNonGrav == 1){
-				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax, ay, az);
 			}
 			if(useGR == 1){
-				GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_h[10]);
 			}
 			if(useJ2 == 1){
-				J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+				J2(xiE, yiE, ziE, ax, ay, az, GM_h[2]);
 			}
-			Gravity(x_h[i], y_h[i], z_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
+			Gravity(x_h[i], y_h[i], z_h[i], xTable_h, yTable_h, zTable_h, ax, ay, az, i);
 			// ----------------------------------------------------------------------------
 
 			xp_h[i] = x_h[i] + dt2 * vx_h[i];
 			yp_h[i] = y_h[i] + dt2 * vy_h[i];
 			zp_h[i] = z_h[i] + dt2 * vz_h[i];
 
-			vxp_h[i] = vx_h[i] + dt2 * ax_h[i];
-			vyp_h[i] = vy_h[i] + dt2 * ay_h[i];
-			vzp_h[i] = vz_h[i] + dt2 * az_h[i];
+			vxp_h[i] = vx_h[i] + dt2 * ax;
+			vyp_h[i] = vy_h[i] + dt2 * ay;
+			vzp_h[i] = vz_h[i] + dt2 * az;
 		}
 
 		// ----------------------------------------------------------------------------
@@ -1507,9 +1473,9 @@ inline int asteroid::BS_step(){
 //printf("%d %d %g\n", n, 1, dt2 / dt);
 		// ----------------------------------------------------------------------------
 		for(int i = 0; i < N; ++i){
-			ax_h[i] = 0.0;
-			ay_h[i] = 0.0;
-			az_h[i] = 0.0;
+			double ax = 0.0;
+			double ay = 0.0;
+			double az = 0.0;
 
 			//compute forces
 			// ----------------------------------------------------------------------------
@@ -1533,24 +1499,24 @@ inline int asteroid::BS_step(){
 			double ziE = zp_h[i] - zTable_h[2];
 
 			if(useNonGrav == 1){
-				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax, ay, az);
 			}
 			if(useGR == 1){
-				GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_h[10]);
 			}
 			if(useJ2 == 1){
-				J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+				J2(xiE, yiE, ziE, ax, ay, az, GM_h[2]);
 			}
-			Gravity(xp_h[i], yp_h[i], zp_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
+			Gravity(xp_h[i], yp_h[i], zp_h[i], xTable_h, yTable_h, zTable_h, ax, ay, az, i);
 			// ----------------------------------------------------------------------------
 
 			xt_h[i] = x_h[i] + dt22 * vxp_h[i];
 			yt_h[i] = y_h[i] + dt22 * vyp_h[i];
 			zt_h[i] = z_h[i] + dt22 * vzp_h[i];
 
-			vxt_h[i] = vx_h[i] + dt22 * ax_h[i];
-			vyt_h[i] = vy_h[i] + dt22 * ay_h[i];
-			vzt_h[i] = vz_h[i] + dt22 * az_h[i];
+			vxt_h[i] = vx_h[i] + dt22 * ax;
+			vyt_h[i] = vy_h[i] + dt22 * ay;
+			vzt_h[i] = vz_h[i] + dt22 * az;
 		}
 		for(int m = 2; m <= n; ++m){
 
@@ -1564,9 +1530,9 @@ inline int asteroid::BS_step(){
 //printf("%d %d %g\n", n, m, (m-1) * dt22 / dt);
 			// ----------------------------------------------------------------------------
 			for(int i = 0; i < N; ++i){
-				ax_h[i] = 0.0;
-				ay_h[i] = 0.0;
-				az_h[i] = 0.0;
+				double ax = 0.0;
+				double ay = 0.0;
+				double az = 0.0;
 
 				//compute forces
 				// ----------------------------------------------------------------------------
@@ -1589,24 +1555,24 @@ inline int asteroid::BS_step(){
 				double ziE = zt_h[i] - zTable_h[2];
 
 				if(useNonGrav == 1){
-					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax, ay, az);
 				}
 				if(useGR == 1){
-					GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+					GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_h[10]);
 				}
 				if(useJ2 == 1){
-					J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+					J2(xiE, yiE, ziE, ax, ay, az, GM_h[2]);
 				}
-				Gravity(xt_h[i], yt_h[i], zt_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
+				Gravity(xt_h[i], yt_h[i], zt_h[i], xTable_h, yTable_h, zTable_h, ax, ay, az, i);
 				// ----------------------------------------------------------------------------
 
 				xp_h[i] += dt22 * vxt_h[i];
 				yp_h[i] += dt22 * vyt_h[i];
 				zp_h[i] += dt22 * vzt_h[i];
 
-				vxp_h[i] += dt22 * ax_h[i];
-				vyp_h[i] += dt22 * ay_h[i];
-				vzp_h[i] += dt22 * az_h[i];
+				vxp_h[i] += dt22 * ax;
+				vyp_h[i] += dt22 * ay;
+				vzp_h[i] += dt22 * az;
 			}
 			// ----------------------------------------------------------------------------
 			//Update the Chebyshev coefficients if necessary
@@ -1618,9 +1584,9 @@ inline int asteroid::BS_step(){
 //printf("%d %d %g\n", n, m, ((m-1) * dt22 + dt2) / dt);
 			// ----------------------------------------------------------------------------
 			for(int i = 0; i < N; ++i){
-				ax_h[i] = 0.0;
-				ay_h[i] = 0.0;
-				az_h[i] = 0.0;
+				double ax = 0.0;
+				double ay = 0.0;
+				double az = 0.0;
 
 				//compute forces
 				// ----------------------------------------------------------------------------
@@ -1643,24 +1609,24 @@ inline int asteroid::BS_step(){
 				double ziE = zp_h[i] - zTable_h[2];
 
 				if(useNonGrav == 1){
-					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax, ay, az);
 				}
 				if(useGR == 1){
-					GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+					GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_h[10]);
 				}
 				if(useJ2 == 1){
-					J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+					J2(xiE, yiE, ziE, ax, ay, az, GM_h[2]);
 				}
-				Gravity(xp_h[i], yp_h[i], zp_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
+				Gravity(xp_h[i], yp_h[i], zp_h[i], xTable_h, yTable_h, zTable_h, ax, ay, az, i);
 				// ----------------------------------------------------------------------------
 
 				xt_h[i] += dt22 * vxp_h[i];
 				yt_h[i] += dt22 * vyp_h[i];
 				zt_h[i] += dt22 * vzp_h[i];
 
-				vxt_h[i] += dt22 * ax_h[i];
-				vyt_h[i] += dt22 * ay_h[i];
-				vzt_h[i] += dt22 * az_h[i];
+				vxt_h[i] += dt22 * ax;
+				vyt_h[i] += dt22 * ay;
+				vzt_h[i] += dt22 * az;
 			}
 		} // end if m loop
 
@@ -1674,9 +1640,9 @@ inline int asteroid::BS_step(){
 //printf("%d %d %g\n", n, n+1, 1.0);
 		// ----------------------------------------------------------------------------
 		for(int i = 0; i < N; ++i){
-			ax_h[i] = 0.0;
-			ay_h[i] = 0.0;
-			az_h[i] = 0.0;
+			double ax = 0.0;
+			double ay = 0.0;
+			double az = 0.0;
 
 			//compute forces
 			// ----------------------------------------------------------------------------
@@ -1699,24 +1665,24 @@ inline int asteroid::BS_step(){
 			double ziE = zt_h[i] - zTable_h[2];
 
 			if(useNonGrav == 1){
-				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax_h[i], ay_h[i], az_h[i]);
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1_h[i], A2_h[i], A3_h[i], r, ax, ay, az);
 			}
 			if(useGR == 1){
-				GR(xih, yih, zih, vxih, vyih, vzih, r, ax_h[i], ay_h[i], az_h[i], GM_h[10]);
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_h[10]);
 			}
 			if(useJ2 == 1){
-				J2(xiE, yiE, ziE, ax_h[i], ay_h[i], az_h[i], GM_h[2]);
+				J2(xiE, yiE, ziE, ax, ay, az, GM_h[2]);
 			}
-			Gravity(xt_h[i], yt_h[i], zt_h[i], xTable_h, yTable_h, zTable_h, ax_h[i], ay_h[i], az_h[i], i);
+			Gravity(xt_h[i], yt_h[i], zt_h[i], xTable_h, yTable_h, zTable_h, ax, ay, az, i);
 			// ----------------------------------------------------------------------------
 
 			xp_h[i] += dt2 * vxt_h[i];
 			yp_h[i] += dt2 * vyt_h[i];
 			zp_h[i] += dt2 * vzt_h[i];
 
-			vxp_h[i] += dt2 * ax_h[i];
-			vyp_h[i] += dt2 * ay_h[i];
-			vzp_h[i] += dt2 * az_h[i];
+			vxp_h[i] += dt2 * ax;
+			vyp_h[i] += dt2 * ay;
+			vzp_h[i] += dt2 * az;
 		}
 
 		for(int i = 0; i < N; ++i){
@@ -1805,18 +1771,15 @@ inline int asteroid::BS_step(){
 
 			time += dt;
 			++timeStep;
-			if(stop != 1){
-				//only increase time step when stop == 0
-				if(n >= 8){
-					dt *= 0.55;
-					snew_h[0] = 0.55;
+			if(n >= 8){
+				dt *= 0.55;
+				snew_h[0] = 0.55;
 //printf("reduce time step %g\n", dt);
-				}
-				if(n < 7){
-					dt *= 1.3;
-					snew_h[0] = 1.3;
+			}
+			if(n < 7){
+				dt *= 1.3;
+				snew_h[0] = 1.3;
 //printf("increase time step %g\n", dt);
-				}
 			}
 
 			for(int i = 0; i < N; ++i){

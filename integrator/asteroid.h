@@ -135,10 +135,6 @@ public:
 	double *vzout_h, *vzout_d;
 
 
-	double *ax_h, *ax_d;
-	double *ay_h, *ay_d;
-	double *az_h, *az_d;
-
 	//Non-grav terms
 	double *A1_h, *A1_d;
 	double *A2_h, *A2_d;
