@@ -6,10 +6,12 @@
 #include <math.h>
 #include <cstring>
 
-#define def_version 1.02
+#define def_version 1.03
 
 #define def_NP 32		//used for shared memory, must be at least the number of perturbers
 #define def_N 64		//used for shared memory, must be a multiple of the warp size
+
+#define def_nLMax 4		//Maximum Number of integration time step levels
 
 class asteroid{
 
@@ -45,6 +47,8 @@ public:
 
 	int N;					//Number of bodies to integrate, not including perturbers
 	int Nperturbers;			//Number of perturbers
+	int nL = def_nLMax;				//Number of integration time step levels, Initialize with maximum number of levels
+	double dtlimit[def_nLMax];
 	double inputFileVersion = 1;
 	double time_reference = 2451545.0;	//Reference time in JD 
 	double timeStart = 2450800.5;		//Start time of the integration, in JD
@@ -126,7 +130,7 @@ public:
 	double *vy_h, *vy_d;
 	double *vz_h, *vz_d;
 
-	double *xout_h, *xout_d;			//Contains only integration bodies, not perturbers
+	double *xout_h, *xout_d;		//Contains only integration bodies, not perturbers
 	double *yout_h, *yout_d;
 	double *zout_h, *zout_d;
 
@@ -208,15 +212,21 @@ public:
 
 	double *dt_h;
 	double *dtsave_h;
-	double *dtmin_h;
+	double *dtmin_h, *dtmin_d;
+	double *dtminlevel_h;
 	double *time_h;
 	long long int *timeStep_h;
 
 	long long int *id_h, *id_d;
+	int *index_h, *index_d;			//needed for higher time step levels
 
 	double *snew_h, *snew_d;
+	double *snewlevel_h, *snewlevel_d;
 	double *ssum_d;
 	double *jd_init_h;
+	
+	int *Nlevel_h, *Nlevel_d;
+	int *stop_h;
 
 	int readParam(int , char*argv[]);
 	int readIC();
@@ -231,7 +241,7 @@ public:
 	void copyOutput();
 	int copyConst();
 	void printInfo();
-	void printOutput(double);
+	void printOutput();
 	void freeMemory();
 	void freeMemoryGPU();
 	
@@ -253,14 +263,15 @@ public:
 	inline void J2(double, double, double, double &, double &, double &, double);
 	inline void Gravity(double, double, double, double *, double *, double *, double &, double &, double &, int);
 	int loop();
+	int loop_recursive(int);
 	int loop_individual();
 
 	inline int RKF_individual_step(const int);
 	inline int BS_individual_step(const int);
 	inline int leapfrog_step();
 	inline int RK_step();
-	inline int RKF_step();
-	inline int BS_step();
+	inline int RKF_step(const int, double);
+	inline int BS_step(const int, double);
 	inline int IMM_step();
 
 	void setRK4();

@@ -731,13 +731,25 @@ inline int asteroid::RKF_individual_step(const int i){
 }
 
 //Runge Kutta Fehlberg step with adaptive time step
-inline int asteroid::RKF_step(const int level){
+inline int asteroid::RKF_step(const int level, double dtlimit){
 
 	int er;
 	double dt = dt_h[level];
+	int N = Nlevel_h[level];
+	int N0 = Nlevel_h[0];
+
+	int stopFlag = 0;
+	for(int l = 0; l <= level; ++l){
+		if(stop_h[l] == 1){
+			stopFlag = 1;
+		}
+	}
+
+	if(stopFlag == 1){
+		dtlimit = dt * dts;
+	}
 
 	for(int S = 0; S < RKFn; ++S){
-
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
 		er = update_Chebyshev(time_h[level] + RKFc_h[S] * dt);
@@ -747,7 +759,15 @@ inline int asteroid::RKF_step(const int level){
 		update_perturbers(time_h[level] + RKFc_h[S] * dt);
 		// ----------------------------------------------------------------------------
 
-		for(int i = 0; i < N; ++i){
+		for(int jj = 0; jj < N; ++jj){
+
+
+			int i = jj;
+
+			if(level > 0){
+				i = index_h[(level - 1) * N0 + jj];
+			}
+
 			double xt = x_h[i];
 			double yt = y_h[i];
 			double zt = z_h[i];
@@ -755,10 +775,9 @@ inline int asteroid::RKF_step(const int level){
 			double vxt = vx_h[i];
 			double vyt = vy_h[i];
 			double vzt = vz_h[i];
-
 			for(int s = 0; s < S; ++s){
 				double dtaa = dt * RKFa_h[S * RKFn + s];
-				int ii = i + s * N;
+				int ii = jj + s * N;
 				xt  += dtaa * kx_h[ii];
 				yt  += dtaa * ky_h[ii];
 				zt  += dtaa * kz_h[ii];
@@ -767,11 +786,10 @@ inline int asteroid::RKF_step(const int level){
 				vzt += dtaa * kvz_h[ii];
 
 			}
-			int ii = i + S * N;
+			int ii = jj + S * N;
 			kx_h[ii] = vxt;
 			ky_h[ii] = vyt;
 			kz_h[ii] = vzt;
-//if(i < 2) printf("K %d %d %.20g %.20g %.20g\n", i, S, kx_h[i + S * N], ky_h[i + S * N], kz_h[i + S * N]);
 
 			// ----------------------------------------------------------------------------
 			//compute forces
@@ -795,9 +813,9 @@ inline int asteroid::RKF_step(const int level){
 
 //			if(cometFlag > 0 && S == 0){
 //				if(i == 0){
-//					Tsave_h[timeStep] = time_h[level];
+//					Tsave_h[timeStep_h[level]] = time_h[level];
 //				}
-//				Rsave_h[i * Rbuffersize + timeStep] = r;
+//				Rsave_h[i * Rbuffersize + timeStep_h[level]] = r;
 //			}
 
 			//Earth centric coordinates
@@ -824,7 +842,12 @@ inline int asteroid::RKF_step(const int level){
 	}
 
 	//update
-	for(int i = 0; i < N; ++i){
+	for(int jj = 0; jj < N; ++jj){
+		int i = jj;
+
+		if(level > 0){
+			i = index_h[(level - 1) * N0 + jj];
+		}
 
 		dx_h[i] = 0.0;
 		dy_h[i] = 0.0;
@@ -836,7 +859,7 @@ inline int asteroid::RKF_step(const int level){
 
 		for(int S = 0; S < RKFn; ++S){
 			double dtb = dt * RKFb_h[S];
-			int ii = i + S * N;
+			int ii = jj + S * N;
 			dx_h[i] += dtb * kx_h[ii];
 			dy_h[i] += dtb * ky_h[ii];
 			dz_h[i] += dtb * kz_h[ii];
@@ -882,7 +905,7 @@ inline int asteroid::RKF_step(const int level){
 
 		for(int S = 0; S < RKFn; ++S){
 			double f = (RKFb_h[S] - RKFbb_h[S]) * dt;
-			int ii = i + S * N;
+			int ii = jj + S * N;
 			errorkx += f * kx_h[ii];
 			errorky += f * ky_h[ii];
 			errorkz += f * kz_h[ii];
@@ -904,42 +927,86 @@ inline int asteroid::RKF_step(const int level){
 
 		double s = pow( 1.0  / errork, RKF_ee);
 
-		snew_h[i] = s;
+		s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
+		s = (RKF_facmax < s) ? RKF_facmax : s;
+
+//printf("snew %d %d %g %g %g \n", level, i, s, dt, s * dt);
+
+		if(s * dt * dts >= dtlimit || level >= nL - 1){
+			snew_h[i] = s;
+		}
+		else{
+			snew_h[i] = 1.0e6;	//mark body for higher level integration
+			time_h[level + 1] = time_h[level];
+		}
 	}
 
 
 	double snew = 1.0e6;
-	//Find minimum time step
-	for(int i = 0; i < N; ++i){
+	//Find minimum s factor
+	for(int jj = 0; jj < N; ++jj){
+		int i = jj;
 
-		double s = snew_h[i];
-		s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
-		s = (RKF_facmax < s) ? RKF_facmax : s;
-
-		if(s * dt > 0.1){
-
-			snew = (snew < s) ? snew : s;
-			
+		if(level > 0){
+			i = index_h[(level - 1) * N0 + jj];
 		}
 
+		double s = snew_h[i];
+
+		snew = (snew < s) ? snew : s;
+	}
+	if(snew == 1.0e6){
+		snew = 1.0;
 	}
 
-	snew_h[level] = snew;
+//printf("snewMin %g %g\n", snew, dtlimit);
+	snewlevel_h[level] = snew;
 
-	if(snew >= 1.0){
+	if(snew >= RKF_fac){
 		//accept step
-		for(int i = 0; i < N; ++i){
-			x_h[i] += dx_h[i];
-			y_h[i] += dy_h[i];
-			z_h[i] += dz_h[i];
+		for(int jj = 0; jj < N; ++jj){
+			int i = jj;
 
-			vx_h[i] += dvx_h[i];
-			vy_h[i] += dvy_h[i];
-			vz_h[i] += dvz_h[i];
+			if(level > 0){
+				i = index_h[(level - 1) * N0 + jj];
+			}
+
+			if(snew_h[i] < 1.0e6){
+				x_h[i] += dx_h[i];
+				y_h[i] += dy_h[i];
+				z_h[i] += dz_h[i];
+
+				vx_h[i] += dvx_h[i];
+				vy_h[i] += dvy_h[i];
+				vz_h[i] += dvz_h[i];
+//printf("update %d %g\n", i, time_h[level] + dt);
+
+
+				if(stopFlag == 0){
+					if(dts < 0){
+						dtmin_h[i] = dt > dtmin_h[i] ? dt : dtmin_h[i];
+					}
+					else{
+						dtmin_h[i] = dt < dtmin_h[i] ? dt : dtmin_h[i];
+					}
+				}
+//printf("dtmin %d %d %d %g\n", i, level, stopFlag, dtmin_h[i]);
+
+			}
+			else{
+				int j = Nlevel_h[level + 1]++;
+				index_h[level * N0 + j] = i;
+				//add to list
+//printf("add to list %d %d %g\n", i, j, time_h[level + 1]);
+			}
+
 		}
 
 		time_h[level] += dt;
-		++timeStep[level];
+		++timeStep_h[level];
+	}
+	else{
+//printf("repeat level %d %g\n", level, snew);
 	}
 
 
@@ -1379,10 +1446,33 @@ inline int asteroid::BS_individual_step(const int i){
 	
 
 // Bulirsh-Stoer step with adaptive time step
-inline int asteroid::BS_step(){
-	int er;
+inline int asteroid::BS_step(const int level, double dtlimit){
 
-	for(int i = 0; i < N; ++i){
+	int er;
+	double dt = dt_h[level];
+	int N = Nlevel_h[level];
+	int N0 = Nlevel_h[0];
+
+	int stopFlag = 0;
+	for(int l = 0; l <= level; ++l){
+		if(stop_h[l] == 1){
+			stopFlag = 1;
+		}               
+
+	}       
+	if(stopFlag == 1){
+		dtlimit = dt * dts;
+	}
+
+
+	for(int jj = 0; jj < N; ++jj){
+
+		int i = jj;
+
+		if(level > 0){
+			i = index_h[(level - 1) * N0 + jj];
+		}
+
 
 		scalex_h[i] = atol + fabs(x_h[i]) * rtol;
 		scaley_h[i] = atol + fabs(y_h[i]) * rtol;
@@ -1391,6 +1481,8 @@ inline int asteroid::BS_step(){
 		scalevx_h[i] = atol + fabs(vx_h[i]) * rtol;
 		scalevy_h[i] = atol + fabs(vy_h[i]) * rtol;
 		scalevz_h[i] = atol + fabs(vz_h[i]) * rtol;
+
+		snew_h[i] = -1000.0;
 	}
 
 
@@ -1402,15 +1494,23 @@ inline int asteroid::BS_step(){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		er = update_Chebyshev(time);
+		er = update_Chebyshev(time_h[level]);
 		if(er <= 0){
 			return 0;
 		}
-		update_perturbers(time);
+		update_perturbers(time_h[level]);
 //printf("%d %d %g %g\n", n, 0, 0.0, dt);
 		// ----------------------------------------------------------------------------
 
-		for(int i = 0; i < N; ++i){
+		for(int jj = 0; jj < N; ++jj){
+			int i = jj;
+
+			if(level > 0){
+				i = index_h[(level - 1) * N0 + jj];
+			}
+
+			if(snew_h[i] > 0.0) continue;
+
 			double ax = 0.0;
 			double ay = 0.0;
 			double az = 0.0;
@@ -1430,12 +1530,12 @@ inline int asteroid::BS_step(){
 			double rsq = xih * xih + yih * yih + zih * zih;
 			double r = sqrt(rsq);
 
-			if(cometFlag > 0 && n == 1){
-				if(i == 0){
-					Tsave_h[timeStep] = time;
-				}
-				Rsave_h[i * Rbuffersize + timeStep] = r;
-			}
+//			if(cometFlag > 0 && n == 1){
+//				if(i == 0){
+//					Tsave_h[timeStep_h[level]] = time_h[level];
+//				}
+//				Rsave_h[i * Rbuffersize + timeStep_h[level]] = r;
+//			}
 
 			//Earth centric coordinates
 			double xiE = x_h[i] - xTable_h[2];
@@ -1465,14 +1565,22 @@ inline int asteroid::BS_step(){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		er = update_Chebyshev(time + dt2);
+		er = update_Chebyshev(time_h[level] + dt2);
 		if(er <= 0){
 			return 0;
 		}
-		update_perturbers(time + dt2);
+		update_perturbers(time_h[level] + dt2);
 //printf("%d %d %g\n", n, 1, dt2 / dt);
 		// ----------------------------------------------------------------------------
-		for(int i = 0; i < N; ++i){
+		for(int jj = 0; jj < N; ++jj){
+			int i = jj;
+
+			if(level > 0){
+				i = index_h[(level - 1) * N0 + jj];
+			}
+
+			if(snew_h[i] > 0.0) continue;
+
 			double ax = 0.0;
 			double ay = 0.0;
 			double az = 0.0;
@@ -1522,14 +1630,22 @@ inline int asteroid::BS_step(){
 
 			// ----------------------------------------------------------------------------
 			//Update the Chebyshev coefficients if necessary
-			er = update_Chebyshev(time + (m-1) * dt22);
+			er = update_Chebyshev(time_h[level] + (m-1) * dt22);
 			if(er <= 0){
 				return 0;
 			}
-			update_perturbers(time + (m-1) * dt22);
+			update_perturbers(time_h[level] + (m-1) * dt22);
 //printf("%d %d %g\n", n, m, (m-1) * dt22 / dt);
 			// ----------------------------------------------------------------------------
-			for(int i = 0; i < N; ++i){
+			for(int jj = 0; jj < N; ++jj){
+				int i = jj;
+
+				if(level > 0){
+					i = index_h[(level - 1) * N0 + jj];
+				}
+
+				if(snew_h[i] > 0.0) continue;
+
 				double ax = 0.0;
 				double ay = 0.0;
 				double az = 0.0;
@@ -1576,14 +1692,22 @@ inline int asteroid::BS_step(){
 			}
 			// ----------------------------------------------------------------------------
 			//Update the Chebyshev coefficients if necessary
-			er = update_Chebyshev(time + (m-1) * dt22 + dt2);
+			er = update_Chebyshev(time_h[level] + (m-1) * dt22 + dt2);
 			if(er <= 0){
 				return 0;
 			}
-			update_perturbers(time + (m-1) * dt22 + dt2);
+			update_perturbers(time_h[level] + (m-1) * dt22 + dt2);
 //printf("%d %d %g\n", n, m, ((m-1) * dt22 + dt2) / dt);
 			// ----------------------------------------------------------------------------
-			for(int i = 0; i < N; ++i){
+			for(int jj = 0; jj < N; ++jj){
+				int i = jj;
+
+				if(level > 0){
+					i = index_h[(level - 1) * N0 + jj];
+				}
+
+				if(snew_h[i] > 0.0) continue;
+
 				double ax = 0.0;
 				double ay = 0.0;
 				double az = 0.0;
@@ -1632,14 +1756,22 @@ inline int asteroid::BS_step(){
 
 		// ----------------------------------------------------------------------------
 		//Update the Chebyshev coefficients if necessary
-		er = update_Chebyshev(time + dt);
+		er = update_Chebyshev(time_h[level] + dt);
 		if(er <= 0){
 			return 0;
 		}
-		update_perturbers(time + dt);
+		update_perturbers(time_h[level] + dt);
 //printf("%d %d %g\n", n, n+1, 1.0);
 		// ----------------------------------------------------------------------------
-		for(int i = 0; i < N; ++i){
+		for(int jj = 0; jj < N; ++jj){
+			int i = jj;
+
+			if(level > 0){
+				i = index_h[(level - 1) * N0 + jj];
+			}
+
+			if(snew_h[i] > 0.0) continue;
+
 			double ax = 0.0;
 			double ay = 0.0;
 			double az = 0.0;
@@ -1683,9 +1815,7 @@ inline int asteroid::BS_step(){
 			vxp_h[i] += dt2 * ax;
 			vyp_h[i] += dt2 * ay;
 			vzp_h[i] += dt2 * az;
-		}
 
-		for(int i = 0; i < N; ++i){
 			dx_h[i * 8 + (n-1)] = 0.5 * (xt_h[i] + xp_h[i]);
 			dy_h[i * 8 + (n-1)] = 0.5 * (yt_h[i] + yp_h[i]);
 			dz_h[i * 8 + (n-1)] = 0.5 * (zt_h[i] + zp_h[i]);
@@ -1696,9 +1826,17 @@ inline int asteroid::BS_step(){
 		}
 
 
+		double errorMax = 0.0;
 		//Extrapolation step
-		double errormax = 0.0;
-		for(int i = 0; i < N; ++i){
+		for(int jj = 0; jj < N; ++jj){
+			int i = jj;
+
+			if(level > 0){
+				i = index_h[(level - 1) * N0 + jj];
+			}
+
+			if(snew_h[i] > 0.0) continue;
+
 			for(int j = n - 1; j >= 1; --j){
 				double t0 = BSt0_h[(n-1) * 8 + (j-1)];
 				double t1 = t0 * BSddt_h[j];
@@ -1737,17 +1875,13 @@ inline int asteroid::BS_step(){
 
 
 			error = sqrt(error / 6.0);	//6 is the number of dimensions
-//printf("error %d %.20g\n", i, error);
-			errormax = error > errormax ? error: errormax;
 
-		}
-//printf("errormax %d %g\n", n, errormax);
-		if(errormax < 1.0){
-//printf("accept %lld %.20g %g\n", timeStep, time, dt);
+			errorMax = error > errorMax ? error : errorMax;
 
-			//accept step
-			snew_h[0] = 1.0;
-			for(int i = 0; i < N; ++i){
+
+			if(error < 1.0){
+				//accept step
+
 				xt_h[i] = dx_h[i * 8];
 				yt_h[i] = dy_h[i * 8];
 				zt_h[i] = dz_h[i * 8];
@@ -1764,25 +1898,84 @@ inline int asteroid::BS_step(){
 					vxt_h[i] += dvx_h[i * 8 + j];
 					vyt_h[i] += dvy_h[i * 8 + j];
 					vzt_h[i] += dvz_h[i * 8 + j];
-
-	
 				}
+
+				snew_h[i] = 1.0;
+				if(n >= 8){
+					snew_h[i] = 0.55;
+				}
+				if(n < 7){
+					snew_h[i] = 1.3;
+				}
+//printf("Accect %d %d %d %g %g\n", level, i, n, dt, snew_h[i]);
+			}
+			else if(n == 8){
+				//repeat step
+				snew_h[i] = 0.5;
+//printf("Repeat %d %d %d %g %g\n", level, i, n, dt, snew_h[i]);
 			}
 
-			time += dt;
-			++timeStep;
-			if(n >= 8){
-				dt *= 0.55;
-				snew_h[0] = 0.55;
-//printf("reduce time step %g\n", dt);
-			}
-			if(n < 7){
-				dt *= 1.3;
-				snew_h[0] = 1.3;
-//printf("increase time step %g\n", dt);
+		}
+
+		if(errorMax < 1.0){
+			f = 0;
+			break;
+		}
+	}// end if n loop
+	
+
+	for(int jj = 0; jj < N; ++jj){
+		int i = jj;
+
+		if(level > 0){
+			i = index_h[(level - 1) * N0 + jj];
+		}
+		double s = snew_h[i];
+
+		if(s * dt * dts >= dtlimit || level >= nL - 1){
+			//snew_h[i] = s;
+		}
+		else{
+			snew_h[i] = 1.0e6;      //mark body for higher level integration
+			time_h[level + 1] = time_h[level];
+		}
+	}
+
+
+	double snew = 1.0e6;
+	//Find maximum error
+	for(int jj = 0; jj < N; ++jj){
+		int i = jj;
+
+		if(level > 0){
+			i = index_h[(level - 1) * N0 + jj];
+		}
+
+
+		double s = snew_h[i];
+
+		snew = (snew < s) ? snew : s;
+	}
+	if(snew == 1.0e6){
+		snew = 1.0;
+	}
+
+//printf("snewMin %g %g\n", snew, dtlimit);
+	snewlevel_h[level] = snew;
+
+//printf("errormax %d %g\n", n, errormax);
+	if(snew > 0.5){
+//printf("accept %lld %.20g %g\n", timeStep_h[level, time_h[level], dt);
+
+		//accept step
+		for(int jj = 0; jj < N; ++jj){
+			int i = jj;
+
+			if(level > 0){
+				i = index_h[(level - 1) * N0 + jj];
 			}
 
-			for(int i = 0; i < N; ++i){
+			if(snew_h[i] < 1.0e6){
 				x_h[i] = xt_h[i];
 				y_h[i] = yt_h[i];
 				z_h[i] = zt_h[i];
@@ -1790,25 +1983,52 @@ inline int asteroid::BS_step(){
 				vx_h[i] = vxt_h[i];
 				vy_h[i] = vyt_h[i];
 				vz_h[i] = vzt_h[i];
+
+//printf("update %d %g\n", i, time_h[level] + dt);
+
+				if(stopFlag == 0){
+					if(dts < 0){
+						dtmin_h[i] = dt > dtmin_h[i] ? dt : dtmin_h[i];
+					}
+					else{
+						dtmin_h[i] = dt < dtmin_h[i] ? dt : dtmin_h[i];
+					}
+				}
+//printf("dtmin %d %d %d %g\n", i, level, stopFlag, dtmin_h[i]);
+
+			}
+			else{
+				int j = Nlevel_h[level + 1]++;
+				index_h[level * N0 + j] = i;
+				//add to list
+//printf("add to list %d %d %g\n", i, j, time_h[level + 1]);
 			}
 
-			f = 0;
-			break; //break n loop
+
 		}
-	} //end of n loop
-	if(f == 1){
-		dt *= 0.5;
-		snew_h[0] = 0.5;
-//printf("repeat time step %g\n", dt);
+
+		time_h[level] += dt;
+		++timeStep_h[level];
 	}
+	else{
+//printf("repeat level %d %g\n", level, snew);
+	}
+
+
 	return 1;
 }
 	
 int asteroid::loop_individual(){
 	int er;
+
 	//If needed, convert from heliocentric equatorial coordinates to barycentric equatorial coordinates
 	if(ICheliocentric == 1){
-		HelioToBary(x_h, y_h, z_h, vx_h, vy_h, vz_h);
+		printf("Convert heliocentric to barycentric coordinates\n");
+		er = HelioToBary(x_h, y_h, z_h, vx_h, vy_h, vz_h);
+		if(er <= 0){
+			return 0;
+		}
+		printf("Convert heliocentric to barycentric coordinates OK\n");
 	} 
 
 
@@ -1834,10 +2054,14 @@ int asteroid::loop_individual(){
 		timeStep_h[i] = 0ll;
 		time_h[i] = time;
 	}
+	dtminlevel_h[0] = dt;
 
 	if(time_reference + time >= outStart){
-		convertOutput();
-		printOutput(dt);
+		er = convertOutput();
+		if(er <= 0){
+			return 0;
+		}
+		printOutput();
 	}
 
 
@@ -1979,19 +2203,23 @@ int asteroid::loop_individual(){
 			}
 			
 		}
+		dtminlevel_h[0] = dtmin;
 
 		if(time_reference + time >= outStart){
-			convertOutput();
-			printOutput(dtmin);
+			er = convertOutput();
+			if(er <= 0){
+				return 0;
+			}
+			printOutput();
 			fflush(outputFile);
 		}
 
 		if(dts < 0 && time <= timeEnd){
-			printf("Reached the end of the integration\n");
+			printf("Reached the end of the integration %.20g\n", time + time_reference);
 			return 0;
 		}
 		if(dts > 0 && time >= timeEnd){
-			printf("Reached the end of the integration\n");
+			printf("Reached the end of the integration %.20g\n", time + time_reference);
 			return 0;
 		}
 
@@ -2036,8 +2264,27 @@ int asteroid::loop(){
 	}
 	printf("Start integration %.20g\n", timeStart + time_reference);
 
+
+	dt_h[0] = dt;
+
+	if(nL > 1 && dt_h[0] * dts < dtlimit[0]){
+		dt_h[0] = dtlimit[0] * dts;
+	}
+
+	for(int i = 1; i < nL; ++i){
+		dt_h[i] = dtlimit[i - 1] * dts;
+	}
+	for(int i = 0; i < nL; ++i){
+		dtsave_h[i] = dt;
+		time_h[i] = time;
+		stop_h[i] = 0;
+		dtminlevel_h[i] = dt_h[i];
+	}
+
+	//reduce loop to numer of levels
 	for(int i = 0; i < N; ++i){
 		dtmin_h[i] = dt;
+		timeStep_h[i] = 0ll;
 	}
 
 	if(time_reference + time >= outStart){
@@ -2045,63 +2292,76 @@ int asteroid::loop(){
 		if(er <= 0){
 			return 0;
 		}
-		printOutput(dt);
+		printOutput();
 	}
 
 	for(int tt = 0; tt < MaxTimeSteps1; ++tt){
 
 		//dtmin is the minimum time step of an output intervall, only used for diagnostics
-		double dtmin = dt;
+		for(int i = 0; i < nL; ++i){
+			dtminlevel_h[i] = 1000.0 * dts;
+		}
+
+		for(int i = 0; i < N; ++i){
+			dtmin_h[i] = outputInterval * dts;
+		}
+
+
 
 		//next output time
 		double timett1 = timeStart + dts * (tt + 1) * outputInterval;
 
 		double snew = 10.0;
-//printf("integrate %.20g %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1, dt);
+//printf("integrate %.20g %.20g %.20g\n", timeStart + dts * tt * 10.0, timett1, dt_h[0]);
 
 
 		//integrate until the next output interval
 		for(int ttt = 0; ttt < MaxTimeSteps2; ++ttt){
 
 			if(dts < 0){
-				if(dt < -outputInterval){
-					dt = -outputInterval;
+				if(dt_h[0] < -outputInterval){
+					dt_h[0] = -outputInterval;
 				}
 
 
 				//refine last time step of interval to match output time
-				if(time + dt < timett1){
-//printf("refine %.20g | %.20g %.20g %.20g\n", dt, time + dt, timett1, timett1 - time);
-					dtsave = dt;
-					dt = timett1 - time;
-					stop = 1;
+				if(time + dt_h[0] < timett1){
+printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
+					dtsave_h[0] = dt_h[0];
+					dt_h[0] = timett1 - time;
+					stop_h[0] = 1;
 				}
 				else{
-					dtmin = dt > dtmin ? dt : dtmin;
+					dtminlevel_h[0] = dt_h[0] > dtminlevel_h[0] ? dt_h[0] : dtminlevel_h[0];
 				}
 			}
 			else{
-				if(dt > outputInterval){
-					dt = outputInterval;
+				if(dt_h[0] > outputInterval){
+					dt_h[0] = outputInterval;
 				}
 
 				//refine last time step of interval to match output time
-				if(time + dt > timett1){
-//printf("refine %.20g | %.20g %.20g %.20g\n", dt, time + dt, timett1, timett1 - time);
-					dtsave = dt;
-					dt = timett1 - time;
-					stop = 1;
+				if(time + dt_h[0] > timett1){
+printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
+					dtsave_h[0] = dt_h[0];
+					dt_h[0] = timett1 - time;
+					stop_h[0] = 1;
 				}
 				else{
-					dtmin = dt < dtmin ? dt : dtmin;
+					dtminlevel_h[0] = dt_h[0] < dtminlevel_h[0] ? dt_h[0] : dtminlevel_h[0];
 				}
 
 			}
+
+			Nlevel_h[0] = N;
+			for(int i = 1; i < nL; ++i){
+				Nlevel_h[i] = 0;
+			}
+
 
 			//do a time step of length dt
 			if(strcmp(integratorName, "LF") == 0){
 				er = leapfrog_step();
-//				time = timeStart + timeStep * dt;
 			}
 			if(strcmp(integratorName, "RK4") == 0){
 				er = RK_step();
@@ -2110,20 +2370,56 @@ int asteroid::loop(){
 				er = RK_step();
 			}
 			if(strcmp(integratorName, "RKF45") == 0){
-				er = RKF_step();
-				snew = snew_h[0];
+				er = RKF_step(0, dtlimit[0]);
+
+				if(Nlevel_h[1] > 0){
+
+					loop_recursive(1);
+
+				}
+
+				snew = snewlevel_h[0];
+				timeStep = timeStep_h[0]; 
+				time = time_h[0]; 
 			}
 			if(strcmp(integratorName, "DP54") == 0){
-				er = RKF_step();
-				snew = snew_h[0];
+				er = RKF_step(0, dtlimit[0]);
+
+				if(Nlevel_h[1] > 0){
+
+					loop_recursive(1);
+
+				}
+
+				snew = snewlevel_h[0];
+				timeStep = timeStep_h[0]; 
+				time = time_h[0]; 
 			}
 			if(strcmp(integratorName, "RKF78") == 0){
-				er = RKF_step();
-				snew = snew_h[0];
+				er = RKF_step(0, dtlimit[0]);
+
+				if(Nlevel_h[1] > 0){
+
+					loop_recursive(1);
+
+				}
+
+				snew = snewlevel_h[0];
+				timeStep = timeStep_h[0]; 
+				time = time_h[0]; 
 			}
 			if(strcmp(integratorName, "BS") == 0){
-				er = BS_step();
-				snew = snew_h[0];
+				er = BS_step(0, dtlimit[0]);
+
+				if(Nlevel_h[1] > 0){
+
+					loop_recursive(1);
+
+				}
+
+				snew = snewlevel_h[0];
+				timeStep = timeStep_h[0]; 
+				time = time_h[0]; 
 			}
 			if(strcmp(integratorName, "IMM") == 0){
 				er = IMM_step();
@@ -2138,34 +2434,43 @@ int asteroid::loop(){
 	
 	
 			if(printdt == 1){
-				fprintf(dtFile, "%-25.20g %lld %-25.20g\n", time + time_reference, timeStep, dt / snew);
+				fprintf(dtFile, "%-25.20g %lld %-25.20g %d\n", time + time_reference, timeStep, dt_h[0] / snew, 0);
 			}
-//printf("dt %lld %g %g %g\n", timeStep, snew, dt, dtsave);
+printf("dt %d %lld %g %g %g\n", 0, timeStep, snew, dt_h[0], dtsave_h[0]);
 
 
+
+			dt_h[0] *= snew;
 
 			if(dts < 0 && time <= timett1){
 				//set time step equal to the last accepted full time step
 
-				if(snew >= 1.0 && stop == 1){
+				if(snew >= 1.0 && stop_h[0] == 1){
 
-					dt = dtsave;
-//printf("reset  %.20g\n", dt);
+					for(int l = 0; l < nL; ++l){
+						dt_h[l] = dtsave_h[l];
+printf("reset %d  %.20g\n", l, dt_h[l]);
+
+					}
 				}
 
-				stop = 0;
+				stop_h[0] = 0;
 				break;
 			}
 			if(dts > 0 && time >= timett1){
 				//set time step equal to the last accepted full time step
 
 
-				if(snew >= 1.0 && stop == 1){
+				if(snew >= 1.0 && stop_h[0] == 1){
 
-					dt = dtsave;
-//printf("reset  %.20g\n", dt);
+					for(int l = 0; l < nL; ++l){
+						dt_h[l] = dtsave_h[l];
+printf("reset %d  %.20g\n", l, dt_h[l]);
+
+					}
+
 				}
-				stop = 0;
+				stop_h[0] = 0;
 				break;
 			}
 
@@ -2188,7 +2493,7 @@ int asteroid::loop(){
 			if(er <= 0){
 				return 0;
 			}
-			printOutput(dtmin);
+			printOutput();
 			fflush(outputFile);
 		}
 	
@@ -2208,5 +2513,125 @@ int asteroid::loop(){
 			return 0;
 		}
 	}//end of tt loop
+	return 1;
+}
+
+int asteroid::loop_recursive(int level){
+	int er;
+
+printf("\nStart level %d %g %g\n", level, dt_h[level - 1], dt_h[level]);
+	for(int t = 0; t < MaxTimeSteps2; ++t){
+
+
+		if(dts < 0){
+			if(dt_h[level] < dt_h[level - 1]){
+				dt_h[level] = dt_h[level - 1];
+			}
+
+
+			//refine last time step of interval to match output time
+			if(time_h[level] + dt_h[level] < time_h[level - 1]){
+printf("refine %d %.20g | %.20g %.20g %.20g\n", level, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
+				dtsave_h[level] = dt_h[level];
+				dt_h[level] = time_h[level - 1] - time_h[level];
+				stop_h[level] = 1;
+			}
+			else{
+				dtminlevel_h[level] = dt_h[level] > dtminlevel_h[level] ? dt_h[level] : dtminlevel_h[level];
+			}
+		}
+		else{
+			if(dt_h[level] > dt_h[level - 1]){
+				dt_h[level] = dt_h[level - 1];
+			}
+
+			//refine last time step of interval to match output time
+			if(time_h[level] + dt_h[level] > time_h[level - 1]){
+printf("refine %d %.20g | %.20g %.20g %.20g\n", 1, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
+				dtsave_h[level] = dt_h[level];
+				dt_h[level] = time_h[level - 1] - time_h[level];
+				stop_h[level] = 1;
+			}
+			else{
+				dtminlevel_h[level] = dt_h[level] < dtminlevel_h[level] ? dt_h[level] : dtminlevel_h[level];
+			}
+
+		}
+
+		if(strcmp(integratorName, "RKF45") == 0){
+			er = RKF_step(level, dtlimit[level]);
+		}
+		if(strcmp(integratorName, "DP54") == 0){
+			er = RKF_step(level, dtlimit[level]);
+		}
+		if(strcmp(integratorName, "RKF78") == 0){
+			er = RKF_step(level, dtlimit[level]);
+		}
+		if(strcmp(integratorName, "BS") == 0){
+			er = BS_step(level, dtlimit[level]);
+		}
+
+		if(Nlevel_h[level + 1] > 0){
+
+			loop_recursive(level + 1);
+
+		}
+
+		if(er <= 0){
+			return 0;
+		}
+
+
+		if(printdt == 1){
+			fprintf(dtFile, "%-25.20g %lld %-25.20g %d\n", time_h[level] + time_reference, timeStep, dt_h[level] / snewlevel_h[level], level);
+		}
+printf("dt %d %lld %g %g %g\n", level, timeStep, snewlevel_h[level], dt_h[level], dtsave_h[level]);
+
+		dt_h[level] *= snewlevel_h[level];
+
+
+
+		if(dts < 0 && time_h[level] <= time_h[level - 1]){
+			//set time step equal to the last accepted full time step
+
+			if(snewlevel_h[level] >= 1.0 && stop_h[level] == 1){
+
+				for(int l = level; l < nL; ++l){
+					dt_h[l] = dtsave_h[l];
+printf("reset %d  %.20g\n", l, dt_h[l]);
+
+				}
+			}
+
+			stop_h[level] = 0;
+			break;
+		}
+		if(dts > 0 && time_h[level] >= time_h[level - 1]){
+			//set time step equal to the last accepted full time step
+
+
+			if(snewlevel_h[level] >= 1.0 && stop_h[level] == 1){
+
+				for(int l = level; l < nL; ++l){
+					dt_h[l] = dtsave_h[l];
+printf("reset %d  %.20g\n", l, dt_h[l]);
+
+				}
+
+
+			}
+			stop_h[level] = 0;
+			break;
+		}
+		if(t >= MaxTimeSteps2 - 1){
+
+			printf("Error, time step loop2 in level %d did not finish\n", level);
+			return 0;
+		}
+
+
+	} // end of t loop
+	Nlevel_h[level] = 0;
+
 	return 1;
 }

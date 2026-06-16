@@ -78,6 +78,8 @@ int asteroid::allocateGPU(){
 	cudaMalloc((void **) &A3_d, N * sizeof(double));
 
 	cudaMalloc((void **) &id_d, N * sizeof(long long int));
+	cudaMalloc((void **) &index_d, N * sizeof(int));
+	cudaMalloc((void **) &dtmin_d, N * sizeof(double));
 
 	if(cometFlag > 0){
 		cudaMalloc((void **) &Rsave_d, N * Rbuffersize * sizeof(double));
@@ -90,7 +92,9 @@ int asteroid::allocateGPU(){
 	}
 
 	cudaMalloc((void **) &snew_d, N * sizeof(double));
+	cudaMalloc((void **) &snewlevel_d, nL * sizeof(double));
 	cudaMalloc((void **) &ssum_d, N * sizeof(double));
+	cudaMalloc((void **) &Nlevel_d, nL * sizeof(int));
 
 	cudaDeviceSynchronize();
 	cudaError_t error = cudaGetLastError();
@@ -176,7 +180,11 @@ void asteroid::copyOutput(){
 	cudaMemcpy(vyout_h, vyout_d, N * sizeof(double), cudaMemcpyDeviceToHost);
 	cudaMemcpy(vzout_h, vzout_d, N * sizeof(double), cudaMemcpyDeviceToHost);
 
+	cudaMemcpy(dtmin_h, dtmin_d, N * sizeof(double), cudaMemcpyDeviceToHost);
+
 }
+
+
 
 void asteroid::freeMemoryGPU(){
 
@@ -229,7 +237,14 @@ void asteroid::freeMemoryGPU(){
 	cudaFree(A3_d);
 
 	cudaFree(snew_d);
+	cudaFree(snewlevel_d);
 	cudaFree(ssum_d);
+	cudaFree(Nlevel_d);
+
+
+	cudaFree(id_d);
+	cudaFree(index_d);
+	cudaFree(dtmin_d);
 
 	if(RKFn > 0){
 		cudaFree(kx_d);

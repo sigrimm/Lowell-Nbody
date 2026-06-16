@@ -185,12 +185,14 @@ int main(int argc, char*argv[]){
 #endif
 	//----------------------------------------------------------
 
-	
+A.individualSteps = 0;
+
 	if(A.individualSteps == 1){
 #if USEGPU == 0
 		er = A.loop_individual();	
 #else
-		er = A.loop();
+		printf("Error, individual time steps not supported in GPU mode\n");
+		return 0;
 #endif
 	}
 	else{

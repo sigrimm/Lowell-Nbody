@@ -21,6 +21,9 @@ int asteroid::readParam(int argc, char*argv[]){
 		count[i] = 0;
 	}
 
+	for(int i = 0; i <= nL; ++i){
+		dtlimit[i] = 0.0;
+	}
 
 	for(int j = 0; j < 1000; ++j){ //loop around all lines in the param.dat file
 		int c;
@@ -247,19 +250,19 @@ int asteroid::readParam(int argc, char*argv[]){
 			str = fgets(sp, 3, paramfile);
 			++count[9];
 		}
-		else if(strcmp(sp, "RKF absolute tolerance =") == 0){
+		else if(strcmp(sp, "Integrator absolute tolerance =") == 0){
 			er = fscanf (paramfile, "%lf", &atol);
 			if(er <= 0){
-				printf("Error: RKF absolute tolerance value is not valid!\n");
+				printf("Error: Integrator absolute tolerance value is not valid!\n");
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
 			++count[10];
 		}
-		else if(strcmp(sp, "RKF relative tolerance =") == 0){
+		else if(strcmp(sp, "Integrator relative tolerance =") == 0){
 			er = fscanf (paramfile, "%lf", &rtol);
 			if(er <= 0){
-				printf("Error: RKF relative tolerance value is not valid!\n");
+				printf("Error: Integrator relative tolerance value is not valid!\n");
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
@@ -274,6 +277,27 @@ int asteroid::readParam(int argc, char*argv[]){
 			str = fgets(sp, 3, paramfile);
 			++count[12];
 		}
+		else if(strcmp(sp, "Time Step Levels =") == 0){
+			for(int i = 0; i <= nL; ++i){
+				//store file position
+				long pos = ftell(paramfile); 
+
+				er = fscanf (paramfile, "%lf", &dtlimit[i]);
+				dtlimit[i] = abs(dtlimit[i]);
+				if(er <= 0){
+					//set back read position
+					fseek(paramfile, pos, SEEK_SET);
+					nL = i + 1;
+					break;
+				}
+				if(i == nL - 1){
+					printf("More levels than available %d, def_nLMax =  %d\n", i + 1, def_nLMax);
+					return 0;
+				}
+			}
+			str = fgets(sp, 3, paramfile);
+			++count[13];
+		}
 		else if(strcmp(sp, "Path to perturbers file =") == 0){
 			er = fscanf (paramfile, "%s", perturbersFilePath);
 			if(er <= 0){
@@ -281,7 +305,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[13];
+			++count[14];
 		}
 		else if(strcmp(sp, "Use GR correction =") == 0){
 			er = fscanf (paramfile, "%d", &useGR);
@@ -290,7 +314,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[14];
+			++count[15];
 		}
 		else if(strcmp(sp, "Use J2 force =") == 0){
 			er = fscanf (paramfile, "%d", &useJ2);
@@ -299,7 +323,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[15];
+			++count[16];
 		}
 		else if(strcmp(sp, "Use non-gravitational force =") == 0){
 			er = fscanf (paramfile, "%d", &useNonGrav);
@@ -308,7 +332,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[16];
+			++count[17];
 		}
 		else if(strcmp(sp, "Use comets =") == 0){
 			er = fscanf (paramfile, "%d", &cometFlag);
@@ -317,7 +341,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[17];
+			++count[18];
 		}
 		else if(strcmp(sp, "comet alpha =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_alpha);
@@ -326,7 +350,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[18];
+			++count[19];
 		}
 		else if(strcmp(sp, "comet nk =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_nk);
@@ -335,7 +359,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[19];
+			++count[20];
 		}
 		else if(strcmp(sp, "comet nm =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_nm);
@@ -344,7 +368,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[20];
+			++count[21];
 		}
 		else if(strcmp(sp, "comet nn =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_nn);
@@ -353,7 +377,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[21];
+			++count[22];
 		}
 		else if(strcmp(sp, "comet r0 =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_r0);
@@ -362,7 +386,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[22];
+			++count[23];
 		}
 		else if(strcmp(sp, "comet tau =") == 0){
 			er = fscanf (paramfile, "%lf", &nonGrav_tau);
@@ -371,7 +395,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[23];
+			++count[24];
 		}
 		else if(strcmp(sp, "Use binary output format =") == 0){
 			er = fscanf (paramfile, "%d", &outBinary);
@@ -380,7 +404,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[24];
+			++count[25];
 		}
 		else if(strcmp(sp, "Print time steps =") == 0){
 			er = fscanf (paramfile, "%d", &printdt);
@@ -389,7 +413,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[25];
+			++count[26];
 		}
 
 		else{
@@ -452,6 +476,13 @@ int asteroid::readParam(int argc, char*argv[]){
 		return 0;
 	}
 
+	for(int i = 1; i < nL; ++i){
+		if(dtlimit[i] >= dtlimit[i - 1]){
+			printf("dtlimits not in order %g %g\n", dtlimit[i], dtlimit[i - 1]);
+			return 0;
+		}
+	}
+
 
 	return 1;
 
@@ -459,25 +490,43 @@ int asteroid::readParam(int argc, char*argv[]){
 
 void asteroid::printInfo(){
 	fprintf(infoFile, "Code version = %g\n", def_version);
+	fprintf(infoFile, "Use GPU = %d\n", USEGPU);
+	fprintf(infoFile, "GPU mode = %d\n", GPUMode);
 
 	fprintf(infoFile, "Initial condition file format = %d\n", ICformat);
+	fprintf(infoFile, "Initial condition file coordinates: orbital = %d\n", ICorbital);
+	fprintf(infoFile, "Initial condition file coordinates: ecliptic = %d\n", ICecliptic);
+	fprintf(infoFile, "Initial condition file coordinates: heliocentric= %d\n", ICheliocentric);
 	fprintf(infoFile, "Initial condition file = %s\n", inputFilename);
 	fprintf(infoFile, "Output file name = %s\n", outputFilename);
+	fprintf(infoFile, "Output Interval = %g\n", outputInterval);
+	fprintf(infoFile, "Output coordinates: orbital = %d\n", Outorbital);
+	fprintf(infoFile, "Output coordinates: ecliptic = %d\n", Outecliptic);
+	fprintf(infoFile, "Out coordinates: heliocentric= %d\n", Outheliocentric);
+	fprintf(infoFile, "Use binary output format = %d\n", outBinary);
 	fprintf(infoFile, "Path to perturbers file = %s\n", perturbersFilePath);
 	fprintf(infoFile, "Start Time = %.20g\n", timeStart);
 	fprintf(infoFile, "End Time = %.20g\n", timeEnd);
 	fprintf(infoFile, "Time Step = %.20g\n", dt);
-	fprintf(infoFile, "Output Interval = %g\n", outputInterval);
+	fprintf(infoFile, "Number of Time Step levels = %d\n", nL);
+	for(int i = 0; i < nL - 1; ++i){
+		fprintf(infoFile, "Time Step level %d = %.20g\n", i, dtlimit[i]);
+	}
 	fprintf(infoFile, "Integrator name = %s\n", integratorName);
-	fprintf(infoFile, "RKF absolute tolerance = %.20g\n", atol);
-	fprintf(infoFile, "RKF relative tolerance = %.20g\n", rtol);
+	fprintf(infoFile, "Integrator absolute tolerance = %.20g\n", atol);
+	fprintf(infoFile, "Integrator relative tolerance = %.20g\n", rtol);
 
 	fprintf(infoFile, "Use GR correction = %d\n", useGR);
 	fprintf(infoFile, "Use J2 force = %d\n", useJ2);
 	fprintf(infoFile, "Use non-gravitational force = %d\n", useNonGrav);
-	fprintf(infoFile, "Use GPU = %d\n", USEGPU);
-	fprintf(infoFile, "GPU mode = %d\n", GPUMode);
-	fprintf(infoFile, "Use binary output format = %d\n", outBinary);
+	fprintf(infoFile, "Use comets = %d\n", cometFlag);
+	fprintf(infoFile, "comet alpha = %g\n", nonGrav_alpha);
+	fprintf(infoFile, "comet nk = %g\n", nonGrav_nk);
+	fprintf(infoFile, "comet nm = %g\n", nonGrav_nm);
+	fprintf(infoFile, "comet nn = %g\n", nonGrav_nn);
+	fprintf(infoFile, "comet r0 = %g\n", nonGrav_r0);
+	fprintf(infoFile, "comet tau = %g\n", nonGrav_tau);
+	fprintf(infoFile, "Print time steps = %d\n", printdt);
 	//fprintf(infoFile, "useFIFO = %d\n", useFIFO);
 	//fprintf(infoFile, "InVersion = %g\n", InVersion);
 
@@ -746,12 +795,17 @@ int asteroid::allocate(){
 	dt_h = (double*)malloc(N * sizeof(double));
 	dtsave_h = (double*)malloc(N * sizeof(double));
 	dtmin_h = (double*)malloc(N * sizeof(double));
+	dtminlevel_h = (double*)malloc(nL * sizeof(double));
 	time_h = (double*)malloc(N * sizeof(double));
 	timeStep_h = (long long int*)malloc(N * sizeof(long long int));
 	snew_h = (double*)malloc(N * sizeof(double));
+	snewlevel_h = (double*)malloc(nL * sizeof(double));
 	jd_init_h = (double*)malloc(N * sizeof(double));
+	Nlevel_h = (int*)malloc(nL * sizeof(int));
+	stop_h = (int*)malloc(nL * sizeof(int));
 
 	id_h = (long long int*)malloc(N * sizeof(long long int));
+	index_h = (int*)malloc(N * nL * sizeof(int));
 
 	if(RKFn > 0){
 
@@ -873,8 +927,13 @@ int asteroid::allocate(){
 }
 
 
-void asteroid::printOutput(double dtmin){
-	printf("Reached time %.20g dtmin %.8g\n", time_reference + time, dtmin);
+void asteroid::printOutput(){
+	printf("Reached time %.20g dtmin: ", time_reference + time);
+
+	for(int i = 0; i < nL; ++i){
+		printf("%.8g ", dtminlevel_h[i]);
+	}
+	printf("\n");
 
 	for(int i = 0; i < N; ++i){
 		if(outBinary == 0){
@@ -992,12 +1051,17 @@ void asteroid::freeMemory(){
 	free(dt_h);
 	free(dtsave_h);
 	free(dtmin_h);
+	free(dtminlevel_h);
 	free(time_h);
 	free(timeStep_h);
 
 	free(snew_h);
+	free(snewlevel_h);
 	free(jd_init_h);
 	free(id_h);
+	free(index_h);
+	free(Nlevel_h);
+	free(stop_h);
 
 	if(RKFn > 0){
 		free(kx_h);
