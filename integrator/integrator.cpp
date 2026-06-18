@@ -871,7 +871,6 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 		}
 
 
-
 		//compute integration error
 
 
@@ -893,7 +892,6 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 		double scalevx = atol + fabs(vx_h[i]) * rtol;
 		double scalevy = atol + fabs(vy_h[i]) * rtol;
 		double scalevz = atol + fabs(vz_h[i]) * rtol;
-
 		//error estimation
 		double errorkx = 0.0;
 		double errorky = 0.0;
@@ -913,6 +911,8 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 			errorkvx += f * kvx_h[ii];
 			errorkvy += f * kvy_h[ii];
 			errorkvz += f * kvz_h[ii];
+//printf("error %d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, S, f, kx_h[ii], ky_h[ii], kz_h[ii], kvx_h[ii], kvy_h[ii], kvz_h[ii]);
+//printf("error %d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", i, S, f, errorkx, errorky, errorkz, errorkvx, errorkvy, errorkvz);
 		}
 
 		double errork = 0.0;
@@ -930,7 +930,7 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 		s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
 		s = (RKF_facmax < s) ? RKF_facmax : s;
 
-//printf("snew %d %d %g %g %g \n", level, i, s, dt, s * dt);
+printf("snew %d %d %g %g %g \n", level, i, s, dt, s * dt);
 
 		if(s * dt * dts >= dtlimit || level >= nL - 1){
 			snew_h[i] = s;
@@ -938,6 +938,7 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 		else{
 			snew_h[i] = 1.0e6;	//mark body for higher level integration
 			time_h[level + 1] = time_h[level];
+printf("set time %d %d %g %g\n", level, level + 1, time_h[level], time_h[level + 1]);
 		}
 	}
 
@@ -959,7 +960,7 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 		snew = 1.0;
 	}
 
-//printf("snewMin %g %g\n", snew, dtlimit);
+printf("snewMin %g %g\n", snew, dtlimit);
 	snewlevel_h[level] = snew;
 
 	if(snew >= RKF_fac){
@@ -979,7 +980,7 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 				vx_h[i] += dvx_h[i];
 				vy_h[i] += dvy_h[i];
 				vz_h[i] += dvz_h[i];
-//printf("update %d %g\n", i, time_h[level] + dt);
+printf("update %d %g\n", i, time_h[level] + dt);
 
 
 				if(stopFlag == 0){
@@ -997,7 +998,7 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 				int j = Nlevel_h[level + 1]++;
 				index_h[level * N0 + j] = i;
 				//add to list
-//printf("add to list %d %d %g\n", i, j, time_h[level + 1]);
+printf("add to list %d %d %g\n", i, j, time_h[level + 1]);
 			}
 
 		}
@@ -1006,7 +1007,7 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 		++timeStep_h[level];
 	}
 	else{
-//printf("repeat level %d %g\n", level, snew);
+printf("repeat level %d %g\n", level, snew);
 	}
 
 
@@ -1963,7 +1964,6 @@ inline int asteroid::BS_step(const int level, double dtlimit){
 //printf("snewMin %g %g\n", snew, dtlimit);
 	snewlevel_h[level] = snew;
 
-//printf("errormax %d %g\n", n, errormax);
 	if(snew > 0.5){
 //printf("accept %lld %.20g %g\n", timeStep_h[level, time_h[level], dt);
 

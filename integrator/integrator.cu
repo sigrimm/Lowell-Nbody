@@ -1413,13 +1413,13 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 
 		//compute integration error
 
-		double scalex  = atol_c + fabs(xti) * rtol_c;
-		double scaley  = atol_c + fabs(yti) * rtol_c;
-		double scalez  = atol_c + fabs(zti) * rtol_c;
+		double scalex  = atol_c + fabs(x0) * rtol_c;
+		double scaley  = atol_c + fabs(y0) * rtol_c;
+		double scalez  = atol_c + fabs(z0) * rtol_c;
 
-		double scalevx = atol_c + fabs(vxti) * rtol_c;
-		double scalevy = atol_c + fabs(vyti) * rtol_c;
-		double scalevz = atol_c + fabs(vzti) * rtol_c;
+		double scalevx = atol_c + fabs(vx0) * rtol_c;
+		double scalevy = atol_c + fabs(vy0) * rtol_c;
+		double scalevz = atol_c + fabs(vz0) * rtol_c;
 
 		//error estimation
 		double errorkx = 0.0;
@@ -1442,6 +1442,7 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 			errorkvy += __dmul_rn(f, kvy_d[ii]);
 			errorkvz += __dmul_rn(f, kvz_d[ii]);
 
+//printf("error %d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", id, S, f, kx_d[ii], ky_d[ii], kz_d[ii], kvx_d[ii], kvy_d[ii], kvz_d[ii]);
 //printf("error %d %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", id, S, f, errorkx, errorky, errorkz, errorkvx, errorkvy, errorkvz);
 		}
 
@@ -1459,7 +1460,7 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 
 		s = (RKF_fac_c * s > RKF_facmin_c) ? RKF_fac_c * s : RKF_facmin_c;
 		s = (RKF_facmax_c < s) ? RKF_facmax_c : s;
-printf("snew %d %d %g %g %g \n", level, id, s, dt, s * dt);
+//printf("snew %d %d %g %g %g \n", level, id, s, dt, s * dt);
 
 		if(s * dt * dts >= dtlimit || level >= nL - 1){
 			snew_d[id] = s;
@@ -1697,13 +1698,13 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 
 
 		//compute integration error
-		double scalex  = atol_c + fabs(xti) * rtol_c;
-		double scaley  = atol_c + fabs(yti) * rtol_c;
-		double scalez  = atol_c + fabs(zti) * rtol_c;
+		double scalex  = atol_c + fabs(x0) * rtol_c;
+		double scaley  = atol_c + fabs(y0) * rtol_c;
+		double scalez  = atol_c + fabs(z0) * rtol_c;
 
-		double scalevx = atol_c + fabs(vxti) * rtol_c;
-		double scalevy = atol_c + fabs(vyti) * rtol_c;
-		double scalevz = atol_c + fabs(vzti) * rtol_c;
+		double scalevx = atol_c + fabs(vx0) * rtol_c;
+		double scalevy = atol_c + fabs(vy0) * rtol_c;
+		double scalevz = atol_c + fabs(vz0) * rtol_c;
 
 		//error estimation
 		double errorkx = 0.0;
@@ -1742,7 +1743,7 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 		s = (RKF_facmax_c < s) ? RKF_facmax_c : s;
 
 		snew_d[id] = s;
-printf("snew %d %d %g %g %g \n", level, id, snew_d[id], dt, s * dt);
+//printf("snew %d %d %g %g %g \n", level, id, snew_d[id], dt, s * dt);
 
 		if(s * dt * dts >= dtlimit || level >= nL - 1){
 			snew_d[id] = s;
@@ -1757,11 +1758,19 @@ printf("snew %d %d %g %g %g \n", level, id, snew_d[id], dt, s * dt);
 // Bulirsh-Stoer step with adaptive time step
 // Every body runs on a thread
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
-__global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int BSn, const int Nperturbers, const int N){
+__global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, int *index_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int BSn, const int Nperturbers, const int N, const int N0, const int level, const int nL, double dtlimit){
 
 
 	int itx = threadIdx.x;
-	int id = blockIdx.x * blockDim.x + threadIdx.x;
+	int jj = blockIdx.x * blockDim.x + threadIdx.x;
+
+	int id = jj;
+
+	if(level > 0){
+		if(jj < N){
+			id = index_d[(level - 1) * N0 + jj];
+		}
+	}
 
 
 	//shared memory contains only the perturbers
@@ -1827,10 +1836,13 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 	double scalevy;
 	double scalevz;
 
+
+	double snew = -1000.0;
+
 	if(itx < Nperturbers){
 		GM_s[itx] = GM_d[itx];
 	}
-	if(id < N){
+	if(jj < N){
 		x0 = x_d[id];
 		y0 = y_d[id];
 		z0 = z_d[id];
@@ -1856,7 +1868,7 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 
 	__syncthreads();
 
-	int f = 1;	
+	
 
 	int cc = 0;
 	for(int n = 1; n <= 8; ++n){
@@ -1887,7 +1899,7 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 //printf("p %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", id, time + RKFc_c[S] * dt, xt_s[id], yt_s[id], zt_s[id], vxt_s[id], vyt_s[id], vzt_s[id]);
 //}
 
-		if(id < N){
+		if(jj < N && snew < 0.0){
 
 			// ----------------------------------------------------------------------------
 			//compute forces
@@ -1963,7 +1975,7 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 		// ----------------------------------------------------------------------------
 		__syncthreads();
 
-		if(id < N){
+		if(jj < N && snew < 0.0){
 
 			// ----------------------------------------------------------------------------
 			//compute forces
@@ -2033,7 +2045,7 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 			__syncthreads();
 
 
-			if(id < N){
+			if(jj < N && snew < 0.0){
 
 				// ----------------------------------------------------------------------------
 				//compute forces
@@ -2103,7 +2115,7 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 			__syncthreads();
 
 
-			if(id < N){
+			if(jj < N && snew < 0.0){
 
 				// ----------------------------------------------------------------------------
 				//compute forces
@@ -2176,7 +2188,7 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 
 		double error = 0.0;
 
-		if(id < N){
+		if(jj < N && snew < 0.0){
 
 			// ----------------------------------------------------------------------------
 			//compute forces
@@ -2274,46 +2286,52 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 //printf("error %d %.20g\n", itx, error);
 
 
-			//update
-			xt = dx_s[itx][0];
-			yt = dy_s[itx][0];
-			zt = dz_s[itx][0];
-
-			vxt = dvx_s[itx][0];
-			vyt = dvy_s[itx][0];
-			vzt = dvz_s[itx][0];
-
-			for(int j = 1; j < n; ++j){
-				xt += dx_s[itx][j];
-				yt += dy_s[itx][j];
-				zt += dz_s[itx][j];
-
-				vxt += dvx_s[itx][j];
-				vyt += dvy_s[itx][j];
-				vzt += dvz_s[itx][j];
-			}
-			dx_d[id] = xt;
-			dy_d[id] = yt;
-			dz_d[id] = zt;
-
-			dvx_d[id] = vxt;
-			dvy_d[id] = vyt;
-			dvz_d[id] = vzt;
-
-
 			if(error < 1.0){
-				snew_d[id] = 1.0;
+				//update
+				xt = dx_s[itx][0];
+				yt = dy_s[itx][0];
+				zt = dz_s[itx][0];
 
-				if(n < 6){
-					snew_d[id] = 2.0;
+				vxt = dvx_s[itx][0];
+				vyt = dvy_s[itx][0];
+				vzt = dvz_s[itx][0];
+
+				for(int j = 1; j < n; ++j){
+					xt += dx_s[itx][j];
+					yt += dy_s[itx][j];
+					zt += dz_s[itx][j];
+
+					vxt += dvx_s[itx][j];
+					vyt += dvy_s[itx][j];
+					vzt += dvz_s[itx][j];
 				}
+				dx_d[id] = xt;
+				dy_d[id] = yt;
+				dz_d[id] = zt;
 
-				f = 0;
+				dvx_d[id] = vxt;
+				dvy_d[id] = vyt;
+				dvz_d[id] = vzt;
+
+
+				snew = 1.0;
+
+				if(n >= 8){
+					snew = 0.55;
+				}
+				if(n < 7){
+					snew = 1.3;
+				}
+//printf("Accect %d %d %d %g %g\n", level, id, n, dt, snew);
 //				break;
 
 			}
 			else{
 				f_s[0] = 1;
+				if(n == 8){
+					snew = 0.5;
+//printf("Repeat %d %d %d %g %g\n", level, id, n, dt, snew);
+				}
 			}
 
 
@@ -2327,12 +2345,15 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 
 	}//end of n loop
 
-	__syncthreads();
-	if(id < N && f == 1){
-		snew_d[id] = 0.5;
-//printf("repeat time step %g\n", dt);
+	if(jj < N){
+		if(snew * dt * dts >= dtlimit || level >= nL - 1){
+			snew_d[id] = snew;
+		}
+		else{
+			snew_d[id] = 1.0e6;      //mark body for higher level integration
+		}
+//printf("snew %d %d %g\n", level, id, snew_d[id]); 
 	}
-//printf("snew %d %g\n", id, snew_d[id]);
 
 }
 
@@ -2364,7 +2385,7 @@ __global__ void computeError_d1_kernel(double *snew_d, double *ssum_d, int *inde
 	if(jj < N){	
 		s = snew_d[id];
 //printf("snew %d %g\n", id, s);
-	}
+	}	
 
 	__syncthreads();
 
@@ -2489,7 +2510,7 @@ __global__ void update_kernel(double *x_d, double *y_d, double *z_d, double *vx_
 			vx_d[id] += dvx_d[id];
 			vy_d[id] += dvy_d[id];
 			vz_d[id] += dvz_d[id];
-printf("update %d\n", id);
+//printf("update %d\n", id);
 
 			if(stopFlag == 0){
 				if(dt < 0){
@@ -2499,26 +2520,32 @@ printf("update %d\n", id);
 					dtmin_d[id] = dt < dtmin_d[id] ? dt : dtmin_d[id];
 				}
 			}
-printf("dtmin %d %d %d %g\n", id, level, stopFlag, dtmin_d[id]);
+//printf("dtmin %d %d %d %g\n", id, level, stopFlag, dtmin_d[id]);
 
 		}
 		else{
 			int j = atomicAdd(&Nlevel_d[level + 1], 1);
 			index_d[level * N0 + j] = id;
 			//add to list
-printf("add to list %d %d\n", id, j);
+//printf("add to list %d %d\n", id, j);
 		}
 	}
 }
 
-__global__ void update_BS_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, const int N){
+__global__ void update_BS_kernel(double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *snew_d, double *dtmin_d, int *index_d, int *Nlevel_d, const int N, const int N0, const int level, const int stopFlag, const double dt){
 
-	int id = blockIdx.x * blockDim.x + threadIdx.x;
+	int jj = blockIdx.x * blockDim.x + threadIdx.x;
+	int id = jj;		//particle id
 
-//	if(snew_d[id] >= 1.0){
-//Add a flag for the different time step classes
+
+	if(jj < N){
+
+		if(level > 0){
+			id = index_d[(level - 1) * N0 + jj];
+		}
+
 		//accept step
-		if(id < N){
+		if(snew_d[id] < 1.0e6){
 			x_d[id] = dx_d[id];
 			y_d[id] = dy_d[id];
 			z_d[id] = dz_d[id];
@@ -2526,8 +2553,26 @@ __global__ void update_BS_kernel(double *x_d, double *y_d, double *z_d, double *
 			vx_d[id] = dvx_d[id];
 			vy_d[id] = dvy_d[id];
 			vz_d[id] = dvz_d[id];
+//printf("update %d\n", id);
+
+			if(stopFlag == 0){
+				if(dt < 0){
+					dtmin_d[id] = dt > dtmin_d[id] ? dt : dtmin_d[id];
+				}
+				else{
+					dtmin_d[id] = dt < dtmin_d[id] ? dt : dtmin_d[id];
+				}
+			}
+//printf("dtmin %d %d %d %g\n", id, level, stopFlag, dtmin_d[id]);
+
 		}
-//	}
+		else{
+			int j = atomicAdd(&Nlevel_d[level + 1], 1);
+			index_d[level * N0 + j] = id;
+			//add to list
+//printf("add to list %d %d\n", id, j);
+		}
+	}
 }
 
 
@@ -2992,12 +3037,12 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], time
 					dtlimit_ = dt_h[level] * dts;
 				}
 
-				//if(GPUMode == 0){
-				//	RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
-				//}
-				//else{
-					RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
-				//}
+				if(GPUMode == 0){
+					RKF_step_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
+				}
+				else{
+					RKF_step2_kernel <<< Nlevel_h[level], def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
+				}
 
 
 				//Calculate the minimal time step value
@@ -3023,26 +3068,26 @@ printf("snewMin %g %g\n", snew, dtlimit[level]);
 					//accept step
 					update_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, snew_d, dtmin_d, index_d, Nlevel_d, Nlevel_h[level], N0, level, stopFlag, dt_h[level]);
 
-//compy Nlevel
+					cudaDeviceSynchronize();
+					cudaMemcpy(&Nlevel_h[1], &Nlevel_d[1], sizeof(int), cudaMemcpyDeviceToHost);
+printf("Nlevel %d %d\n", level + 1, Nlevel_h[1]);
+
+					if(Nlevel_h[1] > 0){ 
+						time_h[level + 1] = time_h[level];
+printf("set time %d %d %g %g\n", level, level + 1, time_h[level], time_h[level + 1]);						
+					}
+
 					time_h[level] += dt_h[level];
 					++timeStep_h[level];
 
-
+					if(Nlevel_h[1] > 0){ 
+						loop_recursive(1);
+					}
 				}
 				else{
 printf("repeat level %d %g\n", level, snew);
 				}
 
-
-				cudaDeviceSynchronize();
-				cudaMemcpy(&Nlevel_h[1], Nlevel_d[1], sizeof(double), cudaMemcpyDeviceToHost);
-
-				if(Nlevel_h[1] > 0){ 
-					time_h[level + 1] = time_h[level];
-
-					loop_recursive(1);
-
-				}
 
 				timeStep = timeStep_h[level];
 				time = time_h[level];
@@ -3051,46 +3096,80 @@ printf("repeat level %d %g\n", level, snew);
 
 
 			if(strcmp(integratorName, "BS") == 0){
+				int N0 = Nlevel_h[0];
+				int level = 0;
+
 				//Needs at least Nperturbers threads per block
-				update_perturbers_kernel <<< nStage, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, nStage, nCm, EM, AUtokm, Nperturbers);
+				update_perturbers_kernel <<< nStage, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt_h[level], nStage, nCm, EM, AUtokm, Nperturbers);
+
+				int stopFlag = 0;
+				for(int l = 0; l <= level; ++l){
+					if(stop_h[l] == 1){
+						stopFlag = 1;
+					}
+				}
+
+				double dtlimit_ = dtlimit[level];
+				if(stopFlag == 1){
+					dtlimit_ = dt_h[level] * dts;
+				}
+
 
 				//if(GPUMode == 0){
-					BS_step_kernel <<< (N + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, BSn, Nperturbers, N);
+					BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 				//}
 				//else{
-				//	BS_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt, dts, BSn, Nperturbers, N);
+				//	BS_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, N);
 				//}
 
 
 				//Calculate the minimal time step value
 				//Using a parallel reduction sum
 				int nct = 512;
-				int ncb = min((N + nct - 1) / nct, 1024);
-				//computeError_d1_kernel <<< ncb, nct, WarpSize * sizeof(double)  >>> (snew_d, ssum_d, N);
+				int ncb = min((Nlevel_h[level] + nct - 1) / nct, 1024);
+				computeError_d1_kernel <<< ncb, nct, WarpSize * sizeof(double)  >>> (snew_d, ssum_d, index_d, Nlevel_h[level], N0, level);
 				if(ncb > 1){
 					computeError_d2_kernel <<< 1, ((ncb + WarpSize - 1) / WarpSize) * WarpSize, WarpSize * sizeof(double)  >>> (ssum_d, ncb);
 				}
 
 				cudaDeviceSynchronize();
-				cudaMemcpy(snew_h, ssum_d, sizeof(double), cudaMemcpyDeviceToHost);
-				snew = snew_h[0];
-				if(snew >= 1.0){
-					//accept step
-					update_BS_kernel <<< (N + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, N);
-					time += dt;
-					++timeStep;
-					if(stop != 1){
-						 //only increase time step when stop == 0
-						dt *= snew;
-					}
-//printf("accept %lld %.20g %g\n", timeStep, time, dt);
-				}
-				else{
-					//redo step
-					dt *= snew;
-//printf("repeat step %g\n", dt);
+				cudaMemcpy(&snew, ssum_d, sizeof(double), cudaMemcpyDeviceToHost);
+
+				if(snew == 1.0e6){
+					snew = 1.0;
 				}
 
+printf("snewMin %g %g\n", snew, dtlimit[level]);
+
+				snewlevel_h[level] = snew;
+
+				if(snew > 0.5){
+					//accept step
+					update_BS_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, snew_d, dtmin_d, index_d, Nlevel_d, Nlevel_h[level], N0, level, stopFlag, dt_h[level]);
+
+					cudaDeviceSynchronize();
+					cudaMemcpy(&Nlevel_h[1], &Nlevel_d[1], sizeof(int), cudaMemcpyDeviceToHost);
+printf("Nlevel %d %d\n", level + 1, Nlevel_h[1]);
+
+					if(Nlevel_h[1] > 0){ 
+						time_h[level + 1] = time_h[level];
+printf("set time %d %d %g %g\n", level, level + 1, time_h[level], time_h[level + 1]);						
+					}
+
+					time_h[level] += dt_h[level];
+					++timeStep_h[level];
+
+					if(Nlevel_h[1] > 0){ 
+						loop_recursive(1);
+					}
+
+				}
+				else{
+printf("repeat level %d %g\n", level, snew);
+				}
+
+				timeStep = timeStep_h[level];
+				time = time_h[level];
 			}
 			if(strcmp(integratorName, "IMM") == 0 ){
 				//Needs at least Nperturbers threads per block
@@ -3210,8 +3289,7 @@ printf("reset %d  %.20g\n", l, dt_h[l]);
 }
 
 int asteroid::loop_recursive(int level){
-	int er;
-
+	double snew = 10.0;	
 printf("\nStart level %d %g %g\n", level, dt_h[level - 1], dt_h[level]);
 	for(int t = 0; t < MaxTimeSteps2; ++t){
 
@@ -3251,13 +3329,8 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", 1, dt_h[level - 1], time_h[level
 
 		}
 
-		if(strcmp(integratorName, "RKF45") == 0){
-//			er = RKF_step(level, dtlimit[level]);
-		}
-		if(strcmp(integratorName, "DP54") == 0){
-//			er = RKF_step(level, dtlimit[level]);
-		}
-		if(strcmp(integratorName, "RKF78") == 0){
+		if(strcmp(integratorName, "RKF45") == 0 || strcmp(integratorName, "DP54") == 0 || strcmp(integratorName, "RKF78") == 0){
+			int N0 = Nlevel_h[0];
 
 			//Needs at least Nperturbers threads per block
 			update_perturbers_kernel <<< nStage, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time_h[level], time_reference, dt_h[level], nStage, nCm, EM, AUtokm, Nperturbers);
@@ -3274,12 +3347,12 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", 1, dt_h[level - 1], time_h[level
 				dtlimit_ = dt_h[level] * dts;
 			}
 
-			//if(GPUMode == 0){
-			//	RKF_step_kernel <<< (N + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time_h[level], timeStep_h[level], dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
-			//}
-			//else{
-				RKF_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time_h[level], timeStep_h[level], dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
-			//}
+			if(GPUMode == 0){
+				RKF_step_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time_h[level], timeStep_h[level], dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
+			}
+			else{
+				RKF_step2_kernel <<< Nlevel_h[level], def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time_h[level], timeStep_h[level], dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
+			}
 
 
 			//Calculate the minimal time step value
@@ -3305,8 +3378,23 @@ printf("snewMin %g %g\n", snew, dtlimit[level]);
 				//accept step
 				update_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, snew_d, dtmin_d, index_d, Nlevel_d, Nlevel_h[level], N0, level, stopFlag, dt_h[level]);
 
+				cudaDeviceSynchronize();
+				cudaMemcpy(&Nlevel_h[level + 1], &Nlevel_d[level + 1], sizeof(int), cudaMemcpyDeviceToHost);
+
+				if(Nlevel_h[level + 1] > 0){
+					time_h[level + 1] = time_h[level];
+
+
+				}
+
 				time_h[level] += dt_h[level];
 				++timeStep_h[level];
+
+				if(Nlevel_h[level + 1] > 0){
+
+					loop_recursive(level + 1);
+
+				}
 
 
 			}
@@ -3315,30 +3403,86 @@ printf("repeat level %d %g\n", level, snew);
 			}
 
 
-			cudaDeviceSynchronize();
-			cudaMemcpy(&Nlevel_h[level + 1], Nlevel_d[level + 1], sizeof(double), cudaMemcpyDeviceToHost);
+		}
 
-			if(Nlevel_h[level + 1] > 0){
-				time_h[level + 1] = time_h[level];
+		if(strcmp(integratorName, "BS") == 0){
+			int N0 = Nlevel_h[0];
 
-				loop_recursive(level + 1);
+			//Needs at least Nperturbers threads per block
+			update_perturbers_kernel <<< nStage, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time_h[level], time_reference, dt_h[level], nStage, nCm, EM, AUtokm, Nperturbers);
 
+			int stopFlag = 0;
+			for(int l = 0; l <= level; ++l){
+				if(stop_h[l] == 1){
+					stopFlag = 1;
+				}
 			}
 
+			double dtlimit_ = dtlimit[level];
+			if(stopFlag == 1){
+				dtlimit_ = dt_h[level] * dts;
+			}
 
-		}
-		if(strcmp(integratorName, "BS") == 0){
-//			er = BS_step(level, dtlimit[level]);
+			//if(GPUMode == 0){
+				BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
+			//}
+			//else{
+			//}
+
+
+			//Calculate the minimal time step value
+			//Using a parallel reduction sum
+			int nct = 512;
+			int ncb = min((Nlevel_h[level] + nct - 1) / nct, 1024);
+			computeError_d1_kernel <<< ncb, nct, WarpSize * sizeof(double)  >>> (snew_d, ssum_d, index_d, Nlevel_h[level], N0, level);
+			if(ncb > 1){
+				computeError_d2_kernel <<< 1, ((ncb + WarpSize - 1) / WarpSize) * WarpSize, WarpSize * sizeof(double)  >>> (ssum_d, ncb);
+			}
+
+			cudaDeviceSynchronize();
+			cudaMemcpy(&snew, ssum_d, sizeof(double), cudaMemcpyDeviceToHost);
+
+			if(snew == 1.0e6){
+				snew = 1.0;
+			}
+
+printf("snewMin %g %g\n", snew, dtlimit[level]);
+			snewlevel_h[level] = snew;
+
+			if(snew > 0.5){
+				//accept step
+				update_BS_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, snew_d, dtmin_d, index_d, Nlevel_d, Nlevel_h[level], N0, level, stopFlag, dt_h[level]);
+
+				cudaDeviceSynchronize();
+				cudaMemcpy(&Nlevel_h[level + 1], &Nlevel_d[level + 1], sizeof(int), cudaMemcpyDeviceToHost);
+
+				if(Nlevel_h[level + 1] > 0){
+					time_h[level + 1] = time_h[level];
+
+
+				}
+
+				time_h[level] += dt_h[level];
+				++timeStep_h[level];
+
+				if(Nlevel_h[level + 1] > 0){
+
+					loop_recursive(level + 1);
+
+				}
+
+
+			}
+			else{
+printf("repeat level %d %g\n", level, snew);
+			}
+
 		}
 
 		if(Nlevel_h[level + 1] > 0){
 
 			loop_recursive(level + 1);
 
-		}
-
-		if(er <= 0){
-			return 0;
 		}
 
 
@@ -3408,6 +3552,7 @@ printf("reset %d  %.20g\n", l, dt_h[l]);
 
 	} // end of t loop
 	Nlevel_h[level] = 0;
+	cudaMemset(&Nlevel_d[level], 0, sizeof(int));
 
 	return 1;
 }
