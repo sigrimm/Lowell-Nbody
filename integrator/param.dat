@@ -24,3 +24,4 @@ comet nn = 5.093
 comet r0 = 2.808
 comet tau = 0.0
 Print time steps = 0
+GPU block mode = 0

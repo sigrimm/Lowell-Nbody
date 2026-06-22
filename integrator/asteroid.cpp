@@ -415,6 +415,15 @@ int asteroid::readParam(int argc, char*argv[]){
 			str = fgets(sp, 3, paramfile);
 			++count[26];
 		}
+		else if(strcmp(sp, "GPU block mode =") == 0){
+			er = fscanf (paramfile, "%d", &GPUMode);
+			if(er <= 0){
+				printf("Error: GPU block mode is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+			++count[27];
+		}
 
 		else{
 			printf("Error: param.dat file is not valid! %s\n", sp);
@@ -446,7 +455,7 @@ int asteroid::readParam(int argc, char*argv[]){
 		else if(strcmp(argv[i], "-out") == 0){
 			sprintf(name, "%s", argv[i + 1]);
 		}
-		else if(strcmp(argv[i], "-mode") == 0){
+		else if(strcmp(argv[i], "-GPUmode") == 0){
 			GPUMode = atoi(argv[i + 1]);
 		}
 		else{
@@ -491,7 +500,7 @@ int asteroid::readParam(int argc, char*argv[]){
 void asteroid::printInfo(){
 	fprintf(infoFile, "Code version = %g\n", def_version);
 	fprintf(infoFile, "Use GPU = %d\n", USEGPU);
-	fprintf(infoFile, "GPU mode = %d\n", GPUMode);
+	fprintf(infoFile, "GPU block mode = %d\n", GPUMode);
 
 	fprintf(infoFile, "Initial condition file format = %d\n", ICformat);
 	fprintf(infoFile, "Initial condition file coordinates: orbital = %d\n", ICorbital);

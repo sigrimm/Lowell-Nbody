@@ -1472,7 +1472,7 @@ __global__ void RKF_step_kernel(double *xTable_d, double *yTable_d, double *zTab
 }
 
 // Runge Kutta Fehlberg step with adaptive time step
-// Every body runs on a thread
+// Every body runs on a thread block with the gravitation of the perturbers on an individual thread
 // Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
 __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d,double *GM_d, double *A1_d, double *A2_d, double *A3_d, int *index_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int RKFn, const int Nperturbers, const int N, const int N0, const int level, const int nL, double dtlimit){
 
@@ -1483,9 +1483,7 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 	int id = jj;		//particle id
 
 	if(level > 0){
-		if(jj < N){
-			id = index_d[(level - 1) * N0 + jj];
-		}
+		id = index_d[(level - 1) * N0 + jj];
 	}
 
 	//shared memory contains only the perturbers
@@ -1517,35 +1515,22 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 	double vyti;
 	double vzti;
 
-	double x0;
-	double y0;
-	double z0;
+	double x0 = x_d[id];
+	double y0 = y_d[id];
+	double z0 = z_d[id];
 
-	double vx0;
-	double vy0;
-	double vz0;
+	double vx0 = vx_d[id];
+	double vy0 = vy_d[id];
+	double vz0 = vz_d[id];
 
-	double A1;
-	double A2;
-	double A3;
+	double A1 = A1_d[id];
+	double A2 = A2_d[id];
+	double A3 = A3_d[id];
+
 
 	if(itx < Nperturbers){
 		GM_s[itx] = GM_d[itx];
 	}
-	if(jj < N){
-		x0 = x_d[id];
-		y0 = y_d[id];
-		z0 = z_d[id];
-
-		vx0 = vx_d[id];
-		vy0 = vy_d[id];
-		vz0 = vz_d[id];
-
-		A1 = A1_d[id];
-		A2 = A2_d[id];
-		A3 = A3_d[id];
-	}
-
 	__syncthreads();
 
 
@@ -1571,95 +1556,94 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 //printf("p %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", id, time + RKFc_c[S] * dt, xt_s[id], yt_s[id], zt_s[id], vxt_s[id], vyt_s[id], vzt_s[id]);
 //}
 
-		if(jj < N){
+		xti = x0;
+		yti = y0;
+		zti = z0;
 
-			xti = x0;
-			yti = y0;
-			zti = z0;
+		vxti = vx0;
+		vyti = vy0;
+		vzti = vz0;
 
-			vxti = vx0;
-			vyti = vy0;
-			vzti = vz0;
+		double ax = 0.0;
+		double ay = 0.0;
+		double az = 0.0;
 
-			double ax = 0.0;
-			double ay = 0.0;
-			double az = 0.0;
-
-			for(int s = 0; s < S; ++s){
-				double dtaa = dt * RKFa_c[S * RKFn + s];
-				xti  += dtaa * kx_s[s];
-				yti  += dtaa * ky_s[s];
-				zti  += dtaa * kz_s[s];
-				vxti += dtaa * kvx_s[s];
-				vyti += dtaa * kvy_s[s];
-				vzti += dtaa * kvz_s[s];
+		for(int s = 0; s < S; ++s){
+			double dtaa = dt * RKFa_c[S * RKFn + s];
+			xti  += dtaa * kx_s[s];
+			yti  += dtaa * ky_s[s];
+			zti  += dtaa * kz_s[s];
+			vxti += dtaa * kvx_s[s];
+			vyti += dtaa * kvy_s[s];
+			vzti += dtaa * kvz_s[s];
 //printf("update 2 %d %d %g %g %g %g %g %g\n", S, id, xti, yti, zti, RKFa_c[S * RKFn + s], kx_d[s], dt);
 
-			}
+		}
 
-			if(itx == 0){
-				kx_s[S] = vxti;
-				ky_s[S] = vyti;
-				kz_s[S] = vzti;
+		if(itx == 0){
+			kx_s[S] = vxti;
+			ky_s[S] = vyti;
+			kz_s[S] = vzti;
 
-				// ----------------------------------------------------------------------------
-				//compute forces
-
-				//heliocentric coordinates
-				double xih = xti - xTable_s[10];
-				double yih = yti - yTable_s[10];
-				double zih = zti - zTable_s[10];
-
-				double vxih = vxti - vxTable_s[10];
-				double vyih = vyti - vyTable_s[10];
-				double vzih = vzti - vzTable_s[10];
-
-				//r is used in multiple forces, so reuse it
-				double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
-				double r = sqrt(rsq);
-
-				if(cometFlag_c > 0 && S == 0){
-					if(id == 0){
-						Tsave_d[timeStep] = time;
-					}
-					Rsave_d[id * Rbuffersize_c + timeStep] = r;
-				}
-
-				//Earth centric coordinates
-				double xiE = xti - xTable_s[2];
-				double yiE = yti - yTable_s[2];
-				double ziE = zti - zTable_s[2];
-
-				if(useNonGrav_c == 1){
-					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
-				}
-				if(useGR_c == 1){
-					GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
-				}
-				if(useJ2_c == 1){
-					J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
-				}
-			}
-
-			__syncthreads();
-			if(itx < Nperturbers){
-				Gravity(xti, yti, zti, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, itx);
-			}
-			__syncthreads();
-			//reduce a
 			// ----------------------------------------------------------------------------
-			for(int i = 1; i < warpSize; i*=2){
-				ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
-				ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
-				az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
-			}
-			__syncthreads();
+			//compute forces
 
-			if(itx == 0){
-				kvx_s[S] = ax;
-				kvy_s[S] = ay;
-				kvz_s[S] = az;
+			//heliocentric coordinates
+			double xih = xti - xTable_s[10];
+			double yih = yti - yTable_s[10];
+			double zih = zti - zTable_s[10];
+
+			double vxih = vxti - vxTable_s[10];
+			double vyih = vyti - vyTable_s[10];
+			double vzih = vzti - vzTable_s[10];
+
+			//r is used in multiple forces, so reuse it
+			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
+			double r = sqrt(rsq);
+
+			if(cometFlag_c > 0 && S == 0){
+				if(id == 0){
+					Tsave_d[timeStep] = time;
+				}
+				Rsave_d[id * Rbuffersize_c + timeStep] = r;
 			}
+
+			//Earth centric coordinates
+			double xiE = xti - xTable_s[2];
+			double yiE = yti - yTable_s[2];
+			double ziE = zti - zTable_s[2];
+
+			if(useNonGrav_c == 1){
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+			}
+			if(useGR_c == 1){
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+			}
+			if(useJ2_c == 1){
+				J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+			}
+		}
+
+		__syncthreads();
+	
+		if(itx < Nperturbers){
+			Gravity(xti, yti, zti, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, itx);
+		}
+		__syncthreads();
+
+		//reduce a
+		// ----------------------------------------------------------------------------
+		for(int i = 1; i < warpSize; i*=2){
+			ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
+			ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
+			az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
+		}
+		__syncthreads();
+
+		if(itx == 0){
+			kvx_s[S] = ax;
+			kvy_s[S] = ay;
+			kvz_s[S] = az;
 		}
 		__syncthreads();
 	}
@@ -1675,7 +1659,7 @@ __global__ void RKF_step2_kernel(double *xTable_d, double *yTable_d, double *zTa
 	double dvz = 0.0;
 
 
-	if(jj < N && itx == 0){
+	if(itx == 0){
 
 		for(int S = 0; S < RKFn; ++S){
 			double dtb = dt * RKFb_c[S];
@@ -1900,7 +1884,6 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 //}
 
 		if(jj < N && snew < 0.0){
-
 			// ----------------------------------------------------------------------------
 			//compute forces
 			ax = 0.0;
@@ -2283,7 +2266,7 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 
 
 			error = sqrt(error / 6.0);      //6 is the number of dimensions
-//printf("error %d %.20g\n", itx, error);
+//printf("error %d %d %d %.20g\n", level, id, n, error);
 
 
 			if(error < 1.0){
@@ -2322,8 +2305,7 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 				if(n < 7){
 					snew = 1.3;
 				}
-//printf("Accect %d %d %d %g %g\n", level, id, n, dt, snew);
-//				break;
+//printf("Accecpt %d %d %d %g %g\n", level, id, n, dt, snew);
 
 			}
 			else{
@@ -2346,6 +2328,661 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 	}//end of n loop
 
 	if(jj < N){
+		if(snew * dt * dts >= dtlimit || level >= nL - 1){
+			snew_d[id] = snew;
+		}
+		else{
+			snew_d[id] = 1.0e6;      //mark body for higher level integration
+		}
+//printf("snew %d %d %g\n", level, id, snew_d[id]); 
+	}
+
+}
+
+
+// Bulirsh-Stoer step with adaptive time step
+// Every body runs on a thread block with the gravitation of the perturbers on an individual thread
+// Kernel uses at least Nperturbers threads. The perturbers are loaded into shared memory
+__global__ void BS_step2_kernel(double *xTable_d, double *yTable_d, double *zTable_d, double *vxTable_d, double *vyTable_d, double *vzTable_d, double *x_d, double *y_d, double *z_d, double *vx_d, double *vy_d, double *vz_d, double *dx_d, double *dy_d, double *dz_d, double *dvx_d, double *dvy_d, double *dvz_d, double *kx_d, double *ky_d, double *kz_d, double *kvx_d, double *kvy_d, double *kvz_d, double *GM_d, double *A1_d, double *A2_d, double *A3_d, int *index_d, double *Tsave_d, double *Rsave_d, double *snew_d, double time, long long int timeStep, const double dt, const int dts, const int BSn, const int Nperturbers, const int N, const int N0, const int level, const int nL, double dtlimit){
+
+
+	int itx = threadIdx.x;
+	int jj = blockIdx.x;
+
+	int id = jj;		//particle id
+
+	if(level > 0){
+		id = index_d[(level - 1) * N0 + jj];
+	}
+
+
+	//shared memory contains only the perturbers
+	__shared__ double xTable_s[def_NP];
+	__shared__ double yTable_s[def_NP];
+	__shared__ double zTable_s[def_NP];
+
+	__shared__ double vxTable_s[def_NP];
+	__shared__ double vyTable_s[def_NP];
+	__shared__ double vzTable_s[def_NP];
+
+	__shared__ double GM_s[def_NP];
+
+
+	__shared__ double dx_s[8];
+	__shared__ double dy_s[8];
+	__shared__ double dz_s[8];
+
+	__shared__ double dvx_s[8];
+	__shared__ double dvy_s[8];
+	__shared__ double dvz_s[8];
+
+	__shared__ int f_s[1];
+
+	double xp;
+	double yp;
+	double zp;
+
+	double vxp;
+	double vyp;
+	double vzp;
+
+	double xt;
+	double yt;
+	double zt;
+
+	double vxt;
+	double vyt;
+	double vzt;
+
+	double ax;
+	double ay;
+	double az;
+
+	double x0 = x_d[id];
+	double y0 = y_d[id];
+	double z0 = z_d[id];
+
+	double vx0 = vx_d[id];
+	double vy0 = vy_d[id];
+	double vz0 = vz_d[id];
+
+	double A1 = A1_d[id];
+	double A2 = A2_d[id];
+	double A3 = A3_d[id];
+
+	double scalex = atol_c + fabs(x0) * rtol_c;
+	double scaley = atol_c + fabs(y0) * rtol_c;
+	double scalez = atol_c + fabs(z0) * rtol_c;
+
+	double scalevx = atol_c + fabs(vx0) * rtol_c;
+	double scalevy = atol_c + fabs(vy0) * rtol_c;
+	double scalevz = atol_c + fabs(vz0) * rtol_c;
+
+
+	double snew = -1000.0;
+
+	if(itx < Nperturbers){
+		GM_s[itx] = GM_d[itx];
+	}
+
+
+
+	__syncthreads();
+
+	
+
+	int cc = 0;
+	for(int n = 1; n <= 8; ++n){
+		double dt2 = dt / (2.0 * n);
+		double dt22 = dt2 * 2.0;
+
+		f_s[0] = 0;
+
+		// ----------------------------------------------------------------------------
+		//Read the perturbers position
+		if(itx < Nperturbers){
+			int ii = itx * BSn + cc;
+
+			xTable_s[itx] = xTable_d[ii];
+			yTable_s[itx] = yTable_d[ii];
+			zTable_s[itx] = zTable_d[ii];
+
+			vxTable_s[itx] = vxTable_d[ii];
+			vyTable_s[itx] = vyTable_d[ii];
+			vzTable_s[itx] = vzTable_d[ii];
+//printf("%d %d %.20g %.20g %.20g\n", S, itx, xTable_s[itx], yTable_s[itx], zTable_s[itx]);
+		}
+		++cc;
+		// ----------------------------------------------------------------------------
+		__syncthreads();
+
+//if(id < Nperturbers){
+//printf("p %d %.20g %.20g %.20g %.20g %.20g %.20g %.20g\n", id, time + RKFc_c[S] * dt, xt_s[id], yt_s[id], zt_s[id], vxt_s[id], vyt_s[id], vzt_s[id]);
+//}
+		ax = 0.0;
+		ay = 0.0;
+		az = 0.0;
+
+		if(itx == 0){
+
+			// ----------------------------------------------------------------------------
+			//compute forces
+
+			//heliocentric coordinates
+			double xih = x0 - xTable_s[10];
+			double yih = y0 - yTable_s[10];
+			double zih = z0 - zTable_s[10];
+
+			double vxih = vx0 - vxTable_s[10];
+			double vyih = vy0 - vyTable_s[10];
+			double vzih = vz0 - vzTable_s[10];
+
+			//r is used in multiple forces, so reuse it
+			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
+			double r = sqrt(rsq);
+
+			if(cometFlag_c > 0 && n == 0){
+				if(id == 0){
+					Tsave_d[timeStep] = time;
+				}
+				Rsave_d[id * Rbuffersize_c + timeStep] = r;
+			}
+
+			//Earth centric coordinates
+			double xiE = x0 - xTable_s[2];
+			double yiE = y0 - yTable_s[2];
+			double ziE = z0 - zTable_s[2];
+
+			if(useNonGrav_c == 1){
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+			}
+			if(useGR_c == 1){
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+			}
+			if(useJ2_c == 1){
+				J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+			}
+
+		}
+		__syncthreads();
+
+		if(itx < Nperturbers){
+			Gravity(x0, y0, z0, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, itx);
+		}
+		__syncthreads();
+
+		//reduce a
+		// ----------------------------------------------------------------------------
+		for(int i = 1; i < warpSize; i*=2){
+			ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
+			ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
+			az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
+		}
+		__syncthreads();
+		// inside a warp all threads have now the same value of ax ay and az
+
+		if(itx < Nperturbers){
+			xp = x0 + dt2 * vx0;
+			yp = y0 + dt2 * vy0;
+			zp = z0 + dt2 * vz0;
+
+			vxp = vx0 + dt2 * ax;
+			vyp = vy0 + dt2 * ay;
+			vzp = vz0 + dt2 * az;
+		}
+		__syncthreads();
+
+
+		// ----------------------------------------------------------------------------
+		//Read the perturbers position
+		if(itx < Nperturbers){
+			int ii = itx * BSn + cc;
+
+			xTable_s[itx] = xTable_d[ii];
+			yTable_s[itx] = yTable_d[ii];
+			zTable_s[itx] = zTable_d[ii];
+
+			vxTable_s[itx] = vxTable_d[ii];
+			vyTable_s[itx] = vyTable_d[ii];
+			vzTable_s[itx] = vzTable_d[ii];
+		}
+		++cc;
+		// ----------------------------------------------------------------------------
+		__syncthreads();
+
+		ax = 0.0;
+		ay = 0.0;
+		az = 0.0;
+
+		if(itx == 0){
+
+			// ----------------------------------------------------------------------------
+			//compute forces
+
+			//heliocentric coordinates
+			double xih = xp - xTable_s[10];
+			double yih = yp - yTable_s[10];
+			double zih = zp - zTable_s[10];
+
+			double vxih = vxp - vxTable_s[10];
+			double vyih = vyp - vyTable_s[10];
+			double vzih = vzp - vzTable_s[10];
+
+			//r is used in multiple forces, so reuse it
+			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
+			double r = sqrt(rsq);
+
+			//Earth centric coordinates
+			double xiE = xp - xTable_s[2];
+			double yiE = yp - yTable_s[2];
+			double ziE = zp - zTable_s[2];
+
+			if(useNonGrav_c == 1){
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+			}
+			if(useGR_c == 1){
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+			}
+			if(useJ2_c == 1){
+				J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+			}
+
+		}
+		__syncthreads();
+
+		if(itx < Nperturbers){
+			Gravity(xp, yp, zp, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, itx);
+		}
+		__syncthreads();
+
+		//reduce a
+		// ----------------------------------------------------------------------------
+		for(int i = 1; i < warpSize; i*=2){
+			ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
+			ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
+			az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
+		}
+		__syncthreads();
+
+
+		if(itx < Nperturbers){
+			xt = x0 + dt22 * vxp;
+			yt = y0 + dt22 * vyp;
+			zt = z0 + dt22 * vzp;
+
+			vxt = vx0 + dt22 * ax;
+			vyt = vy0 + dt22 * ay;
+			vzt = vz0 + dt22 * az;
+		}
+		__syncthreads();
+
+		for(int m = 2; m <= n; ++m){
+			// ----------------------------------------------------------------------------
+			//Read the perturbers position
+			if(itx < Nperturbers){
+				int ii = itx * BSn + cc;
+
+				xTable_s[itx] = xTable_d[ii];
+				yTable_s[itx] = yTable_d[ii];
+				zTable_s[itx] = zTable_d[ii];
+
+				vxTable_s[itx] = vxTable_d[ii];
+				vyTable_s[itx] = vyTable_d[ii];
+				vzTable_s[itx] = vzTable_d[ii];
+			}
+			++cc;
+			// ----------------------------------------------------------------------------
+			__syncthreads();
+
+			ax = 0.0;
+			ay = 0.0;
+			az = 0.0;
+
+			if(itx == 0){
+
+				// ----------------------------------------------------------------------------
+				//compute forces
+
+				//heliocentric coordinates
+				double xih = xt - xTable_s[10];
+				double yih = yt - yTable_s[10];
+				double zih = zt - zTable_s[10];
+
+				double vxih = vxt - vxTable_s[10];
+				double vyih = vyt - vyTable_s[10];
+				double vzih = vzt - vzTable_s[10];
+
+				//r is used in multiple forces, so reuse it
+				double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
+				double r = sqrt(rsq);
+
+
+				//Earth centric coordinates
+				double xiE = xt - xTable_s[2];
+				double yiE = yt - yTable_s[2];
+				double ziE = zt - zTable_s[2];
+
+				if(useNonGrav_c == 1){
+					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+				}
+				if(useGR_c == 1){
+					GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+				}
+				if(useJ2_c == 1){
+					J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+				}
+			}
+			__syncthreads();
+
+			if(itx < Nperturbers){
+				Gravity(xt, yt, zt, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, itx);
+			}
+			__syncthreads();
+
+			//reduce a
+			// ----------------------------------------------------------------------------
+			for(int i = 1; i < warpSize; i*=2){
+				ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
+				ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
+				az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
+			}
+			__syncthreads();
+
+
+			if(itx < Nperturbers){
+				xp += dt22 * vxt;
+				yp += dt22 * vyt;
+				zp += dt22 * vzt;
+
+				vxp += dt22 * ax;
+				vyp += dt22 * ay;
+				vzp += dt22 * az;
+			}
+			__syncthreads();
+
+			// ----------------------------------------------------------------------------
+			//Read the perturbers position
+			if(itx < Nperturbers){
+				int ii = itx * BSn + cc;
+
+				xTable_s[itx] = xTable_d[ii];
+				yTable_s[itx] = yTable_d[ii];
+				zTable_s[itx] = zTable_d[ii];
+
+				vxTable_s[itx] = vxTable_d[ii];
+				vyTable_s[itx] = vyTable_d[ii];
+				vzTable_s[itx] = vzTable_d[ii];
+			}
+			++cc;
+			// ----------------------------------------------------------------------------
+			__syncthreads();
+
+
+			ax = 0.0;
+			ay = 0.0;
+			az = 0.0;
+
+			if(itx == 0){
+
+				// ----------------------------------------------------------------------------
+				//compute forces
+
+				//heliocentric coordinates
+				double xih = xp - xTable_s[10];
+				double yih = yp - yTable_s[10];
+				double zih = zp - zTable_s[10];
+
+				double vxih = vxp - vxTable_s[10];
+				double vyih = vyp - vyTable_s[10];
+				double vzih = vzp - vzTable_s[10];
+
+				//r is used in multiple forces, so reuse it
+				double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
+				double r = sqrt(rsq);
+
+
+				//Earth centric coordinates
+				double xiE = xp - xTable_s[2];
+				double yiE = yp - yTable_s[2];
+				double ziE = zp - zTable_s[2];
+
+				if(useNonGrav_c == 1){
+					NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+				}
+				if(useGR_c == 1){
+					GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+				}
+				if(useJ2_c == 1){
+					J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+				}
+			}
+			__syncthreads();
+
+			if(itx < Nperturbers){
+				Gravity(xp, yp, zp, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, itx);
+			}
+			__syncthreads();
+
+			//reduce a
+			// ----------------------------------------------------------------------------
+			for(int i = 1; i < warpSize; i*=2){
+				ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
+				ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
+				az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
+			}
+			__syncthreads();
+
+
+			if(itx < Nperturbers){
+				xt += dt22 * vxp;
+				yt += dt22 * vyp;
+				zt += dt22 * vzp;
+
+				vxt += dt22 * ax;
+				vyt += dt22 * ay;
+				vzt += dt22 * az;
+			}
+			__syncthreads();
+
+		} // end of m loop
+
+		// ----------------------------------------------------------------------------
+		//Read the perturbers position
+		if(itx < Nperturbers){
+			int ii = itx * BSn + cc;
+
+			xTable_s[itx] = xTable_d[ii];
+			yTable_s[itx] = yTable_d[ii];
+			zTable_s[itx] = zTable_d[ii];
+
+			vxTable_s[itx] = vxTable_d[ii];
+			vyTable_s[itx] = vyTable_d[ii];
+			vzTable_s[itx] = vzTable_d[ii];
+		}
+		++cc;
+		// ----------------------------------------------------------------------------
+		__syncthreads();
+
+		double error = 0.0;
+
+		ax = 0.0;
+		ay = 0.0;
+		az = 0.0;
+
+		if(itx == 0){
+
+			// ----------------------------------------------------------------------------
+			//compute forces
+
+			//heliocentric coordinates
+			double xih = xt - xTable_s[10];
+			double yih = yt - yTable_s[10];
+			double zih = zt - zTable_s[10];
+
+			double vxih = vxt - vxTable_s[10];
+			double vyih = vyt - vyTable_s[10];
+			double vzih = vzt - vzTable_s[10];
+
+			//r is used in multiple forces, so reuse it
+			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
+			double r = sqrt(rsq);
+
+
+			//Earth centric coordinates
+			double xiE = xt - xTable_s[2];
+			double yiE = yt - yTable_s[2];
+			double ziE = zt - zTable_s[2];
+
+			if(useNonGrav_c == 1){
+				NonGrav(xih, yih, zih, vxih, vyih, vzih, A1, A2, A3, r, ax, ay, az);
+			}
+			if(useGR_c == 1){
+				GR(xih, yih, zih, vxih, vyih, vzih, r, ax, ay, az, GM_s[10]);
+			}
+			if(useJ2_c == 1){
+				J2(xiE, yiE, ziE, ax, ay, az, GM_s[2]);
+			}
+		}
+		__syncthreads();
+
+		if(itx < Nperturbers){
+			Gravity(xt, yt, zt, xTable_s, yTable_s, zTable_s, ax, ay, az, GM_s, itx);
+		}
+		__syncthreads();
+
+		//reduce a
+		// ----------------------------------------------------------------------------
+		for(int i = 1; i < warpSize; i*=2){
+			ax += __shfl_xor_sync(0xffffffff, ax, i, warpSize);
+			ay += __shfl_xor_sync(0xffffffff, ay, i, warpSize);
+			az += __shfl_xor_sync(0xffffffff, az, i, warpSize);
+		}
+		__syncthreads();
+
+
+		if(itx < Nperturbers){
+			xp += dt2 * vxt;
+			yp += dt2 * vyt;
+			zp += dt2 * vzt;
+
+			vxp += dt2 * ax;
+			vyp += dt2 * ay;
+			vzp += dt2 * az;
+
+		}
+
+		__syncthreads();
+
+		if(itx == 0){
+
+			dx_s[n-1] = 0.5 * (xt + xp);
+			dy_s[n-1] = 0.5 * (yt + yp);
+			dz_s[n-1] = 0.5 * (zt + zp);
+
+			dvx_s[n-1] = 0.5 * (vxt + vxp);
+			dvy_s[n-1] = 0.5 * (vyt + vyp);
+			dvz_s[n-1] = 0.5 * (vzt + vzp);
+
+			for(int j = n - 1; j >= 1; --j){
+				double t0 = BSt0_c[(n-1) * 8 + (j-1)];
+				double t1 = t0 * BSddt_c[j];
+				double t2 = t0 * BSddt_c[n-1];
+
+				dx_s[j-1] = (t1 * dx_s[j]) - (t2 * dx_s[j-1]);
+				dy_s[j-1] = (t1 * dy_s[j]) - (t2 * dy_s[j-1]);
+				dz_s[j-1] = (t1 * dz_s[j]) - (t2 * dz_s[j-1]);
+
+				dvx_s[j-1] = (t1 * dvx_s[j]) - (t2 * dvx_s[j-1]);
+				dvy_s[j-1] = (t1 * dvy_s[j]) - (t2 * dvy_s[j-1]);
+				dvz_s[j-1] = (t1 * dvz_s[j]) - (t2 * dvz_s[j-1]);
+
+			}
+
+			double error1 = 0.0;
+
+			error1 = dx_s[0] / scalex;
+			error += error1 * error1;
+
+			error1 = dy_s[0] / scaley;
+			error += error1 * error1;
+
+			error1 = dz_s[0] / scalez;
+			error += error1 * error1;
+
+			error1 = dvx_s[0] / scalevx;
+			error += error1 * error1;
+
+			error1 = dvy_s[0] / scalevy;
+			error += error1 * error1;
+
+			error1 = dvz_s[0] / scalevz;
+			error += error1 * error1;
+
+
+			error = sqrt(error / 6.0);      //6 is the number of dimensions
+//printf("error %d %d %d %.20g\n", level, id, n, error);
+
+
+			if(error < 1.0){
+				//update
+				xt = dx_s[0];
+				yt = dy_s[0];
+				zt = dz_s[0];
+
+				vxt = dvx_s[0];
+				vyt = dvy_s[0];
+				vzt = dvz_s[0];
+
+				for(int j = 1; j < n; ++j){
+					xt += dx_s[j];
+					yt += dy_s[j];
+					zt += dz_s[j];
+
+					vxt += dvx_s[j];
+					vyt += dvy_s[j];
+					vzt += dvz_s[j];
+				}
+				dx_d[id] = xt;
+				dy_d[id] = yt;
+				dz_d[id] = zt;
+
+				dvx_d[id] = vxt;
+				dvy_d[id] = vyt;
+				dvz_d[id] = vzt;
+
+
+				snew = 1.0;
+
+				if(n >= 8){
+					snew = 0.55;
+				}
+				if(n < 7){
+					snew = 1.3;
+				}
+//printf("Accecpt %d %d %d %g %g\n", level, id, n, dt, snew);
+//				break;
+
+			}
+			else{
+				f_s[0] = 1;
+				if(n == 8){
+					snew = 0.5;
+//printf("Repeat %d %d %d %g %g\n", level, id, n, dt, snew);
+				}
+			}
+
+
+		}
+		__syncthreads();
+
+		if(f_s[0] == 0){
+			break;
+		}
+
+
+	}//end of n loop
+
+	if(itx == 0){
 		if(snew * dt * dts >= dtlimit || level >= nL - 1){
 			snew_d[id] = snew;
 		}
@@ -3115,12 +3752,12 @@ printf("repeat level %d %g\n", level, snew);
 				}
 
 
-				//if(GPUMode == 0){
+				if(GPUMode == 0){
 					BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
-				//}
-				//else{
-				//	BS_step2_kernel <<< N, def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, GM_d, A1_d, A2_d, A3_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, N);
-				//}
+				}
+				else{
+					BS_step2_kernel <<< Nlevel_h[level], def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
+				}
 
 
 				//Calculate the minimal time step value
@@ -3423,11 +4060,12 @@ printf("repeat level %d %g\n", level, snew);
 				dtlimit_ = dt_h[level] * dts;
 			}
 
-			//if(GPUMode == 0){
+			if(GPUMode == 0){
 				BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
-			//}
-			//else{
-			//}
+			}
+			else{
+				BS_step2_kernel <<< Nlevel_h[level], def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
+			}
 
 
 			//Calculate the minimal time step value
