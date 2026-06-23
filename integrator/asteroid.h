@@ -12,6 +12,7 @@
 #define def_N 64		//used for shared memory, must be a multiple of the warp size
 
 #define def_nLMax 4		//Maximum Number of integration time step levels
+#define def_NCMax 48		//Maximum number of Chebyshev coefficients
 
 class asteroid{
 

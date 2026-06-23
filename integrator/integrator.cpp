@@ -194,7 +194,7 @@ inline int asteroid::leapfrog_step(){
 		//r is used in multiple forces, so reuse it
 		double rsq = xih * xih + yih * yih + zih * zih;
 		double r = sqrt(rsq);
-		if(cometFlag > 0){
+		if(cometFlag > 0 && timeStep < Rbuffersize){
 			if(i == 0){
 				Tsave_h[timeStep] = time;
 			}
@@ -299,7 +299,7 @@ inline int asteroid::IMM_step(){
 			double rsq = xih * xih + yih * yih + zih * zih;
 			double r = sqrt(rsq);
 
-			if(cometFlag > 0 && k == 0){
+			if(cometFlag > 0 && k == 0 && timeStep < Rbuffersize){
 				if(i == 0){
 					Tsave_h[timeStep] = time;
 				}
@@ -446,7 +446,7 @@ inline int asteroid::RK_step(){
 			double rsq = xih * xih + yih * yih + zih * zih;
 			double r = sqrt(rsq);
 
-			if(cometFlag > 0 && S == 0){
+			if(cometFlag > 0 && S == 0 && timeStep < Rbuffersize){
 				if(i == 0){
 					Tsave_h[timeStep] = time;
 				}

@@ -42,6 +42,6 @@ asteroidGPU.o: asteroid.cu asteroid.h
 	nvcc -c $(CFLAGS) -o asteroidGPU.o asteroid.cu
 
 clean:
-	rm *.o
-	rm integrator
-	rm integratorGPU
+	rm -f *.o
+	rm -f integrator
+	rm -f integratorGPU

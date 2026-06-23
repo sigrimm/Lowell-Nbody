@@ -21,7 +21,7 @@ int asteroid::readParam(int argc, char*argv[]){
 		count[i] = 0;
 	}
 
-	for(int i = 0; i <= nL; ++i){
+	for(int i = 0; i < nL; ++i){
 		dtlimit[i] = 0.0;
 	}
 
@@ -274,21 +274,21 @@ int asteroid::readParam(int argc, char*argv[]){
 			++count[12];
 		}
 		else if(strcmp(sp, "Time Step Levels =") == 0){
-			for(int i = 0; i <= nL; ++i){
+			for(int i = 0; i < def_nLMax; ++i){
 				//store file position
 				long pos = ftell(paramfile); 
 
 				er = fscanf (paramfile, "%lf", &dtlimit[i]);
-				dtlimit[i] = abs(dtlimit[i]);
 				if(er <= 0){
 					//set back read position
 					fseek(paramfile, pos, SEEK_SET);
 					nL = i + 1;
 					break;
 				}
-				if(i == nL - 1){
-					printf("More levels than available %d, def_nLMax =  %d\n", i + 1, def_nLMax);
-					return 0;
+				dtlimit[i] = fabs(dtlimit[i]);
+				if(i == def_nLMax - 1){
+					nL = def_nLMax;
+					break;
 				}
 			}
 			str = fgets(sp, 3, paramfile);
@@ -485,7 +485,7 @@ int asteroid::readParam(int argc, char*argv[]){
 
 
 
-	if(ICformat > 0 && ICformat != 0){
+	if(ICformat == 1 && ICorbital == 1){
 		printf("Error, combination of initial condition format and initial condition coordinate system is not allowed\n");
 		return 0;
 	}
