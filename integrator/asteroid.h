@@ -12,6 +12,7 @@
 #define def_N 64		//used for shared memory, must be a multiple of the warp size
 
 #define def_nLMax 4		//Maximum Number of integration time step levels
+#define def_nCMax 14
 
 class asteroid{
 
@@ -47,7 +48,7 @@ public:
 
 	int N;					//Number of bodies to integrate, not including perturbers
 	int Nperturbers;			//Number of perturbers
-	int nL = def_nLMax;				//Number of integration time step levels, Initialize with maximum number of levels
+	int nL = def_nLMax;			//Number of integration time step levels, Initialize with maximum number of levels
 	double dtlimit[def_nLMax];
 	double inputFileVersion = 1;
 	double time_reference = 2451545.0;	//Reference time in JD 

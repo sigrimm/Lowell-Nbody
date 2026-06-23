@@ -21,7 +21,7 @@ int asteroid::readParam(int argc, char*argv[]){
 		count[i] = 0;
 	}
 
-	for(int i = 0; i <= nL; ++i){
+	for(int i = 0; i < nL; ++i){
 		dtlimit[i] = 0.0;
 	}
 
@@ -274,19 +274,19 @@ int asteroid::readParam(int argc, char*argv[]){
 			++count[12];
 		}
 		else if(strcmp(sp, "Time Step Levels =") == 0){
-			for(int i = 0; i <= nL; ++i){
+			for(int i = 0; i < def_nLMax; ++i){
 				//store file position
 				long pos = ftell(paramfile); 
 
 				er = fscanf (paramfile, "%lf", &dtlimit[i]);
-				dtlimit[i] = abs(dtlimit[i]);
 				if(er <= 0){
 					//set back read position
 					fseek(paramfile, pos, SEEK_SET);
 					nL = i + 1;
 					break;
 				}
-				if(i == nL - 1){
+				dtlimit[i] = abs(dtlimit[i]);
+				if(i == def_nLMax - 1){
 					printf("More levels than available %d, def_nLMax =  %d\n", i + 1, def_nLMax);
 					return 0;
 				}
@@ -484,11 +484,6 @@ int asteroid::readParam(int argc, char*argv[]){
 	sprintf(dtFilename, "dt_%s.dat", name);
 
 
-
-	if(ICformat > 0 && ICformat != 0){
-		printf("Error, combination of initial condition format and initial condition coordinate system is not allowed\n");
-		return 0;
-	}
 
 	for(int i = 1; i < nL; ++i){
 		if(dtlimit[i] >= dtlimit[i - 1]){
@@ -740,7 +735,10 @@ int asteroid::allocate(){
 //printf("%d %d %d %d %d %.20g\n", i, idp_h[i], nChebyshev_h[i], offset0_h[i], offset1_h[i], GM_h[i]);
 	}
 #endif
-	//printf("nCm %d\n", nCm);
+	printf("nCm %d\n", nCm);
+	if(nCm > def_nCMax){
+		printf("Error: nCm larger than def_nCMax: %d %d\n", nCm, def_nCMax);
+	}
 
 	//Find size of entire data file  
 

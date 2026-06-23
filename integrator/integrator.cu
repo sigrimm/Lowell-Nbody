@@ -41,14 +41,6 @@ __constant__ double nonGrav_tau_c;
 
 
 __host__ int asteroid::copyConst(){
-{
-cudaDeviceSynchronize();
-cudaError_t error = cudaGetLastError();
-printf("copy const error 1= %d = %s\n",error, cudaGetErrorString(error));
-if(error != 0.0){
-	return 0;
-}
-}
 
 	if(RKFn > 0){
 		cudaMemcpyToSymbol(RKFa_c, RKFa_h, RKFn * RKFn * sizeof(double), 0, cudaMemcpyHostToDevice);
@@ -3674,7 +3666,8 @@ int asteroid::loop(){
 					dtlimit_ = dt_h[level] * dts;
 				}
 
-				if(GPUMode == 0){
+				//if(GPUMode == 0){
+				if(Nlevel_h[level] > 2000){
 					RKF_step_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 				}
 				else{
@@ -3749,8 +3742,8 @@ int asteroid::loop(){
 				}
 
 
-				//if(GPUMode == 0){
-				if(Nlevel_h[level] > 2000){
+				if(GPUMode == 0){
+				//if(Nlevel_h[level] > 2000){
 					BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 				}
 				else{
@@ -3791,8 +3784,12 @@ int asteroid::loop(){
 					time_h[level] += dt_h[level];
 					++timeStep_h[level];
 
-					if(Nlevel_h[1] > 0){ 
-						loop_recursive(1);
+					if(Nlevel_h[1] > 0){
+//printf("Start recursive\n"); 
+						int er = loop_recursive(1);
+						if(er <= 0){
+							return 0;
+						}
 					}
 
 				}
@@ -3888,7 +3885,14 @@ int asteroid::loop(){
 			}
 
 		}//end of ttt loop
+
 		cudaDeviceSynchronize();
+		cudaError_t error = cudaGetLastError();
+		if(error != 0.0){
+			printf("step error = %d = %s\n",error, cudaGetErrorString(error));
+			return 0;
+		}
+
 		if(time_reference + time >= outStart){
 			if(Outheliocentric == 1 || Outgeocentric == 1){
 				update_perturbers_kernel <<< nStage, 32 >>>(xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, data_d, cdata_d, idp_d, startTime_d, endTime_d, nChebyshev_d, offset0_d, time, time_reference, dt, nStage, nCm, EM, AUtokm, Nperturbers);
@@ -3979,7 +3983,8 @@ int asteroid::loop_recursive(int level){
 				dtlimit_ = dt_h[level] * dts;
 			}
 
-			if(GPUMode == 0){
+			if(Nlevel_h[level] > 2000){
+			//if(GPUMode == 0){
 				RKF_step_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time_h[level], timeStep_h[level], dt_h[level], dts, RKFn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 			}
 			else{
@@ -4021,13 +4026,6 @@ int asteroid::loop_recursive(int level){
 				time_h[level] += dt_h[level];
 				++timeStep_h[level];
 
-				if(Nlevel_h[level + 1] > 0){
-
-					loop_recursive(level + 1);
-
-				}
-
-
 			}
 			else{
 //printf("repeat level %d %g\n", level, snew);
@@ -4054,8 +4052,8 @@ int asteroid::loop_recursive(int level){
 				dtlimit_ = dt_h[level] * dts;
 			}
 
-			if(Nlevel_h[level] > 2000){
-			//if(GPUMode == 0){
+			//if(Nlevel_h[level] > 2000){
+			if(GPUMode == 0){
 				BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 			}
 			else{
@@ -4086,24 +4084,18 @@ int asteroid::loop_recursive(int level){
 				update_BS_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, snew_d, dtmin_d, index_d, Nlevel_d, Nlevel_h[level], N0, level, stopFlag, dt_h[level]);
 
 				cudaDeviceSynchronize();
-				cudaMemcpy(&Nlevel_h[level + 1], &Nlevel_d[level + 1], sizeof(int), cudaMemcpyDeviceToHost);
+				if(level + 1 < nL){
+					cudaMemcpy(&Nlevel_h[level + 1], &Nlevel_d[level + 1], sizeof(int), cudaMemcpyDeviceToHost);
 
-				if(Nlevel_h[level + 1] > 0){
-					time_h[level + 1] = time_h[level];
+					if(Nlevel_h[level + 1] > 0){
+						time_h[level + 1] = time_h[level];
 
 
+					}
 				}
 
 				time_h[level] += dt_h[level];
 				++timeStep_h[level];
-
-				if(Nlevel_h[level + 1] > 0){
-
-					loop_recursive(level + 1);
-
-				}
-
-
 			}
 			else{
 //printf("repeat level %d %g\n", level, snew);
@@ -4112,8 +4104,10 @@ int asteroid::loop_recursive(int level){
 		}
 
 		if(Nlevel_h[level + 1] > 0){
-
-			loop_recursive(level + 1);
+			int er = loop_recursive(level + 1);
+			if(er <= 0){
+				return 0;
+			}
 
 		}
 

@@ -51,12 +51,6 @@ int asteroid::readICSize(){
 //Read the initial conditions file in text format
 //Cartesian coordinates
 int asteroid::readIC(){
-	inputFile = fopen(inputFilename, "rb");
-	if(inputFile == NULL){
-		printf("Error, could not open initial condition file |%s|\n", inputFilename);
-		return 0;
-	}
-
 	for(int i = 0; i < N; ++i){
 		int er = 0;
 		er = fscanf(inputFile, "%lld", &id_h[i]);
