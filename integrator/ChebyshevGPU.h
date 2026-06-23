@@ -57,12 +57,12 @@ __device__ void update_perturbersGPU(double *xTable_s, double *yTable_s, double 
 		//double Tvy[nCm];
 		//double Tvz[nCm];
 
-		double Tx[14];
-		double Ty[14];
-		double Tz[14];
-		double Tvx[14];
-		double Tvy[14];
-		double Tvz[14];
+		double Tx[def_NCMax];
+		double Ty[def_NCMax];
+		double Tz[def_NCMax];
+		double Tvx[def_NCMax];
+		double Tvy[def_NCMax];
+		double Tvz[def_NCMax];
 
 
 		//Calculate positions of perturbers
