@@ -222,22 +222,18 @@ int asteroid::readParam(int argc, char*argv[]){
 			else if(strcmp(integratorName, "RKF45") == 0){
 				RKFn = 6;
 				nStage = 6;
-				individualSteps = 1;
 			}
 			else if(strcmp(integratorName, "DP54") == 0){
 				RKFn = 7;
 				nStage = 7;
-				individualSteps = 1;
 			}
 			else if(strcmp(integratorName, "RKF78") == 0){
 				RKFn = 13;
 				nStage = 13;
-				individualSteps = 1;
 			}
 			else if(strcmp(integratorName, "BS") == 0){
 				BSn = 80;
 				nStage = 80;
-				individualSteps = 1;
 			}
 			else if(strcmp(integratorName, "IMM") == 0){
 				nStage = 1;
@@ -415,6 +411,15 @@ int asteroid::readParam(int argc, char*argv[]){
 			str = fgets(sp, 3, paramfile);
 			++count[26];
 		}
+		else if(strcmp(sp, "Use individual time step mode =") == 0){
+			er = fscanf (paramfile, "%d", &individualSteps);
+			if(er <= 0){
+				printf("Error: Time step mode is not valid!\n");
+				return 0;
+			}
+			str = fgets(sp, 3, paramfile);
+			++count[27];
+		}
 		else if(strcmp(sp, "GPU block mode =") == 0){
 			er = fscanf (paramfile, "%d", &GPUMode);
 			if(er <= 0){
@@ -422,7 +427,7 @@ int asteroid::readParam(int argc, char*argv[]){
 				return 0;
 			}
 			str = fgets(sp, 3, paramfile);
-			++count[27];
+			++count[28];
 		}
 
 		else{
@@ -493,6 +498,26 @@ int asteroid::readParam(int argc, char*argv[]){
 	}
 
 
+
+	if(strcmp(integratorName, "LF") == 0){
+		individualSteps = 0;
+	}
+	else if(strcmp(integratorName, "RK4") == 0){
+		individualSteps = 0;
+	}
+	else if(strcmp(integratorName, "RK7") == 0){
+		individualSteps = 0;
+	}
+	else if(strcmp(integratorName, "IMM") == 0){
+		individualSteps = 0;
+	}
+
+
+	if(individualSteps == 1){
+		nL = 1;
+	}
+
+
 	return 1;
 
 }
@@ -501,6 +526,7 @@ void asteroid::printInfo(){
 	fprintf(infoFile, "Code version = %g\n", def_version);
 	fprintf(infoFile, "Use GPU = %d\n", USEGPU);
 	fprintf(infoFile, "GPU block mode = %d\n", GPUMode);
+	fprintf(infoFile, "Use individual time steps = %d\n", individualSteps);
 
 	fprintf(infoFile, "Initial condition file format = %d\n", ICformat);
 	fprintf(infoFile, "Initial condition file coordinates: orbital = %d\n", ICorbital);

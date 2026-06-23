@@ -185,8 +185,6 @@ int main(int argc, char*argv[]){
 #endif
 	//----------------------------------------------------------
 
-A.individualSteps = 0;
-
 	if(A.individualSteps == 1){
 #if USEGPU == 0
 		er = A.loop_individual();	

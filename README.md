@@ -82,17 +82,37 @@ Every record contains
     - cartesian geocentric equatorial
     - orbital heliocentric ecliptic
   - Path to perturbers file, string
-  - 
-allowed integrators are:
+  - Start Time: start of the integration, in days. 
+  - End Time: end of the integration, in days
+  - Time Step, in days. Can be negative for backward integration.
+  - Time Step Levels: list of edges between the block time step levels, in days. Use "-" for a single block.
+  - Integrator: allowed integrators are:
+    - LF: leapfrog. Fixed time steps
+    - IMM: Implicit Midpoint Method. Fixed time steps
+    - RK4: Runge Kutta order 4. Fixed time steps
+    - RK7: Runge Kutta order 7. Fixed time steps
+    - RKF45: Runge Kutta Fehlberg order 4,5. Adaptive time steps
+    - DP54: Runge Kutta Fehlberg 5,4. Adaptive time steps
+    - RKF78: Runge Kutta Fehlberg 7,8, Adaptive time steps
+    - BS: Bulirsh Stoer method, Adaptive time steps
+  - Integrator absolute tolerance.
+  - Integrator relative tolerance.
+  - Use GR correction: 0 or 1
+  - Use J2 force; 0 or 1
+  - Use non-gravitational force: 0 or 1
+  - Use comets: 0 or 1
+  - comet alpha
+  - comet nk
+  - comet nm
+  - comet nn
+  - comet r0
+  - comet tau
+  - Print time steps: 0 or 1
+  - Use individual time step mode: 0 or 1
+  - GPU block mode: 0 or 1
 
-  - LF: leapfrog. Fixed time steps
-  - IMM: Implicit Midpoint Method. Fixed time steps
-  - RK4: Runge Kutta order 4. Fixed time steps
-  - RK7: Runge Kutta order 7. Fixed time steps
-  - RKF45: Runge Kutta Fehlberg order 4,5. Adaptive time steps
-  - DP54: Runge Kutta Fehlberg 5,4. Adaptive time steps
-  - RKF78: Runge Kutta Fehlberg 7,8, Adaptive time steps
-  - BS: Bulirsh Stoer method, Adaptive time steps
+
+
 
 ## Step 3, set initial conditions ##
 
@@ -109,7 +129,15 @@ with:
 
 ## Step 4, run the integration ##
 
-- ./integrator
+run:
+
+    ./integrator
+
+or:
+
+    ./integratorGPU
+
+
 
 The name of the initial conditions file must be set in the param.dat file.
 The output file format can either be a text file (Out_<name>.dat) or a binary file (Out_<name>.bin)

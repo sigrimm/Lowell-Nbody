@@ -930,7 +930,7 @@ inline int asteroid::RKF_step(const int level, double dtlimit){
 		s = (RKF_fac * s > RKF_facmin) ? RKF_fac * s : RKF_facmin;
 		s = (RKF_facmax < s) ? RKF_facmax : s;
 
-printf("snew %d %d %g %g %g \n", level, i, s, dt, s * dt);
+//printf("snew %d %d %g %g %g \n", level, i, s, dt, s * dt);
 
 		if(s * dt * dts >= dtlimit || level >= nL - 1){
 			snew_h[i] = s;
@@ -938,7 +938,6 @@ printf("snew %d %d %g %g %g \n", level, i, s, dt, s * dt);
 		else{
 			snew_h[i] = 1.0e6;	//mark body for higher level integration
 			time_h[level + 1] = time_h[level];
-printf("set time %d %d %g %g\n", level, level + 1, time_h[level], time_h[level + 1]);
 		}
 	}
 
@@ -960,7 +959,6 @@ printf("set time %d %d %g %g\n", level, level + 1, time_h[level], time_h[level +
 		snew = 1.0;
 	}
 
-printf("snewMin %g %g\n", snew, dtlimit);
 	snewlevel_h[level] = snew;
 
 	if(snew >= RKF_fac){
@@ -980,8 +978,6 @@ printf("snewMin %g %g\n", snew, dtlimit);
 				vx_h[i] += dvx_h[i];
 				vy_h[i] += dvy_h[i];
 				vz_h[i] += dvz_h[i];
-printf("update %d %g\n", i, time_h[level] + dt);
-
 
 				if(stopFlag == 0){
 					if(dts < 0){
@@ -998,7 +994,7 @@ printf("update %d %g\n", i, time_h[level] + dt);
 				int j = Nlevel_h[level + 1]++;
 				index_h[level * N0 + j] = i;
 				//add to list
-printf("add to list %d %d %g\n", i, j, time_h[level + 1]);
+//printf("add to list %d %d %g\n", i, j, time_h[level + 1]);
 			}
 
 		}
@@ -1007,7 +1003,7 @@ printf("add to list %d %d %g\n", i, j, time_h[level + 1]);
 		++timeStep_h[level];
 	}
 	else{
-printf("repeat level %d %g\n", level, snew);
+//printf("repeat level %d %g\n", level, snew);
 	}
 
 
@@ -2326,7 +2322,7 @@ int asteroid::loop(){
 
 				//refine last time step of interval to match output time
 				if(time + dt_h[0] < timett1){
-printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
+//printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
 					dtsave_h[0] = dt_h[0];
 					dt_h[0] = timett1 - time;
 					stop_h[0] = 1;
@@ -2342,7 +2338,7 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], time
 
 				//refine last time step of interval to match output time
 				if(time + dt_h[0] > timett1){
-printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
+//printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
 					dtsave_h[0] = dt_h[0];
 					dt_h[0] = timett1 - time;
 					stop_h[0] = 1;
@@ -2436,7 +2432,7 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], time
 			if(printdt == 1){
 				fprintf(dtFile, "%-25.20g %lld %-25.20g %d\n", time + time_reference, timeStep, dt_h[0] / snew, 0);
 			}
-printf("dt %d %lld %g %g %g\n", 0, timeStep, snew, dt_h[0], dtsave_h[0]);
+//printf("dt %d %lld %g %g %g\n", 0, timeStep, snew, dt_h[0], dtsave_h[0]);
 
 
 
@@ -2449,7 +2445,7 @@ printf("dt %d %lld %g %g %g\n", 0, timeStep, snew, dt_h[0], dtsave_h[0]);
 
 					for(int l = 0; l < nL; ++l){
 						dt_h[l] = dtsave_h[l];
-printf("reset %d  %.20g\n", l, dt_h[l]);
+//printf("reset %d  %.20g\n", l, dt_h[l]);
 
 					}
 				}
@@ -2465,7 +2461,7 @@ printf("reset %d  %.20g\n", l, dt_h[l]);
 
 					for(int l = 0; l < nL; ++l){
 						dt_h[l] = dtsave_h[l];
-printf("reset %d  %.20g\n", l, dt_h[l]);
+//printf("reset %d  %.20g\n", l, dt_h[l]);
 
 					}
 
@@ -2519,7 +2515,7 @@ printf("reset %d  %.20g\n", l, dt_h[l]);
 int asteroid::loop_recursive(int level){
 	int er;
 
-printf("\nStart level %d %g %g\n", level, dt_h[level - 1], dt_h[level]);
+//printf("\nStart level %d %g %g\n", level, dt_h[level - 1], dt_h[level]);
 	for(int t = 0; t < MaxTimeSteps2; ++t){
 
 
@@ -2531,7 +2527,7 @@ printf("\nStart level %d %g %g\n", level, dt_h[level - 1], dt_h[level]);
 
 			//refine last time step of interval to match output time
 			if(time_h[level] + dt_h[level] < time_h[level - 1]){
-printf("refine %d %.20g | %.20g %.20g %.20g\n", level, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
+//printf("refine %d %.20g | %.20g %.20g %.20g\n", level, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
 				dtsave_h[level] = dt_h[level];
 				dt_h[level] = time_h[level - 1] - time_h[level];
 				stop_h[level] = 1;
@@ -2547,7 +2543,7 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", level, dt_h[level - 1], time_h[l
 
 			//refine last time step of interval to match output time
 			if(time_h[level] + dt_h[level] > time_h[level - 1]){
-printf("refine %d %.20g | %.20g %.20g %.20g\n", 1, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
+//printf("refine %d %.20g | %.20g %.20g %.20g\n", 1, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
 				dtsave_h[level] = dt_h[level];
 				dt_h[level] = time_h[level - 1] - time_h[level];
 				stop_h[level] = 1;
@@ -2585,7 +2581,7 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", 1, dt_h[level - 1], time_h[level
 		if(printdt == 1){
 			fprintf(dtFile, "%-25.20g %lld %-25.20g %d\n", time_h[level] + time_reference, timeStep, dt_h[level] / snewlevel_h[level], level);
 		}
-printf("dt %d %lld %g %g %g\n", level, timeStep, snewlevel_h[level], dt_h[level], dtsave_h[level]);
+//printf("dt %d %lld %g %g %g\n", level, timeStep, snewlevel_h[level], dt_h[level], dtsave_h[level]);
 
 		dt_h[level] *= snewlevel_h[level];
 
@@ -2598,7 +2594,7 @@ printf("dt %d %lld %g %g %g\n", level, timeStep, snewlevel_h[level], dt_h[level]
 
 				for(int l = level; l < nL; ++l){
 					dt_h[l] = dtsave_h[l];
-printf("reset %d  %.20g\n", l, dt_h[l]);
+//printf("reset %d  %.20g\n", l, dt_h[l]);
 
 				}
 			}
@@ -2614,7 +2610,7 @@ printf("reset %d  %.20g\n", l, dt_h[l]);
 
 				for(int l = level; l < nL; ++l){
 					dt_h[l] = dtsave_h[l];
-printf("reset %d  %.20g\n", l, dt_h[l]);
+//printf("reset %d  %.20g\n", l, dt_h[l]);
 
 				}
 

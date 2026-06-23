@@ -3583,7 +3583,7 @@ int asteroid::loop(){
 
 				//refine last time step of interval to match output time
 				if(time + dt_h[0] < timett1){
-printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
+//printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
 					dtsave_h[0] = dt_h[0];
 					dt_h[0] = timett1 - time;
 					stop_h[0] = 1;
@@ -3599,7 +3599,7 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], time
 
 				//refine last time step of interval to match output time
 				if(time + dt_h[0] > timett1){
-printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
+//printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], timett1, timett1 - time);
 					dtsave_h[0] = dt_h[0];
 					dt_h[0] = timett1 - time;
 					stop_h[0] = 1;
@@ -3698,7 +3698,6 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", 0, dt_h[0], time + dt_h[0], time
 					snew = 1.0;
 				}
 
-printf("snewMin %g %g\n", snew, dtlimit[level]);
 				snewlevel_h[level] = snew;
 
 				if(snew >= RKF_fac){
@@ -3707,11 +3706,9 @@ printf("snewMin %g %g\n", snew, dtlimit[level]);
 
 					cudaDeviceSynchronize();
 					cudaMemcpy(&Nlevel_h[1], &Nlevel_d[1], sizeof(int), cudaMemcpyDeviceToHost);
-printf("Nlevel %d %d\n", level + 1, Nlevel_h[1]);
 
 					if(Nlevel_h[1] > 0){ 
 						time_h[level + 1] = time_h[level];
-printf("set time %d %d %g %g\n", level, level + 1, time_h[level], time_h[level + 1]);						
 					}
 
 					time_h[level] += dt_h[level];
@@ -3722,7 +3719,7 @@ printf("set time %d %d %g %g\n", level, level + 1, time_h[level], time_h[level +
 					}
 				}
 				else{
-printf("repeat level %d %g\n", level, snew);
+//printf("repeat level %d %g\n", level, snew);
 				}
 
 
@@ -3776,7 +3773,6 @@ printf("repeat level %d %g\n", level, snew);
 					snew = 1.0;
 				}
 
-printf("snewMin %g %g\n", snew, dtlimit[level]);
 
 				snewlevel_h[level] = snew;
 
@@ -3786,11 +3782,9 @@ printf("snewMin %g %g\n", snew, dtlimit[level]);
 
 					cudaDeviceSynchronize();
 					cudaMemcpy(&Nlevel_h[1], &Nlevel_d[1], sizeof(int), cudaMemcpyDeviceToHost);
-printf("Nlevel %d %d\n", level + 1, Nlevel_h[1]);
 
 					if(Nlevel_h[1] > 0){ 
 						time_h[level + 1] = time_h[level];
-printf("set time %d %d %g %g\n", level, level + 1, time_h[level], time_h[level + 1]);						
 					}
 
 					time_h[level] += dt_h[level];
@@ -3802,7 +3796,7 @@ printf("set time %d %d %g %g\n", level, level + 1, time_h[level], time_h[level +
 
 				}
 				else{
-printf("repeat level %d %g\n", level, snew);
+//printf("repeat level %d %g\n", level, snew);
 				}
 
 				timeStep = timeStep_h[level];
@@ -3838,7 +3832,7 @@ printf("repeat level %d %g\n", level, snew);
 			if(printdt == 1){
 				fprintf(dtFile, "%-25.20g %lld %-25.20g\n", time + time_reference, timeStep, dt_h[0] / snew);
 			}
-printf("dt %d %lld %g %g %g\n", 0, timeStep, snew, dt_h[0], dtsave_h[0]);
+//printf("dt %d %lld %g %g %g\n", 0, timeStep, snew, dt_h[0], dtsave_h[0]);
 
 
 
@@ -3852,7 +3846,7 @@ printf("dt %d %lld %g %g %g\n", 0, timeStep, snew, dt_h[0], dtsave_h[0]);
 
 					for(int l = 0; l < nL; ++l){
 						dt_h[l] = dtsave_h[l];
-printf("reset %d  %.20g\n", l, dt_h[l]);
+//printf("reset %d  %.20g\n", l, dt_h[l]);
 
 					}
 				}
@@ -3868,7 +3862,7 @@ printf("reset %d  %.20g\n", l, dt_h[l]);
 
 					for(int l = 0; l < nL; ++l){
 						dt_h[l] = dtsave_h[l];
-printf("reset %d  %.20g\n", l, dt_h[l]);
+//printf("reset %d  %.20g\n", l, dt_h[l]);
 
 					}
 
@@ -3927,7 +3921,7 @@ printf("reset %d  %.20g\n", l, dt_h[l]);
 
 int asteroid::loop_recursive(int level){
 	double snew = 10.0;	
-printf("\nStart level %d %g %g\n", level, dt_h[level - 1], dt_h[level]);
+//printf("\nStart level %d %g %g\n", level, dt_h[level - 1], dt_h[level]);
 	for(int t = 0; t < MaxTimeSteps2; ++t){
 
 
@@ -3939,7 +3933,7 @@ printf("\nStart level %d %g %g\n", level, dt_h[level - 1], dt_h[level]);
 
 			//refine last time step of interval to match output time
 			if(time_h[level] + dt_h[level] < time_h[level - 1]){
-printf("refine %d %.20g | %.20g %.20g %.20g\n", level, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
+//printf("refine %d %.20g | %.20g %.20g %.20g\n", level, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
 				dtsave_h[level] = dt_h[level];
 				dt_h[level] = time_h[level - 1] - time_h[level];
 				stop_h[level] = 1;
@@ -3955,7 +3949,7 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", level, dt_h[level - 1], time_h[l
 
 			//refine last time step of interval to match output time
 			if(time_h[level] + dt_h[level] > time_h[level - 1]){
-printf("refine %d %.20g | %.20g %.20g %.20g\n", 1, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
+//printf("refine %d %.20g | %.20g %.20g %.20g\n", 1, dt_h[level - 1], time_h[level] + dt_h[level], time_h[level - 1], time_h[level - 1] - time_h[level]);
 				dtsave_h[level] = dt_h[level];
 				dt_h[level] = time_h[level - 1] - time_h[level];
 				stop_h[level] = 1;
@@ -4008,7 +4002,6 @@ printf("refine %d %.20g | %.20g %.20g %.20g\n", 1, dt_h[level - 1], time_h[level
 				snew = 1.0;
 			}
 
-printf("snewMin %g %g\n", snew, dtlimit[level]);
 			snewlevel_h[level] = snew;
 
 			if(snew >= RKF_fac){
@@ -4036,7 +4029,7 @@ printf("snewMin %g %g\n", snew, dtlimit[level]);
 
 			}
 			else{
-printf("repeat level %d %g\n", level, snew);
+//printf("repeat level %d %g\n", level, snew);
 			}
 
 
@@ -4084,7 +4077,6 @@ printf("repeat level %d %g\n", level, snew);
 				snew = 1.0;
 			}
 
-printf("snewMin %g %g\n", snew, dtlimit[level]);
 			snewlevel_h[level] = snew;
 
 			if(snew > 0.5){
@@ -4112,7 +4104,7 @@ printf("snewMin %g %g\n", snew, dtlimit[level]);
 
 			}
 			else{
-printf("repeat level %d %g\n", level, snew);
+//printf("repeat level %d %g\n", level, snew);
 			}
 
 		}
@@ -4127,7 +4119,7 @@ printf("repeat level %d %g\n", level, snew);
 		if(printdt == 1){
 			fprintf(dtFile, "%-25.20g %lld %-25.20g %d\n", time_h[level] + time_reference, timeStep, dt_h[level] / snewlevel_h[level], level);
 		}
-printf("dt %d %lld %g %g %g\n", level, timeStep, snewlevel_h[level], dt_h[level], dtsave_h[level]);
+//printf("dt %d %lld %g %g %g\n", level, timeStep, snewlevel_h[level], dt_h[level], dtsave_h[level]);
 
 		dt_h[level] *= snewlevel_h[level];
 
@@ -4140,7 +4132,7 @@ printf("dt %d %lld %g %g %g\n", level, timeStep, snewlevel_h[level], dt_h[level]
 
 				for(int l = level; l < nL; ++l){
 					dt_h[l] = dtsave_h[l];
-printf("reset %d  %.20g\n", l, dt_h[l]);
+//printf("reset %d  %.20g\n", l, dt_h[l]);
 
 				}
 			}
@@ -4156,7 +4148,7 @@ printf("reset %d  %.20g\n", l, dt_h[l]);
 
 				for(int l = level; l < nL; ++l){
 					dt_h[l] = dtsave_h[l];
-printf("reset %d  %.20g\n", l, dt_h[l]);
+//printf("reset %d  %.20g\n", l, dt_h[l]);
 
 				}
 			}
@@ -4172,7 +4164,7 @@ printf("reset %d  %.20g\n", l, dt_h[l]);
 
 				for(int l = level; l < nL; ++l){
 					dt_h[l] = dtsave_h[l];
-printf("reset %d  %.20g\n", l, dt_h[l]);
+//printf("reset %d  %.20g\n", l, dt_h[l]);
 
 				}
 
