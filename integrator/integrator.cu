@@ -3749,7 +3749,8 @@ int asteroid::loop(){
 				}
 
 
-				if(GPUMode == 0){
+				//if(GPUMode == 0){
+				if(Nlevel_h[level] > 2000){
 					BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 				}
 				else{
@@ -4053,7 +4054,8 @@ int asteroid::loop_recursive(int level){
 				dtlimit_ = dt_h[level] * dts;
 			}
 
-			if(GPUMode == 0){
+			if(Nlevel_h[level] > 2000){
+			//if(GPUMode == 0){
 				BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 			}
 			else{
