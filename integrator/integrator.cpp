@@ -2368,7 +2368,7 @@ int asteroid::loop(){
 			if(strcmp(integratorName, "RKF45") == 0){
 				er = RKF_step(0, dtlimit[0]);
 
-				if(Nlevel_h[1] > 0){
+				if(1 < nL && Nlevel_h[1] > 0){
 
 					loop_recursive(1);
 
@@ -2381,7 +2381,7 @@ int asteroid::loop(){
 			if(strcmp(integratorName, "DP54") == 0){
 				er = RKF_step(0, dtlimit[0]);
 
-				if(Nlevel_h[1] > 0){
+				if(1 < nL && Nlevel_h[1] > 0){
 
 					loop_recursive(1);
 
@@ -2394,7 +2394,7 @@ int asteroid::loop(){
 			if(strcmp(integratorName, "RKF78") == 0){
 				er = RKF_step(0, dtlimit[0]);
 
-				if(Nlevel_h[1] > 0){
+				if(1 < nL && Nlevel_h[1] > 0){
 
 					loop_recursive(1);
 
@@ -2407,7 +2407,7 @@ int asteroid::loop(){
 			if(strcmp(integratorName, "BS") == 0){
 				er = BS_step(0, dtlimit[0]);
 
-				if(Nlevel_h[1] > 0){
+				if(1 < nL && Nlevel_h[1] > 0){
 
 					loop_recursive(1);
 
@@ -2567,7 +2567,7 @@ int asteroid::loop_recursive(int level){
 			er = BS_step(level, dtlimit[level]);
 		}
 
-		if(Nlevel_h[level + 1] > 0){
+		if(level + 1 < nL && Nlevel_h[level + 1] > 0){
 
 			loop_recursive(level + 1);
 

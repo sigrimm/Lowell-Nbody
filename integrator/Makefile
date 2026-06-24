@@ -1,4 +1,6 @@
 CFLAGS = -O3
+GFLAGS = -O3
+#GFLAGS = -O3 -lineinfo
 #CFLAGS = -O3 -g
 
 
@@ -30,16 +32,16 @@ integratorGPU: mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o read.o 
 	nvcc -o integratorGPU mainGPU.o asteroid1.o asteroidGPU.o RKF.o integratorGPU.o read.o convert.o
 
 asteroid1.o: asteroid.cpp asteroid.h
-	nvcc -c $(CFLAGS) -DUSEGPU=1 -o asteroid1.o asteroid.cpp
+	nvcc -c $(GFLAGS) -DUSEGPU=1 -o asteroid1.o asteroid.cpp
 
 mainGPU.o: main.cpp asteroid.h
-	nvcc -c $(CFLAGS) -DUSEGPU=1 -o mainGPU.o main.cpp
+	nvcc -c $(GFLAGS) -DUSEGPU=1 -o mainGPU.o main.cpp
 
 integratorGPU.o: integrator.cu asteroid.h ChebyshevGPU.h forceGPU.h
-	nvcc -c $(CFLAGS) -o integratorGPU.o integrator.cu
+	nvcc -c $(GFLAGS) -o integratorGPU.o integrator.cu
 
 asteroidGPU.o: asteroid.cu asteroid.h
-	nvcc -c $(CFLAGS) -o asteroidGPU.o asteroid.cu
+	nvcc -c $(GFLAGS) -o asteroidGPU.o asteroid.cu
 
 clean:
 	rm -f *.o

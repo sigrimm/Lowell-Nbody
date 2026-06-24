@@ -837,6 +837,7 @@ int asteroid::allocate(){
 	Nlevel_h = (int*)malloc(nL * sizeof(int));
 	stop_h = (int*)malloc(nL * sizeof(int));
 
+
 	id_h = (long long int*)malloc(N * sizeof(long long int));
 	index_h = (int*)malloc(N * nL * sizeof(int));
 

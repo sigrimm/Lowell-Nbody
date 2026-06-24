@@ -1895,12 +1895,12 @@ __global__ void BS_step_kernel(double *xTable_d, double *yTable_d, double *zTabl
 			double rsq = __dmul_rn(xih, xih) + __dmul_rn(yih, yih) + __dmul_rn(zih, zih);
 			double r = sqrt(rsq);
 
-			if(cometFlag_c > 0 && n == 0){
-				if(id == 0){
-					Tsave_d[timeStep] = time;
-				}
-				Rsave_d[id * Rbuffersize_c + timeStep] = r;
-			}
+//			if(cometFlag_c > 0 && n == 0){
+//				if(id == 0){
+//					Tsave_d[timeStep] = time;
+//				}
+//				Rsave_d[id * Rbuffersize_c + timeStep] = r;
+//			}
 
 			//Earth centric coordinates
 			double xiE = x0 - xTable_s[2];
@@ -3172,9 +3172,9 @@ __global__ void update_BS_kernel(double *x_d, double *y_d, double *z_d, double *
 		if(level > 0){
 			id = index_d[(level - 1) * N0 + jj];
 		}
-
 		//accept step
 		if(snew_d[id] < 1.0e6){
+//printf("update %d\n", id);
 			x_d[id] = dx_d[id];
 			y_d[id] = dy_d[id];
 			z_d[id] = dz_d[id];
@@ -3182,7 +3182,6 @@ __global__ void update_BS_kernel(double *x_d, double *y_d, double *z_d, double *
 			vx_d[id] = dvx_d[id];
 			vy_d[id] = dvy_d[id];
 			vz_d[id] = dvz_d[id];
-//printf("update %d\n", id);
 
 			if(stopFlag == 0){
 				if(dt < 0){
@@ -3197,9 +3196,9 @@ __global__ void update_BS_kernel(double *x_d, double *y_d, double *z_d, double *
 		}
 		else{
 			int j = atomicAdd(&Nlevel_d[level + 1], 1);
+//printf("add to list %d %d %d\n", id, j, level * N0 + j);
 			index_d[level * N0 + j] = id;
 			//add to list
-//printf("add to list %d %d\n", id, j);
 		}
 	}
 }
@@ -3537,6 +3536,7 @@ int asteroid::loop(){
 	}
 
 	set_dtmin_kernel <<< (N + 255) / 256 , 256 >>> (dtmin_d, dt, N);
+	cudaMemset(Nlevel_d, 0, nL * sizeof(int));
 
 	if(time_reference + time >= outStart){
 		if(Outheliocentric == 1 || Outgeocentric == 1){
@@ -3698,16 +3698,19 @@ int asteroid::loop(){
 					update_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, snew_d, dtmin_d, index_d, Nlevel_d, Nlevel_h[level], N0, level, stopFlag, dt_h[level]);
 
 					cudaDeviceSynchronize();
-					cudaMemcpy(&Nlevel_h[1], &Nlevel_d[1], sizeof(int), cudaMemcpyDeviceToHost);
+					if(1 < nL){
 
-					if(Nlevel_h[1] > 0){ 
-						time_h[level + 1] = time_h[level];
+						cudaMemcpy(&Nlevel_h[1], &Nlevel_d[1], sizeof(int), cudaMemcpyDeviceToHost);
+
+						if(Nlevel_h[1] > 0){ 
+							time_h[level + 1] = time_h[level];
+						}
 					}
 
 					time_h[level] += dt_h[level];
 					++timeStep_h[level];
 
-					if(Nlevel_h[1] > 0){ 
+					if(1 < nL && Nlevel_h[1] > 0){ 
 						loop_recursive(1);
 					}
 				}
@@ -3742,14 +3745,13 @@ int asteroid::loop(){
 				}
 
 
-				if(GPUMode == 0){
-				//if(Nlevel_h[level] > 2000){
+				//if(GPUMode == 0){
+				if(Nlevel_h[level] > 2000){
 					BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 				}
 				else{
 					BS_step2_kernel <<< Nlevel_h[level], def_NP >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 				}
-
 
 				//Calculate the minimal time step value
 				//Using a parallel reduction sum
@@ -3770,21 +3772,25 @@ int asteroid::loop(){
 
 				snewlevel_h[level] = snew;
 
+//printf("snew %g %d %d\n", snew, Nlevel_h[level], N0);
+
 				if(snew > 0.5){
 					//accept step
 					update_BS_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, snew_d, dtmin_d, index_d, Nlevel_d, Nlevel_h[level], N0, level, stopFlag, dt_h[level]);
 
 					cudaDeviceSynchronize();
-					cudaMemcpy(&Nlevel_h[1], &Nlevel_d[1], sizeof(int), cudaMemcpyDeviceToHost);
+					if(1 < nL){
+						cudaMemcpy(&Nlevel_h[1], &Nlevel_d[1], sizeof(int), cudaMemcpyDeviceToHost);
 
-					if(Nlevel_h[1] > 0){ 
+						if(Nlevel_h[1] > 0){ 
 						time_h[level + 1] = time_h[level];
+							}
 					}
 
 					time_h[level] += dt_h[level];
 					++timeStep_h[level];
 
-					if(Nlevel_h[1] > 0){
+					if(1 < nL && Nlevel_h[1] > 0){
 //printf("Start recursive\n"); 
 						int er = loop_recursive(1);
 						if(er <= 0){
@@ -4015,12 +4021,14 @@ int asteroid::loop_recursive(int level){
 				update_kernel <<< (Nlevel_h[level] + 63) / 64 , 64 >>> (x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, snew_d, dtmin_d, index_d, Nlevel_d, Nlevel_h[level], N0, level, stopFlag, dt_h[level]);
 
 				cudaDeviceSynchronize();
-				cudaMemcpy(&Nlevel_h[level + 1], &Nlevel_d[level + 1], sizeof(int), cudaMemcpyDeviceToHost);
+				if(level + 1 < nL){
+					cudaMemcpy(&Nlevel_h[level + 1], &Nlevel_d[level + 1], sizeof(int), cudaMemcpyDeviceToHost);
 
-				if(Nlevel_h[level + 1] > 0){
-					time_h[level + 1] = time_h[level];
+					if(Nlevel_h[level + 1] > 0){
+						time_h[level + 1] = time_h[level];
 
 
+					}
 				}
 
 				time_h[level] += dt_h[level];
@@ -4052,8 +4060,8 @@ int asteroid::loop_recursive(int level){
 				dtlimit_ = dt_h[level] * dts;
 			}
 
-			//if(Nlevel_h[level] > 2000){
-			if(GPUMode == 0){
+			if(Nlevel_h[level] > 2000){
+			//if(GPUMode == 0){
 				BS_step_kernel <<< (Nlevel_h[level] + def_N - 1) / def_N , def_N >>> (xTable_d, yTable_d, zTable_d, vxTable_d, vyTable_d, vzTable_d, x_d, y_d, z_d, vx_d, vy_d, vz_d, dx_d, dy_d, dz_d, dvx_d, dvy_d, dvz_d, kx_d, ky_d, kz_d, kvx_d, kvy_d, kvz_d, GM_d, A1_d, A2_d, A3_d, index_d, Tsave_d, Rsave_d, snew_d, time, timeStep, dt_h[level], dts, BSn, Nperturbers, Nlevel_h[level], N0, level, nL, dtlimit_);
 			}
 			else{
@@ -4103,7 +4111,7 @@ int asteroid::loop_recursive(int level){
 
 		}
 
-		if(Nlevel_h[level + 1] > 0){
+		if(level + 1 < nL && Nlevel_h[level + 1] > 0){
 			int er = loop_recursive(level + 1);
 			if(er <= 0){
 				return 0;
